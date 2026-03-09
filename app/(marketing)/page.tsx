@@ -1,21 +1,22 @@
-import { getCurrentUser } from "@/lib/session";
+import { siteConfig } from "@/config/site";
 import { constructMetadata } from "@/lib/utils";
-import HeroLanding, { LandingImages } from "@/components/sections/hero-landing";
-import { PricingSection } from "@/components/sections/pricing";
 
 export const metadata = constructMetadata({
-  title: "WR.DO - Your All-In-One Domain Services Platform",
-  description:
-    "All-in-one domain platform with short links, temp email, subdomain management, file storage, and open APIs",
+  title: `${siteConfig.name} - 短链接及临时邮箱`,
+  description: `${siteConfig.name} 提供短链接及临时邮箱服务`,
 });
 
-export default async function IndexPage() {
-  const user = await getCurrentUser();
+export default function IndexPage() {
   return (
-    <>
-      <HeroLanding userId={user?.id} />
-      <LandingImages />
-      <PricingSection />
-    </>
+    <section className="flex min-h-[calc(100vh-10rem)] items-center">
+      <div className="container flex max-w-screen-lg flex-col items-center gap-5 py-24 text-center">
+        <h1 className="text-balance font-satoshi text-[40px] font-black leading-[1.15] tracking-tight sm:text-5xl md:text-6xl md:leading-[1.15]">
+          {siteConfig.name}
+          <span className="bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 bg-clip-text text-transparent">
+            {" 短链接及临时邮箱"}
+          </span>
+        </h1>
+      </div>
+    </section>
   );
 }

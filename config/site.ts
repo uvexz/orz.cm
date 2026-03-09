@@ -3,13 +3,13 @@ import { env } from "@/env.mjs";
 
 const site_url = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const email_r2_domain = env.NEXT_PUBLIC_EMAIL_R2_DOMAIN || "";
-const support_email = env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@wr.do";
-const app_name = env.NEXT_PUBLIC_APP_NAME || "WR.DO";
+const support_email = env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@orz.cm";
+const app_name = env.NEXT_PUBLIC_APP_NAME || "Orz";
 
 export const siteConfig: SiteConfig = {
   name: app_name,
   description:
-    "All-in-one domain platform with short links, temp email, subdomain management, file storage, and open APIs.",
+    "All-in-one domain platform with short links, temp email, file storage, and open APIs.",
   url: site_url,
   ogImage: `${site_url}/_static/og.jpg`,
   links: {
