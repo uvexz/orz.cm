@@ -10,26 +10,18 @@ import { env } from "@/env.mjs";
 const linuxDoProvider: any = {
   id: "linuxdo",
   name: "Linux Do",
-  version: "2.0",
-  type: "oauth",
-  authorization: "https://connect.linux.do/oauth2/authorize",
-  token: "https://connect.linux.do/oauth2/token",
-  userinfo: "https://connect.linux.do/api/user",
+  type: "oidc",
+  issuer: "https://connect.linux.do",
   clientId: env.LinuxDo_CLIENT_ID,
   clientSecret: env.LinuxDo_CLIENT_SECRET,
-  checks: ["state"],
   profile: (profile: any) => {
     console.log("profile", profile);
     return {
-      id: profile.id.toString(),
-      name: profile.username,
+      id: profile.sub || profile.id?.toString(),
+      name: profile.name || profile.username,
       image: profile.avatar_url,
       email: profile.email,
       active: profile.active ? 1 : 0,
-      // username: profile.username,
-      // trust_level: profile.trust_level,
-      // silenced: profile.user.silenced,
-      // email: profile.user.email,
     };
   },
 };
