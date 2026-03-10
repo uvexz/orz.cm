@@ -2,7 +2,7 @@
 
 > Wr.do is a platform designed for developers, offering various tools and documentation aimed at simplifying web application development. The website provides resources on authentication, cloud integration, email handling, and more, establishing a comprehensive guide for users to effectively utilize its services. With examples and quick-start guides, it supports developers in implementing features quickly and efficiently.
 
-- [WR.DO](https://wr.do/): All-in-one domain platform with short links, temp email, subdomain management, file storage, and open APIs.
+- [WR.DO](https://wr.do/): All-in-one platform with short links, temp email, file storage, and open APIs.
 - [Introduction – WR.DO](https://wr.do/docs): Welcome to the WR.DO documentation.
 
 ## Documentation
@@ -16,12 +16,7 @@
 - [Installation – WR.DO](https://wr.do/docs/developer/installation): How to install the project.
 - [Markdown Files – WR.DO](https://wr.do/docs/developer/markdown-files): How works blog and docs.
 - [Quick Start for Developer – WR.DO](https://wr.do/docs/developer/quick-start): Step by step installation
-- [DNS Records – WR.DO](https://wr.do/docs/dns-records): Create and manage your DNS records.
 - [Emails – WR.DO](https://wr.do/docs/emails): Create and manage your emails.
-- [Cloudflare Pages & Workers Custom Domain – WR.DO](https://wr.do/docs/examples/cloudflare): Free parsing of Cloudflare Pages & Workers custom domain names.
-- [Other Platforms – WR.DO](https://wr.do/docs/examples/other): Free parsing custom domain names.
-- [Vercel Custom Domain – WR.DO](https://wr.do/docs/examples/vercel): Free parsing of Vercel custom domain names.
-- [Zeabur Custom Domain – WR.DO](https://wr.do/docs/examples/zeabur): Free parsing of Zeabur custom domain names.
 - [Open API – WR.DO](https://wr.do/docs/open-api): Some open APIs for WR.DO. It's free and unlimited to use!
 - [Svg Icon API – WR.DO](https://wr.do/docs/open-api/icon): Simple way to generate your svg icon
 - [Url to Markdown API – WR.DO](https://wr.do/docs/open-api/markdown): Extract website content and convert it to Markdown format
@@ -47,7 +42,6 @@
 - [Login](https://wr.do/dashboard): Login to your account
 - [Login](https://wr.do/dashboard/urls): Login to your account
 - [Login](https://wr.do/dashboard/settings): Login to your account
-- [Login](https://wr.do/dashboard/records): Login to your account
 - [Login](https://wr.do/dashboard/scrape): Login to your account
 - [Login](https://wr.do/emails): Login to your account
 

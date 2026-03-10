@@ -20,22 +20,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run the Docker stack with the bundled local Postgres service: `docker compose -f docker-compose-localdb.yml up -d`
 - Vercel build command: `pnpm check-db && pnpm build`
 
-### Testing and formatting
+### Testing and validation
 
 - There is currently no `test` script and no Jest/Vitest/Playwright/Cypress config in the repository.
 - There is currently no single-test command available.
+- There is no dedicated `typecheck` script; in practice, `pnpm lint` and `pnpm build` are the main validation commands.
 - There is no repo `format` script; pre-commit formatting is handled by Husky with `npx pretty-quick --staged`.
 - Commit messages are checked by Husky + Commitlint and should follow conventional commit style.
 
 ## High-level architecture
 
 - This is a Next.js 14 App Router application in TypeScript.
+- The repo is a multi-product SaaS portal rather than a single-feature app. Main product areas are short URLs, DNS record management, temporary email / outbound email, S3-compatible file storage, public scraping/open APIs, and peer-to-peer chat.
 - The app is split into route groups under `app/`:
-  - `(marketing)` for public/marketing pages
+  - `(marketing)` for public landing/content pages
   - `(docs)` for the documentation site
   - `(auth)` for login/register flows
-  - `(protected)` for dashboard/admin/setup pages
-- Root application composition lives in `app/layout.tsx`, which wires up global styles/fonts, `next-intl`, `next-auth` session state, `next-themes`, modals, Sonner toasts, Google Analytics, Umami, and view transitions.
+  - `(protected)` for dashboard, admin, and setup pages
+- Root application composition lives in `app/layout.tsx`, which wires up global styles/fonts, `next-intl`, `next-auth` session state, `next-themes`, modal providers, Sonner toasts, Google Analytics, Umami, and view transitions.
 - `next.config.mjs` composes `next-intl`, `next-contentlayer2`, and `next-pwa`, and builds with `output: "standalone"`.
 - Runtime environment access is centralized in `env.mjs` via `@t3-oss/env-nextjs`.
 
@@ -80,19 +82,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - file storage: `UserFile`
   - open API usage: `ScrapeMeta`
   - system configuration and quotas: `SystemConfig`, `Plan`
-- Quotas and usage limits are core product concepts. Check `lib/dto/plan.ts` and `lib/team.ts` before changing product limits or creation flows.
+- Quotas and usage limits are core product concepts. Check `lib/dto/plan.ts` and `lib/team.ts` before changing product limits, creation flows, or API usage behavior.
+- A small set of server actions for authenticated mutations lives under `actions/`.
 
 ## API surface and product modules
 
-- This repository is a multi-product SaaS portal, not a single-feature app.
-- Main product areas are:
-  - short URLs
-  - DNS record management
-  - temporary email / outbound email
-  - S3-compatible file storage
-  - public scraping/open APIs
-  - peer-to-peer chat (`app/chat/page.tsx`)
-- The API surface under `app/api` mirrors those product areas. Major route families include `auth`, `url`, `record`, `email`, `storage`, `admin`, `plan`, `configs`, `setup`, and public `v1/*` endpoints.
+- The API surface under `app/api` mirrors the product areas. Major route families include `auth`, `url`, `record`, `email`, `storage`, `admin`, `plan`, `configs`, `setup`, and public `v1/*` endpoints.
+- Public scraping/open API endpoints live under `app/api/v1/*` and usage is tracked in `ScrapeMeta`.
+- File storage integrations are centralized in `lib/s3.ts`; storage route handlers call into that shared S3-compatible helper layer.
 
 ## Content and documentation system
 
@@ -121,13 +118,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Cloudflare is used for domain onboarding and DNS operations.
 - Email sending can use Resend or Brevo depending on domain configuration.
 - File storage uses S3-compatible backends such as Cloudflare R2/AWS-style APIs.
-- Public scraping APIs live under `app/api/v1/*`; screenshot generation depends on `SCREENSHOTONE_BASE_URL`.
+- Public scraping APIs include metadata, screenshot, QR, markdown, and text endpoints; screenshot generation depends on `SCREENSHOTONE_BASE_URL`.
 - Analytics is split between client-side integrations and server-side tracking/redirect logging.
 
 ## Working notes for future agents
 
 - If a change affects routing or custom domains, start with `middleware.ts`.
-- If a change affects business rules, validation, or quotas, inspect the relevant `lib/dto/*` module before editing route handlers.
-- If a change affects docs navigation or docs rendering, check both `content/` and `config/docs.ts`.
+- If a change affects business rules, validation, quotas, or persistence, inspect the relevant `lib/dto/*` module before editing route handlers.
 - If auth/session fields seem wrong, trace the `auth.ts` callbacks before changing UI code.
+- If a change affects docs navigation or docs rendering, check both `content/` and `config/docs.ts`.
+- If a change affects file uploads, signed URLs, or storage backends, inspect `lib/s3.ts` and the related `app/api/storage/**` handlers together.
 - If a feature appears env-sensitive, confirm the required variables in `env.mjs` and the deployment expectations in `docker-compose.yml`, `docker-compose-localdb.yml`, and `vercel.json`.

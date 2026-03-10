@@ -16,34 +16,6 @@ export interface StatusConfig {
   };
 }
 
-// 用户记录状态配置
-export const USER_RECORD_STATUS_CONFIG: StatusConfig = {
-  Active: {
-    color: "bg-green-500",
-    textColor: "text-green-500",
-    gradient: "from-green-400 to-green-600",
-    shadow: "shadow-green-500/25",
-  },
-  Inactive: {
-    color: "bg-gray-700",
-    textColor: "text-gray-700",
-    gradient: "from-gray-400 to-gray-600",
-    shadow: "shadow-gray-500/25",
-  },
-  Pending: {
-    color: "bg-yellow-500",
-    textColor: "text-yellow-500",
-    gradient: "from-yellow-400 to-yellow-600",
-    shadow: "shadow-yellow-500/25",
-  },
-  Rejected: {
-    color: "bg-red-500",
-    textColor: "text-red-500",
-    gradient: "from-red-400 to-red-600",
-    shadow: "shadow-red-500/25",
-  },
-};
-
 // 短链状态配置
 export const URL_STATUS_CONFIG: StatusConfig = {
   Actived: {
@@ -71,18 +43,6 @@ export const URL_STATUS_CONFIG: StatusConfig = {
     shadow: "shadow-blue-500/25",
   },
 };
-
-// 用户记录状态组件
-export function UserRecordStatus({ action }: { action: string }) {
-  return (
-    <GenericStatusDashboard
-      apiEndpoint={action}
-      statusItems={["Active", "Inactive", "Pending", "Rejected"]}
-      statusConfig={USER_RECORD_STATUS_CONFIG}
-      gridCols={4}
-    />
-  );
-}
 
 // 短链状态组件
 export function UrlStatus({ action }: { action: string }) {

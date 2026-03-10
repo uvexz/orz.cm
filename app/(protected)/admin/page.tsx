@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
-import { getUserRecordCount } from "@/lib/dto/cloudflare-dns-record";
 import {
   getAllUserEmailsCount,
   getAllUserInboxEmailsCount,
@@ -57,23 +56,6 @@ async function ShortUrlsCardSection({ userId }: { userId: string }) {
       limit={1000000}
       link="/admin/urls"
       icon="link"
-    />
-  );
-}
-
-// DNS 记录卡片组件
-async function DnsRecordsCardSection({ userId }: { userId: string }) {
-  const record_count = await getUserRecordCount(userId, 1, "ADMIN");
-
-  return (
-    <DashboardInfoCard
-      userId={userId}
-      title="DNS Records"
-      total={record_count.total}
-      monthTotal={record_count.month_total}
-      limit={1000000}
-      link="/admin/records"
-      icon="globeLock"
     />
   );
 }
@@ -213,7 +195,7 @@ export default async function AdminPage() {
     <>
       <DashboardHeader heading="Admin Panel" text="" />
       <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
           <ErrorBoundary
             fallback={<Skeleton className="h-32 w-full rounded-lg" />}
           >
@@ -230,15 +212,6 @@ export default async function AdminPage() {
               fallback={<Skeleton className="h-32 w-full rounded-lg" />}
             >
               <ShortUrlsCardSection userId={user.id} />
-            </Suspense>
-          </ErrorBoundary>
-          <ErrorBoundary
-            fallback={<Skeleton className="h-32 w-full rounded-lg" />}
-          >
-            <Suspense
-              fallback={<Skeleton className="h-32 w-full rounded-lg" />}
-            >
-              <DnsRecordsCardSection userId={user.id} />
             </Suspense>
           </ErrorBoundary>
         </div>

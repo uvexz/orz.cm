@@ -20,9 +20,9 @@ import { Icons } from "@/components/shared/icons";
 import { FormSectionColumns } from "../dashboard/form-section-columns";
 import { Switch } from "../ui/switch";
 
-export type FormData = PlanQuotaFormData;
-
 export type FormType = "add" | "edit";
+
+export type FormData = PlanQuotaFormData;
 
 export interface PlanFormProps {
   user: Pick<User, "id" | "name">;

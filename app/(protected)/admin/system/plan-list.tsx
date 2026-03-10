@@ -22,8 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlanForm } from "@/components/forms/plan-form";
-import { FormType } from "@/components/forms/record-form";
+import { PlanForm, FormType } from "@/components/forms/plan-form";
 import { EmptyPlaceholder } from "@/components/shared/empty-placeholder";
 import { Icons } from "@/components/shared/icons";
 import { PaginationWrapper } from "@/components/shared/pagination";

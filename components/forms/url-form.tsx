@@ -35,9 +35,9 @@ import {
 } from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
 
-export type FormData = ShortUrlFormData;
-
 export type FormType = "add" | "edit";
+
+export type FormData = ShortUrlFormData;
 
 export interface RecordFormProps {
   user: Pick<User, "id" | "name">;

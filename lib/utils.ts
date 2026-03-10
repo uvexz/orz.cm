@@ -30,9 +30,6 @@ export function constructMetadata({
     description,
     keywords: [
       "Cloudflare",
-      "DNS",
-      "DNS Records",
-      "Subdomains",
       "Short Link",
       "Email",
       "Open API",

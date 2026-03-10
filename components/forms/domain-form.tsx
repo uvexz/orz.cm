@@ -32,9 +32,9 @@ import {
 } from "../ui/select";
 import { Switch } from "../ui/switch";
 
-export type FormData = DomainFormData;
-
 export type FormType = "add" | "edit";
+
+export type FormData = DomainFormData;
 
 export interface DomainFormProps {
   user: Pick<User, "id" | "name">;

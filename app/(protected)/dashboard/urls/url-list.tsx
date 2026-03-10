@@ -52,7 +52,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClickableTooltip } from "@/components/ui/tooltip";
 import { UrlStatus } from "@/components/dashboard/status-card";
-import { FormType } from "@/components/forms/record-form";
+import { FormType } from "@/components/forms/url-form";
 import { UrlForm } from "@/components/forms/url-form";
 import ApiReference from "@/components/shared/api-reference";
 import BlurImage from "@/components/shared/blur-image";

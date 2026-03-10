@@ -31,8 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DomainForm } from "@/components/forms/domain-form";
-import { FormType } from "@/components/forms/record-form";
+import { DomainForm, FormType } from "@/components/forms/domain-form";
 import { EmptyPlaceholder } from "@/components/shared/empty-placeholder";
 import { Icons } from "@/components/shared/icons";
 import { PaginationWrapper } from "@/components/shared/pagination";

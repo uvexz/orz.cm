@@ -27,11 +27,6 @@ export const docsConfig: DocsConfig = {
           icon: "page",
         },
         {
-          title: "DNS Records",
-          href: "/docs/dns-records",
-          icon: "page",
-        },
-        {
           title: "WRoom",
           href: "/docs/wroom",
           icon: "page",
@@ -74,36 +69,6 @@ export const docsConfig: DocsConfig = {
         {
           title: "Svg Icon API",
           href: "/docs/open-api/icon",
-          icon: "page",
-        },
-      ],
-    },
-    {
-      title: "Examples",
-      items: [
-        {
-          title: "Github Page Custom Domain",
-          href: "/docs/examples/github-page",
-          icon: "page",
-        },
-        {
-          title: "Cloudflare Custom Domain",
-          href: "/docs/examples/cloudflare",
-          icon: "page",
-        },
-        {
-          title: "Vercel Custom Domain",
-          href: "/docs/examples/vercel",
-          icon: "page",
-        },
-        {
-          title: "Zeabur Custom Domain",
-          href: "/docs/examples/zeabur",
-          icon: "page",
-        },
-        {
-          title: "Other Platforms",
-          href: "/docs/examples/other",
           icon: "page",
         },
       ],
