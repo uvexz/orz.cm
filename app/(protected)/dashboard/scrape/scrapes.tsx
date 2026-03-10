@@ -86,7 +86,7 @@ export function ScreenshotScraping({
 
   return (
     <>
-      <CodeLight content={`https://wr.do/api/v1/scraping/screenshot`} />
+      <CodeLight content={`https://orz.cm/api/v1/scraping/screenshot`} />
       <Card className="bg-gray-50 dark:bg-gray-900">
         <CardHeader>
           <CardTitle>{t("Playground")}</CardTitle>
@@ -143,7 +143,7 @@ export function ScreenshotScraping({
               value={screenshotInfo}
               displayObjectSize={false}
               displayDataTypes={false}
-              // shortenTextAfterLength={50}
+            // shortenTextAfterLength={50}
             />
             {screenshotInfo.tmp_url && (
               <BlurImage
@@ -153,7 +153,7 @@ export function ScreenshotScraping({
                 width={1500}
                 height={750}
                 priority
-                // placeholder="blur"
+              // placeholder="blur"
               />
             )}
           </div>
@@ -170,7 +170,7 @@ export function MetaScraping({
 }) {
   const t = useTranslations("Scrape");
   const { theme } = useTheme();
-  const [currentLink, setCurrentLink] = useState("wr.do");
+  const [currentLink, setCurrentLink] = useState("orz.cm");
   const [protocol, setProtocol] = useState("https://");
   const [metaInfo, setMetaInfo] = useState<MetaScrapingProps>({
     title: "",
@@ -205,7 +205,7 @@ export function MetaScraping({
 
   return (
     <>
-      <CodeLight content={`https://wr.do/api/v1/scraping/meta`} />
+      <CodeLight content={`https://orz.cm/api/v1/scraping/meta`} />
       <Card className="bg-gray-50 dark:bg-gray-900">
         <CardHeader>
           <CardTitle>{t("Playground")}</CardTitle>
@@ -273,7 +273,7 @@ export function MarkdownScraping({
 }) {
   const t = useTranslations("Scrape");
   const { theme } = useTheme();
-  const [currentLink, setCurrentLink] = useState("wr.do");
+  const [currentLink, setCurrentLink] = useState("orz.cm");
   const [protocol, setProtocol] = useState("https://");
   const [metaInfo, setMetaInfo] = useState<MarkdownScrapingProps>({
     url: "",
@@ -304,7 +304,7 @@ export function MarkdownScraping({
 
   return (
     <>
-      <CodeLight content={`https://wr.do/api/v1/scraping/markdown`} />
+      <CodeLight content={`https://orz.cm/api/v1/scraping/markdown`} />
       <Card className="bg-gray-50 dark:bg-gray-900">
         <CardHeader>
           <CardTitle>Markdown</CardTitle>
@@ -369,7 +369,7 @@ export function TextScraping({
 }) {
   const t = useTranslations("Scrape");
   const { theme } = useTheme();
-  const [currentLink, setCurrentLink] = useState("wr.do");
+  const [currentLink, setCurrentLink] = useState("orz.cm");
   const [protocol, setProtocol] = useState("https://");
   const [metaInfo, setMetaInfo] = useState<MarkdownScrapingProps>({
     url: "",
@@ -400,7 +400,7 @@ export function TextScraping({
 
   return (
     <>
-      <CodeLight content={`https://wr.do/api/v1/scraping/text`} />
+      <CodeLight content={`https://orz.cm/api/v1/scraping/text`} />
       <Card className="bg-gray-50 dark:bg-gray-900">
         <CardHeader>
           <CardTitle>{t("Text")}</CardTitle>
@@ -494,7 +494,7 @@ export function QrCodeScraping({
 
   return (
     <>
-      <CodeLight content={`https://wr.do/api/v1/scraping/qrcode`} />
+      <CodeLight content={`https://orz.cm/api/v1/scraping/qrcode`} />
       <Card className="bg-gray-50 dark:bg-gray-900">
         <CardHeader>
           <CardTitle>{t("Playground")}</CardTitle>
@@ -545,7 +545,7 @@ export function QrCodeScraping({
               value={qrInfo}
               displayObjectSize={false}
               displayDataTypes={false}
-              // shortenTextAfterLength={50}
+            // shortenTextAfterLength={50}
             />
             {qrInfo.payload && (
               <BlurImage
@@ -555,7 +555,7 @@ export function QrCodeScraping({
                 width={150}
                 height={150}
                 priority
-                // placeholder="blur"
+              // placeholder="blur"
               />
             )}
           </div>

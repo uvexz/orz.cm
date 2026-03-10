@@ -218,7 +218,7 @@ export function UrlForm({
                   size={32}
                   value={email || ""}
                   onChange={(e) => setEmail(e.target.value)}
-                  // disabled={type === "edit"}
+                // disabled={type === "edit"}
                 />
               </div>
             </FormSectionColumns>
@@ -316,7 +316,7 @@ export function UrlForm({
               ) : (
                 <p className="pb-0.5 text-[13px] text-muted-foreground">
                   {t("A random url suffix")}. {t("Final url like")}
-                  「wr.do/suffix」
+                  「orz.cm/suffix」
                 </p>
               )}
             </div>

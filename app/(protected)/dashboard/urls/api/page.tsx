@@ -31,15 +31,15 @@ curl -X POST \\
   -H "Content-Type: application/json" \\
   -H "wrdo-api-key: YOUR_API_KEY" \\
   -d '{
-    "target": "https://www.oiov.dev",
+    "target": "https://www.orz.cm",
     "url": "abc123",
     "expiration": "-1",
-    "prefix": "wr.do",
+    "prefix": "orz.cm",
     "visible": 1,
     "active": 1,
     "password": ""
   }' \\
-  https://wr.do/api/v1/short
+  https://orz.cm/api/v1/short
         `}
       />
     </>
