@@ -5,7 +5,6 @@ import { createScrapeMeta } from "@/lib/dto/scrape";
 import { getIpInfo } from "@/lib/geo";
 import { isLink } from "@/lib/utils";
 
-export const revalidate = 600;
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {

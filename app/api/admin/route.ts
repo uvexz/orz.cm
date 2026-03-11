@@ -4,7 +4,7 @@ import { TIME_RANGES } from "@/lib/enums";
 import { getCurrentUser } from "@/lib/session";
 import { getStartDate } from "@/lib/utils";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
