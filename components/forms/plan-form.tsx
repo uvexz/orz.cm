@@ -4,7 +4,7 @@ import { Dispatch, SetStateAction, useState, useTransition } from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { User } from "@prisma/client";
-import { create, get } from "lodash";
+import { create, get } from "lodash-es";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";

@@ -4,27 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development commands
 
-- Install dependencies: `pnpm install`
+- Install dependencies: `bun install`
 - Create a local env file: `cp .env.example .env`
-- Generate the Prisma client: `pnpm postinstall`
-- Apply database migrations: `pnpm db:push`
+- Generate the Prisma client: `bun run postinstall`
+- Apply database migrations: `bun run db:push`
   - Note: despite the script name, this runs `prisma migrate deploy`, not `prisma db push`.
-- Start the local dev server: `pnpm dev`
-- Start the local dev server with Turbopack: `pnpm turbo`
-- Build for production: `pnpm build`
-- Preview the production build locally: `pnpm preview`
-- Start the production server: `pnpm start`
-- Lint: `pnpm lint`
-- Run the database health/version check and optional migration step used by deployment: `pnpm check-db`
+- Start the local dev server: `bun run dev`
+- Start the local dev server with Turbopack: `bun run turbo`
+- Build for production: `bun run build`
+- Preview the production build locally: `bun run preview`
+- Start the production server: `bun run start`
+- Lint: `bun run lint`
+- Run the database health/version check and optional migration step used by deployment: `bun run check-db`
 - Run the Docker stack against an external database: `docker compose up -d`
 - Run the Docker stack with the bundled local Postgres service: `docker compose -f docker-compose-localdb.yml up -d`
-- Vercel build command: `pnpm check-db && pnpm build`
+- Vercel build command: `bun run check-db && bun run build`
 
 ### Testing and validation
 
 - There is currently no `test` script and no Jest/Vitest/Playwright/Cypress config in the repository.
 - There is currently no single-test command available.
-- There is no dedicated `typecheck` script; in practice, `pnpm lint` and `pnpm build` are the main validation commands.
+- There is no dedicated `typecheck` script; in practice, `bun run lint` and `bun run build` are the main validation commands.
 - There is no repo `format` script; pre-commit formatting is handled by Husky with `npx pretty-quick --staged`.
 - Commit messages are checked by Husky + Commitlint and should follow conventional commit style.
 

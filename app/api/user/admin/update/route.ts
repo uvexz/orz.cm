@@ -22,6 +22,8 @@ export async function POST(req: Request) {
       image: data.image,
       apiKey: data.apiKey,
       password: data.password,
+      tgChatId: data.tgChatId,
+      tgUsername: data.tgUsername,
     });
     if (!res?.id) {
       return Response.json("An error occurred", {

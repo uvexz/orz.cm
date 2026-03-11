@@ -172,19 +172,19 @@ docker compose up -d
 ```bash
 git clone https://github.com/oiov/wr.do
 cd wr.do
-pnpm install
+bun install
 ```
 
 #### 初始化数据库
 
 ```bash
-pnpm postinstall
-pnpm db:push
+bun run postinstall
+bun run db:push
 ```
 
 ```bash
 # 在 localhost:3000 上运行
-pnpm dev
+bun run dev
 ```
 
 - 默认账号(管理员)：`admin@admin.com`

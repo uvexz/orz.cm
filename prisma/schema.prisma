@@ -58,6 +58,8 @@ model User {
   active        Int       @default(1) // 0 封禁，1 正常
   team          String?   @default("free")
   apiKey        String?
+  tgChatId      String?
+  tgUsername    String?
   createdAt     DateTime  @default(now()) @map(name: "created_at")
   updatedAt     DateTime  @default(now()) @map(name: "updated_at")
   role          UserRole  @default(USER)
@@ -157,6 +159,7 @@ model UrlMeta {
 
   @@unique([urlId, ip])
   @@index([urlId])
+  @@index([createdAt])
   @@map(name: "url_metas")
 }
 
@@ -187,6 +190,7 @@ model ScrapeMeta {
 
   @@unique([type, ip, link])
   @@index([userId, type, apiKey])
+  @@index([createdAt])
   @@map(name: "scrape_metas")
 }
 

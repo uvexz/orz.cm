@@ -120,7 +120,7 @@ docker compose up -d
 ```bash
 git clone https://github.com/oiov/wr.do
 cd wr.do
-pnpm install
+bun install
 ```
 
 copy `.env.example` to `.env` and fill in the necessary environment variables.
@@ -128,13 +128,13 @@ copy `.env.example` to `.env` and fill in the necessary environment variables.
 #### Init database
 
 ```bash
-pnpm postinstall
-pnpm db:push
+bun run postinstall
+bun run db:push
 ```
 
 ```bash
 # run on localhost:3000
-pnpm dev
+bun run dev
 ```
 
 - Default admin account：`admin@admin.com`

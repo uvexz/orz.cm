@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { debounce } from "lodash";
+import { debounce } from "lodash-es";
 import { useTranslations } from "next-intl";
 import { HexColorPicker } from "react-colorful";
 

@@ -4,11 +4,12 @@ import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { UrlMeta, User } from "@prisma/client";
-import { VisSingleContainer, VisTooltip, VisTopoJSONMap } from "@unovis/react";
 import { TopoJSONMap } from "@unovis/ts";
-import { WorldMapTopoJSON } from "@unovis/ts/maps";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
+const WorldMap = dynamic(() => import("./world-map"), { ssr: false });
 import useSWR from "swr";
 
 import {
@@ -401,13 +402,11 @@ export function DailyPVUVChart({
           </AreaChart>
         </ChartContainer>
 
-        <VisSingleContainer
-          data={{ areas: areaData }}
-          width={wrapperWidth * 0.99}
-        >
-          <VisTopoJSONMap topojson={WorldMapTopoJSON} />
-          <VisTooltip triggers={triggers} />
-        </VisSingleContainer>
+        <WorldMap
+          areaData={areaData}
+          wrapperWidth={wrapperWidth}
+          triggers={triggers}
+        />
 
         <div className="my-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
           {/* Referrers、isBotStats */}

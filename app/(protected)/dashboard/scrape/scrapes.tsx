@@ -69,7 +69,7 @@ export function ScreenshotScraping({
       const payload = `/api/v1/scraping/screenshot?url=${protocol}${currentScreenshotLink}&key=${user.apiKey}`;
       const res = await fetch(payload);
       if (!res.ok || res.status !== 200) {
-        const data = await res.json();
+        const data = (await res.json()) as { statusText: string };
         toast.error(data.statusText);
       } else {
         const blob = await res.blob();
@@ -192,10 +192,10 @@ export function MetaScraping({
         `/api/v1/scraping/meta?url=${protocol}${currentLink}&key=${user.apiKey}`,
       );
       if (!res.ok || res.status !== 200) {
-        const data = await res.json();
+        const data = (await res.json()) as { statusText: string };
         toast.error(data.statusText);
       } else {
-        const data = await res.json();
+        const data = (await res.json()) as MetaScrapingProps;
         setMetaInfo(data);
         toast.success("Success!");
       }
@@ -291,10 +291,10 @@ export function MarkdownScraping({
         `/api/v1/scraping/markdown?url=${protocol}${currentLink}&key=${user.apiKey}`,
       );
       if (!res.ok || res.status !== 200) {
-        const data = await res.json();
+        const data = (await res.json()) as { statusText: string };
         toast.error(data.statusText);
       } else {
-        const data = await res.json();
+        const data = (await res.json()) as MarkdownScrapingProps;
         setMetaInfo(data);
         toast.success("Success!");
       }
@@ -387,10 +387,10 @@ export function TextScraping({
         `/api/v1/scraping/text?url=${protocol}${currentLink}&key=${user.apiKey}`,
       );
       if (!res.ok || res.status !== 200) {
-        const data = await res.json();
+        const data = (await res.json()) as { statusText: string };
         toast.error(data.statusText);
       } else {
-        const data = await res.json();
+        const data = (await res.json()) as MarkdownScrapingProps;
         setMetaInfo(data);
         toast.success("Success!");
       }

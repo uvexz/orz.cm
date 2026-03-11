@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     await handleEmailForwarding(data, configs);
 
     // Telegram
+    // 先检查是否全局配置了推送
     if (configs.enable_tg_email_push) {
       const shouldPush = shouldPushToTelegram(
         data,
@@ -36,6 +37,9 @@ export async function POST(req: Request) {
         await sendToTelegram(data, configs);
       }
     }
+
+    // 尝试向个人绑定的 Telegram 发送
+    await sendToPersonalTelegram(data, configs.tg_email_bot_token, configs.tg_email_template);
 
     return Response.json({ status: 200 });
   } catch (error) {
@@ -271,6 +275,55 @@ async function sendToTelegram(email: OriginalEmail, configs: any) {
     );
   } catch (error) {
     console.error("Error in sendToTelegram:", error);
+  }
+}
+
+import { prisma } from "@/lib/db";
+
+async function sendToPersonalTelegram(email: OriginalEmail, botToken: string, template?: string) {
+  if (!botToken) return;
+
+  try {
+    // 查找该邮箱所属的用户
+    const userEmail = await prisma.userEmail.findUnique({
+      where: { emailAddress: email.to },
+      include: { user: true },
+    });
+
+    if (!userEmail || !userEmail.user || !userEmail.user.tgChatId) {
+      return; // 找不到用户，或者用户没绑定 tgChatId
+    }
+
+    const chatId = userEmail.user.tgChatId;
+    const message = formatEmailForTelegram(email, template);
+
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: "Markdown",
+          disable_web_page_preview: true,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error(
+        `Failed to send personal message to Telegram chat ${chatId}:`,
+        error,
+      );
+    } else {
+      console.log(`Personal email successfully sent to Telegram chat ${chatId}`);
+    }
+  } catch (error) {
+    console.error("Error in sendToPersonalTelegram:", error);
   }
 }
 

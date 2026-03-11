@@ -1,14 +1,16 @@
 import { useLocale } from "next-intl";
-import TimeAgo from "timeago-react";
+import { formatDistanceToNow } from "date-fns";
+import { zhCN, enUS } from "date-fns/locale";
 
 export function TimeAgoIntl({ date }: { date: Date }) {
   const locale = useLocale();
 
   return (
-    <TimeAgo
-      className="text-nowrap"
-      datetime={date}
-      locale={locale === "zh" ? "zh_CN" : locale}
-    />
+    <span className="text-nowrap">
+      {formatDistanceToNow(new Date(date), {
+        addSuffix: true,
+        locale: locale === "zh" ? zhCN : enUS,
+      })}
+    </span>
   );
 }

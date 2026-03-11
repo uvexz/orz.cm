@@ -47,8 +47,13 @@ export async function POST(req: NextRequest) {
     if (res.expiration !== "-1" && now > expirationTime) {
       return Response.json("Expired[0001]");
     }
+    
+    // Import statement should be at the top, I'll update it separately if needed,
+    // but typically waitUntil can be imported from '@vercel/functions'.
+    // Let's modify the imports in a separate call if needed.
+    const requestTarget = res.target;
 
-    await createUserShortUrlMeta({
+    const trackPromise = createUserShortUrlMeta({
       urlId: res.id,
       click: 1,
       ip: ip ? ip.split(",")[0] : "127.0.0.1",
@@ -65,8 +70,14 @@ export async function POST(req: NextRequest) {
       os,
       cpu,
       isBot,
-    });
-    return Response.json(res.target);
+    }).catch((e) => console.error("Error creating url meta:", e));
+
+    if (process.env.VERCEL) {
+      const { waitUntil } = require("@vercel/functions");
+      waitUntil(trackPromise);
+    }
+
+    return Response.json(requestTarget);
   } catch (error) {
     return Response.json("Error[0003]");
   }

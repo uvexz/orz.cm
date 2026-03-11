@@ -210,7 +210,7 @@ export default function RealtimeGlobe({
       }
 
       globeInstanceRef.current = globe;
-    } catch (err) {}
+    } catch (err) { }
   }, [
     countries,
     locations,

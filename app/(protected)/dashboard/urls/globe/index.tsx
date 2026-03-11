@@ -61,6 +61,14 @@ interface ChartData {
   count: number;
 }
 
+interface LocationApiResponse {
+  error?: string;
+  data?: DatabaseLocation[];
+  totalClicks?: number;
+  rawRecords?: number;
+  timestamp: string;
+}
+
 function date2unix(date: Date): number {
   return Math.floor(date.getTime() / 1000);
 }
@@ -213,7 +221,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
       });
 
       const response = await fetch(`/api/url/admin/locations?${params}`);
-      const result = await response.json();
+      const result = (await response.json()) as LocationApiResponse;
 
       if (result.error) {
         // console.error("API Error:", result.error);
@@ -277,7 +285,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
         }),
       });
 
-      const result = await response.json();
+      const result = (await response.json()) as LocationApiResponse;
 
       if (result.error || !result.data || result.data.length === 0) {
         return;
@@ -292,7 +300,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
       setStats((prev) => ({
         totalClicks: prev.totalClicks + totalNewClicks,
         uniqueLocations: processedLocations.length,
-        rawRecords: prev.rawRecords + result.data.length,
+        rawRecords: prev.rawRecords + result.data!.length,
         lastFetch: result.timestamp,
       }));
 
@@ -382,7 +390,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
 
   const handleTrafficEventRef = useRef<
     (lat: number, lng: number, city: string) => void
-  >(() => {});
+  >(() => { });
 
   const createTrafficEvent = (lat: number, lng: number, city: string) => {
     if (handleTrafficEventRef.current) {

@@ -160,7 +160,7 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
           body: JSON.stringify({ ids: currentListIds }),
         });
         if (res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as Record<string, number>;
           setCurrentListClickData(data);
         }
       }
@@ -183,7 +183,7 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
       }),
     });
     if (res.ok) {
-      const data = await res.json();
+      const data = (await res.json()) as Record<string, unknown>;
       if (data) {
         toast.success("Successed!");
       }

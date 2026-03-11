@@ -120,7 +120,7 @@ export default function DomainList({ user, action }: DomainListProps) {
       }),
     });
     if (res.ok) {
-      const data = await res.json();
+      const data = (await res.json()) as Record<string, unknown>;
       if (data) {
         toast.success("Saved");
         handleRefresh();

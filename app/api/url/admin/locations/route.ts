@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { create } from "lodash";
+import { create } from "lodash-es";
 
 import { prisma } from "@/lib/db";
 import { checkUserStatus } from "@/lib/dto/user";

@@ -25,9 +25,15 @@ export interface LogsTableData {
   ip: string;
   link: string;
   createdAt: Date;
+  user?: { name?: string; email?: string };
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+interface LogsResponse {
+  logs: LogsTableData[];
+  total: number;
+}
+
+const fetcher = (url: string): Promise<LogsResponse> => fetch(url).then((res) => res.json());
 
 const getLogsUrl = (
   userId: string,
@@ -46,7 +52,7 @@ const getLogsUrl = (
   return `${target}?${params}`;
 };
 
-const LogsTable = ({ userId, target }) => {
+const LogsTable = ({ userId, target }: { userId: string; target: string }) => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -59,7 +65,7 @@ const LogsTable = ({ userId, target }) => {
     email: "",
   });
   const { mutate } = useSWRConfig();
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading } = useSWR<LogsResponse>(
     getLogsUrl(userId, page, filters, target),
     fetcher,
     {
@@ -160,38 +166,38 @@ const LogsTable = ({ userId, target }) => {
             <TableBody>
               {isLoading && logs.length === 0
                 ? Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="hidden sm:inline-block">
-                        <Skeleton className="h-2 w-[100px]" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-2 w-[80px]" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-2 w-[200px]" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-2 w-[200px]" />
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  <TableRow key={i}>
+                    <TableCell className="hidden sm:inline-block">
+                      <Skeleton className="h-2 w-[100px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-2 w-[80px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-2 w-[200px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-2 w-[200px]" />
+                    </TableCell>
+                  </TableRow>
+                ))
                 : logs.map((log) => (
-                    <TableRow
-                      className="grid grid-cols-5 items-center text-xs hover:bg-muted sm:grid-cols-6"
-                      key={log.id}
-                    >
-                      <TableCell className="hidden truncate p-2 sm:inline-block">
-                        {new Date(log.createdAt).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="p-2">{log.type}</TableCell>
-                      <TableCell className="col-span-3 max-w-full truncate p-2">
-                        {log.link}
-                      </TableCell>
-                      <TableCell className="max-w-md truncate p-2">
-                        {log.user?.name || log.user?.email}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  <TableRow
+                    className="grid grid-cols-5 items-center text-xs hover:bg-muted sm:grid-cols-6"
+                    key={log.id}
+                  >
+                    <TableCell className="hidden truncate p-2 sm:inline-block">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="p-2">{log.type}</TableCell>
+                    <TableCell className="col-span-3 max-w-full truncate p-2">
+                      {log.link}
+                    </TableCell>
+                    <TableCell className="max-w-md truncate p-2">
+                      {log.user?.name || log.user?.email}
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </div>
