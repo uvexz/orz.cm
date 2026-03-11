@@ -14,7 +14,7 @@ app.get('/', (c) => c.text('WR.DO Telegram Bot Worker is running!'))
 
 app.post('/webhook', async (c) => {
   const body = await c.req.json()
-  
+
   // Telegram may send various update types. We only care about messages for now.
   if (body.message && body.message.text) {
     const text = body.message.text
@@ -39,7 +39,7 @@ async function handleCommand(c: any, text: string, chatId: number, username?: st
     await sendMessage(
       token,
       chatId,
-      `👋 Welcome to WR.DO Telegram Bot!\n\nTo get started, please bind your WR.DO account by sending:\n\`/setkey <your_api_key>\`\n\nYou can find your API key at https://wr.do/dashboard/settings.`
+      `👋 Welcome to Orz.cm Telegram Bot!\n\nTo get started, please bind your Orz.cm account by sending:\n\`/setkey <your_api_key>\`\n\nYou can find your API key at https://orz.cm/dashboard/settings.`
     )
     return
   }
@@ -64,7 +64,7 @@ async function handleCommand(c: any, text: string, chatId: number, username?: st
       if (resp.ok) {
         // Save to KV!
         await c.env.TGBOT_KV.put(`user:${chatId}:apikey`, apiKey)
-        await sendMessage(token, chatId, "✅ Successfully bound your WR.DO account! You can now use `/short` and `/email` commands.")
+        await sendMessage(token, chatId, "✅ Successfully bound your Orz.cm account! You can now use `/short` and `/email` commands.")
       } else {
         await sendMessage(token, chatId, "❌ Failed to bind account. Please check if your API key is correct.")
       }
@@ -85,7 +85,7 @@ async function handleCommand(c: any, text: string, chatId: number, username?: st
   if (command === '/short') {
     const targetUrl = parts[1]
     const slug = parts[2] || generateRandomSlug(6) // 随机生成如果未提供
-    
+
     // 获取环境变量中配置的短链接域名，取第一个作为默认
     const defaultShortDomains = c.env.DEFAULT_SHORT_DOMAIN?.split(',').map((d: string) => d.trim()).filter(Boolean) || ['wr.do']
     const domain = parts[3] || defaultShortDomains[0]
@@ -128,7 +128,7 @@ async function handleCommand(c: any, text: string, chatId: number, username?: st
 
   if (command === '/email') {
     const prefix = parts[1] || generateRandomSlug(6) // 随机生成如果未提供
-    
+
     // 获取环境变量中配置的临时邮箱后缀，取第一个作为默认
     const defaultEmailDomains = c.env.DEFAULT_EMAIL_DOMAIN?.split(',').map((d: string) => d.trim()).filter(Boolean) || ['mx.wr.do']
     const domain = parts[2] || defaultEmailDomains[0]

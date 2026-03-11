@@ -248,9 +248,8 @@ export async function createUserEmail(
     data: {
       userId,
       emailAddress,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
   });
 }

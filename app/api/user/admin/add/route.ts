@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { checkUserStatus } from "@/lib/dto/user";
 import { getCurrentUser } from "@/lib/session";
-import { hashPassword } from "@/lib/utils";
+import { hashPassword } from "@/lib/password";
 
 export async function POST(req: Request) {
   try {

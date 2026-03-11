@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 
 import { prisma } from "@/lib/db";
-import { hashPassword } from "@/lib/utils";
+import { hashPassword } from "@/lib/password";
 import { userPasswordSchema } from "@/lib/validations/user";
 
 export type FormData = {

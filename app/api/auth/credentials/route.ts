@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { getMultipleConfigs } from "@/lib/dto/system-config";
-import { hashPassword, verifyPassword } from "@/lib/utils";
+import { hashPassword, verifyPassword } from "@/lib/password";
 
 export async function POST(req: NextRequest) {
   try {

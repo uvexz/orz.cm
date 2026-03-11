@@ -2,7 +2,7 @@ import { User, UserRole } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
-import { hashPassword, verifyPassword } from "../utils";
+import { hashPassword, verifyPassword } from "../password";
 
 export interface UpdateUserForm
   extends Omit<User, "id" | "createdAt" | "updatedAt" | "emailVerified"> {}
