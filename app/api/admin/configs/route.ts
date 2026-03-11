@@ -7,10 +7,11 @@ import {
 import { checkUserStatus } from "@/lib/dto/user";
 import { getCurrentUser } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
     if (user.role !== "ADMIN") {
       return Response.json("Unauthorized", { status: 401 });
     }
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
 
     return Response.json(configs, { status: 200 });
   } catch (error) {
+    if (error instanceof Response) return error;
     console.error("[Error]", error);
     return Response.json(error.message || "Server error", { status: 500 });
   }
@@ -49,7 +51,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
     if (user.role !== "ADMIN") {
       return Response.json("Unauthorized", { status: 401 });
     }
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
     }
     return Response.json("Invalid key", { status: 400 });
   } catch (error) {
+    if (error instanceof Response) return error;
     console.error("[Error]", error);
     return Response.json(error.message || "Server error", { status: 500 });
   }

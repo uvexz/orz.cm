@@ -9,10 +9,11 @@ import {
 import { checkUserStatus } from "@/lib/dto/user";
 import { getCurrentUser } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
     if (user.role !== "ADMIN") {
       return Response.json("Unauthorized", { status: 401 });
     }
