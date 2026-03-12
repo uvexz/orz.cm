@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 
 import { useState } from "react";
 import { UrlMeta, User } from "@prisma/client";
@@ -19,7 +20,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyPlaceholder } from "@/components/shared/empty-placeholder";
 import { Icons } from "@/components/shared/icons";
 
-import { DailyPVUVChart } from "./meta-chart";
+
+const DailyPVUVChart = dynamic(() => import("./meta-chart").then((mod) => mod.DailyPVUVChart), { ssr: false });
 
 export interface UrlMetaProps {
   user: Pick<User, "id" | "name" | "team">;

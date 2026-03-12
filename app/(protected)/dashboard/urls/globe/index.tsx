@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { RealtimeChart } from "./realtime-chart";
+
+const RealtimeChart = dynamic(() => import("./realtime-chart").then((mod) => mod.RealtimeChart), { ssr: false });
 import RealtimeLogs from "./realtime-logs";
 
 const RealtimeGlobe = dynamic(() => import("./realtime-globe"), { ssr: false });

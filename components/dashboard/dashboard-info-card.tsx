@@ -24,7 +24,7 @@ export async function UserInfoCard({
   icon?: keyof typeof Icons;
 }) {
   const Icon = Icons[icon || "arrowRight"];
-  const t = useTranslations("Components");
+  const t = await getTranslations("Components");
   return (
     <Card className="grids group bg-gray-50/70 backdrop-blur-lg dark:bg-primary-foreground">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
