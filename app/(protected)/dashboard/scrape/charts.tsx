@@ -1,10 +1,13 @@
+import dynamic from "next/dynamic";
 import {
   getScrapeStatsByTypeAndUserId,
   getScrapeStatsByUserId1,
 } from "@/lib/dto/scrape";
 
-import { LineChartMultiple } from "../../admin/line-chart-multiple";
-import { DailyPVUVChart } from "./daily-chart";
+
+const LineChartMultiple = dynamic(() => import("../../admin/line-chart-multiple").then((mod) => mod.LineChartMultiple), { ssr: false });
+
+const DailyPVUVChart = dynamic(() => import("./daily-chart").then((mod) => mod.DailyPVUVChart), { ssr: false });
 import LogsTable from "./logs";
 
 export default async function DashboardScrapeCharts({ id }: { id: string }) {

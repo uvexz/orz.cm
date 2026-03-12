@@ -14,7 +14,8 @@ import {
   DrawerTitle,
 } from "../ui/drawer";
 import { Input } from "../ui/input";
-import { EmailEditor } from "./EmailEditor";
+import dynamic from "next/dynamic";
+const EmailEditor = dynamic(() => import("./EmailEditor").then((mod) => mod.EmailEditor), { ssr: false });
 
 interface SendEmailModalProps {
   className?: string;
