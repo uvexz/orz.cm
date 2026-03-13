@@ -10,7 +10,7 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-app.get('/', (c) => c.text('WR.DO Telegram Bot Worker is running!'))
+app.get('/', (c) => c.text('Orz.cm Telegram Bot Worker is running!'))
 
 app.post('/webhook', async (c) => {
   const body = await c.req.json()
