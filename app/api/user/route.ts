@@ -2,12 +2,14 @@ import { auth } from "@/auth";
 
 import { deleteUserById } from "@/lib/dto/user";
 
-export const DELETE = auth(async (req) => {
-  if (!req.auth) {
+export async function DELETE() {
+  const session = await auth();
+
+  if (!session?.user) {
     return new Response("Not authenticated", { status: 401 });
   }
 
-  const currentUser = req.auth.user;
+  const currentUser = session.user;
   if (!currentUser || !currentUser?.id) {
     return new Response("Invalid user", { status: 401 });
   }
@@ -19,4 +21,4 @@ export const DELETE = auth(async (req) => {
   }
 
   return new Response("User deleted successfully!", { status: 200 });
-});
+}

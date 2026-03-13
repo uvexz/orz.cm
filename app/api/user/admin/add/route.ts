@@ -1,5 +1,4 @@
-import { prisma } from "@/lib/db";
-import { checkUserStatus } from "@/lib/dto/user";
+import { checkUserStatus, createUser, getUserRecordByEmail } from "@/lib/dto/user";
 import { getCurrentUser } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 
@@ -18,27 +17,20 @@ export async function POST(req: Request) {
       return Response.json("email and password is required", { status: 400 });
     }
 
-    const has_user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const has_user = await getUserRecordByEmail(normalizedEmail);
 
     if (has_user) {
       return Response.json("User already exists", { status: 400 });
     }
 
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashPassword(password),
-        active: 1,
-        role: "USER",
-        team,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+    const newUser = await createUser({
+      name,
+      email: normalizedEmail,
+      password: hashPassword(password),
+      active: 1,
+      role: "USER",
+      team,
     });
     return Response.json(newUser.id, { status: 200 });
   } catch (error) {

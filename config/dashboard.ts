@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/db/types";
 
 import { SidebarNavItem } from "types";
 

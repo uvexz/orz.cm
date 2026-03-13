@@ -1,16 +1,33 @@
 "use server";
 
-import { User, UserRole } from "@prisma/client";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  ne,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { userRecords, users } from "@/lib/db/schema";
 import {
   createUserRecordSchema,
   updateUserRecordSchema,
 } from "@/lib/validations/record";
 
+type UserRole = "ADMIN" | "USER";
+type UserInfo = {
+  name: string | null;
+  email: string | null;
+};
+
 export type UserRecordFormData = {
-  id?: string; // null on created
-  userId?: string; // null on created
+  id?: string;
+  userId?: string;
   record_id: string;
   zone_id: string;
   zone_name: string;
@@ -24,9 +41,13 @@ export type UserRecordFormData = {
   tags: string;
   created_on?: string;
   modified_on?: string;
-  active: number; // 0: inactive, 1: active, 2: pending, 3: rejected
-  user: Pick<User, "name" | "email">;
+  active: number;
+  user: UserInfo;
 };
+
+const generateId = () => crypto.randomUUID().replace(/-/g, "");
+
+const toDate = (value?: string) => (value ? new Date(value) : null);
 
 export async function createUserRecord(
   userId: string,
@@ -50,8 +71,10 @@ export async function createUserRecord(
       active,
     } = createUserRecordSchema.parse(data);
 
-    const res = await prisma.userRecord.create({
-      data: {
+    const [record] = await db
+      .insert(userRecords)
+      .values({
+        id: generateId(),
         userId,
         record_id,
         zone_id,
@@ -64,16 +87,14 @@ export async function createUserRecord(
         proxiable,
         comment,
         tags,
-        created_on,
-        modified_on,
+        created_on: toDate(created_on),
+        modified_on: toDate(modified_on),
         active,
-      },
-    });
+      })
+      .returning();
 
-    // revalidatePath('/dashboard/settings');
-    return { status: "success", data: res };
+    return { status: "success", data: record };
   } catch (error) {
-    // console.log(error);
     return { status: error };
   }
 }
@@ -101,11 +122,9 @@ export async function updateUserRecordReview(
       active,
     } = createUserRecordSchema.parse(data);
 
-    const res = await prisma.userRecord.update({
-      where: {
-        id,
-      },
-      data: {
+    const [record] = await db
+      .update(userRecords)
+      .set({
         userId,
         record_id,
         zone_id,
@@ -118,12 +137,14 @@ export async function updateUserRecordReview(
         proxiable,
         comment,
         tags,
-        created_on,
-        modified_on,
+        created_on: toDate(created_on),
+        modified_on: toDate(modified_on),
         active,
-      },
-    });
-    return { status: "success", data: res };
+      })
+      .where(eq(userRecords.id, id))
+      .returning();
+
+    return { status: "success", data: record };
   } catch (error) {
     console.log(error);
     return { status: error };
@@ -137,58 +158,51 @@ export async function getUserRecords(
   size: number,
   role: UserRole = "USER",
 ) {
-  const option =
-    role === "USER"
-      ? {
-          userId,
-          // active: {
-          //   not: 2,
-          // },
-        }
-      : {
-          // active: {
-          //   not: 2,
-          // },
-        };
-  const [total, list] = await prisma.$transaction([
-    prisma.userRecord.count({
-      where: option,
-    }),
-    prisma.userRecord.findMany({
-      where: option,
-      skip: (page - 1) * size,
-      take: size,
-      select: {
-        id: true,
-        record_id: true,
-        zone_id: true,
-        zone_name: true,
-        name: true,
-        type: true,
-        content: true,
-        ttl: true,
-        proxied: true,
-        proxiable: true,
-        comment: true,
-        tags: true,
-        created_on: true,
-        modified_on: true,
-        active: true,
-        userId: true,
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
+  const whereClause = role === "USER" ? eq(userRecords.userId, userId) : undefined;
+
+  let totalQuery = db
+    .select({ count: sql<number>`count(*)` })
+    .from(userRecords)
+    .$dynamic();
+  let listQuery = db
+    .select({
+      id: userRecords.id,
+      record_id: userRecords.record_id,
+      zone_id: userRecords.zone_id,
+      zone_name: userRecords.zone_name,
+      name: userRecords.name,
+      type: userRecords.type,
+      content: userRecords.content,
+      ttl: userRecords.ttl,
+      proxied: userRecords.proxied,
+      proxiable: userRecords.proxiable,
+      comment: userRecords.comment,
+      tags: userRecords.tags,
+      created_on: userRecords.created_on,
+      modified_on: userRecords.modified_on,
+      active: userRecords.active,
+      userId: userRecords.userId,
+      user: {
+        name: users.name,
+        email: users.email,
       },
-      orderBy: {
-        modified_on: "desc",
-      },
-    }),
-  ]);
+    })
+    .from(userRecords)
+    .leftJoin(users, eq(userRecords.userId, users.id))
+    .orderBy(desc(userRecords.modified_on))
+    .limit(size)
+    .offset((page - 1) * size)
+    .$dynamic();
+
+  if (whereClause) {
+    totalQuery = totalQuery.where(whereClause);
+    listQuery = listQuery.where(whereClause);
+  }
+
+  const [[totalResult], list] = await Promise.all([totalQuery, listQuery]);
+
   return {
-    total,
+    total: Number(totalResult?.count ?? 0),
     list,
   };
 }
@@ -211,19 +225,41 @@ export async function getUserRecordCount(
       999,
     );
 
-    const [total, month_total] = await prisma.$transaction([
-      prisma.userRecord.count({
-        where: role === "USER" ? { userId } : {},
-      }),
-      prisma.userRecord.count({
-        where:
-          role === "USER"
-            ? { userId, created_on: { gte: start, lte: end } }
-            : { created_on: { gte: start, lte: end } },
-      }),
+    const baseWhere = role === "USER" ? eq(userRecords.userId, userId) : undefined;
+
+    const [totalRows, monthRows] = await Promise.all([
+      baseWhere
+        ? db
+            .select({ count: sql<number>`count(*)` })
+            .from(userRecords)
+            .where(baseWhere)
+        : db.select({ count: sql<number>`count(*)` }).from(userRecords),
+      baseWhere
+        ? db
+            .select({ count: sql<number>`count(*)` })
+            .from(userRecords)
+            .where(
+              and(
+                baseWhere,
+                gte(userRecords.created_on, start),
+                lte(userRecords.created_on, end),
+              ),
+            )
+        : db
+            .select({ count: sql<number>`count(*)` })
+            .from(userRecords)
+            .where(
+              and(
+                gte(userRecords.created_on, start),
+                lte(userRecords.created_on, end),
+              ),
+            ),
     ]);
 
-    return { total, month_total };
+    return {
+      total: Number(totalRows[0]?.count ?? 0),
+      month_total: Number(monthRows[0]?.count ?? 0),
+    };
   } catch (error) {
     return { total: -1, month_total: -1 };
   }
@@ -233,34 +269,43 @@ export async function getUserRecordStatus(
   userId: string,
   role: UserRole = "USER",
 ) {
-  const whereCondition = role === "USER" ? { userId } : {};
+  const whereClause = role === "USER" ? eq(userRecords.userId, userId) : undefined;
 
-  const statusCounts = await prisma.userRecord.groupBy({
-    by: ["active"],
-    where: whereCondition,
-    _count: {
-      _all: true,
-    },
-  });
-
-  const total = await prisma.userRecord.count({
-    where: whereCondition,
-  });
+  const [statusCounts, totalRows] = await Promise.all([
+    whereClause
+      ? db
+          .select({
+            active: userRecords.active,
+            count: sql<number>`count(*)`,
+          })
+          .from(userRecords)
+          .where(whereClause)
+          .groupBy(userRecords.active)
+      : db
+          .select({
+            active: userRecords.active,
+            count: sql<number>`count(*)`,
+          })
+          .from(userRecords)
+          .groupBy(userRecords.active),
+    whereClause
+      ? db
+          .select({ count: sql<number>`count(*)` })
+          .from(userRecords)
+          .where(whereClause)
+      : db.select({ count: sql<number>`count(*)` }).from(userRecords),
+  ]);
 
   const counts = statusCounts.reduce(
     (acc, item) => {
-      // if (!item.active) {
-      //   acc[0] = item._count._all;
-      //   return acc;
-      // }
-      acc[item.active ?? 0] = item._count._all;
+      acc[item.active ?? 0] = Number(item.count ?? 0);
       return acc;
     },
     {} as Record<number, number>,
   );
 
   return {
-    total,
+    total: Number(totalRows[0]?.count ?? 0),
     inactive: counts[0] || 0,
     active: counts[1] || 0,
     pending: counts[2] || 0,
@@ -276,18 +321,14 @@ export async function getUserRecordByTypeNameContent(
   zone_name: string,
   active: number = 1,
 ) {
-  return await prisma.userRecord.findMany({
-    where: {
-      // userId,
-      type,
-      // content,
-      name,
-      zone_name,
-      active: {
-        not: 3,
-      },
-    },
-  });
+  const conditions: SQL[] = [
+    eq(userRecords.type, type),
+    eq(userRecords.name, name),
+    eq(userRecords.zone_name, zone_name),
+    ne(userRecords.active, 3),
+  ];
+
+  return await db.select().from(userRecords).where(and(...conditions));
 }
 
 export async function deleteUserRecord(
@@ -296,14 +337,18 @@ export async function deleteUserRecord(
   zone_id: string,
   active: number = 1,
 ) {
-  return await prisma.userRecord.delete({
-    where: {
-      userId,
-      record_id,
-      zone_id,
-      // active,
-    },
-  });
+  const [record] = await db
+    .delete(userRecords)
+    .where(
+      and(
+        eq(userRecords.userId, userId),
+        eq(userRecords.record_id, record_id),
+        eq(userRecords.zone_id, zone_id),
+      ),
+    )
+    .returning();
+
+  return record ?? null;
 }
 
 export async function updateUserRecord(
@@ -325,15 +370,9 @@ export async function updateUserRecord(
       active,
     } = updateUserRecordSchema.parse(data);
 
-    const res = await prisma.userRecord.update({
-      where: {
-        userId,
-        record_id,
-        zone_id,
-        zone_name,
-        // active: active,
-      },
-      data: {
+    const [record] = await db
+      .update(userRecords)
+      .set({
         type,
         name,
         content,
@@ -341,29 +380,39 @@ export async function updateUserRecord(
         comment,
         tags,
         proxied,
-        modified_on: data.modified_on,
-      },
-    });
+        modified_on: toDate(data.modified_on),
+      })
+      .where(
+        and(
+          eq(userRecords.userId, userId),
+          eq(userRecords.record_id, record_id),
+          eq(userRecords.zone_id, zone_id),
+          eq(userRecords.zone_name, zone_name),
+        ),
+      )
+      .returning();
 
-    return { status: "success", data: res };
+    return { status: "success", data: record };
   } catch (error) {
     return { status: error };
   }
 }
+
 export async function updateUserRecordState(
   userId: string,
   record_id: string,
   zone_id: string,
   active: number,
 ) {
-  return await prisma.userRecord.update({
-    where: {
-      // userId,
-      record_id,
-      zone_id,
-    },
-    data: {
+  const [record] = await db
+    .update(userRecords)
+    .set({
       active,
-    },
-  });
+    })
+    .where(
+      and(eq(userRecords.record_id, record_id), eq(userRecords.zone_id, zone_id)),
+    )
+    .returning();
+
+  return record ?? null;
 }

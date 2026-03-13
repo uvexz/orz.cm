@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { User, UserEmail } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 import randomName from "@scaleway/random-name";
 import {
   PanelLeftClose,
@@ -108,9 +108,11 @@ export default function EmailSidebar({
     }
   }, [domainSuffix, emailDomains]);
 
-  if (!selectedEmailAddress && data && data.list.length > 0) {
-    onSelectEmail(data.list[0].emailAddress);
-  }
+  useEffect(() => {
+    if (!selectedEmailAddress && data && data.list.length > 0) {
+      onSelectEmail(data.list[0].emailAddress);
+    }
+  }, [data, onSelectEmail, selectedEmailAddress]);
 
   const userEmails = data?.list || [];
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
@@ -182,7 +184,9 @@ export default function EmailSidebar({
     });
   };
 
-  const handleOpenEditEmail = async (email: UserEmail) => {
+  const handleOpenEditEmail = async (
+    email: Pick<UserEmailList, "id" | "emailAddress">,
+  ) => {
     onSelectEmail(email.emailAddress);
     setDomainSuffix(email.emailAddress.split("@")[1]);
     if (selectedEmailAddress === email.emailAddress) {
@@ -555,7 +559,11 @@ export default function EmailSidebar({
 
       {/* 创建\编辑邮箱的 Modal */}
       {showEmailModal && (
-        <Modal showModal={showEmailModal} setShowModal={setShowEmailModal}>
+        <Modal
+          showModal={showEmailModal}
+          setShowModal={setShowEmailModal}
+          title={isEdit ? t("Edit email") : t("Create new email")}
+        >
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold">
               {isEdit ? t("Edit email") : t("Create new email")}
@@ -655,7 +663,11 @@ export default function EmailSidebar({
 
       {/* 删除邮箱的 Modal */}
       {showDeleteModal && (
-        <Modal showModal={showDeleteModal} setShowModal={setShowDeleteModal}>
+        <Modal
+          showModal={showDeleteModal}
+          setShowModal={setShowDeleteModal}
+          title={t("Delete email")}
+        >
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold">{t("Delete email")}</h2>
             <p className="mb-4 text-sm text-neutral-600">

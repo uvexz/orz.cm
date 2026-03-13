@@ -11,12 +11,12 @@ import { getCurrentUser } from "@/lib/session";
 // 查询单个 UserEmail
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = checkUserStatus(await getCurrentUser());
   if (user instanceof Response) return user;
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const userEmail = await getUserEmailById(id);
@@ -39,12 +39,12 @@ export async function GET(
 // 更新 UserEmail 的 emailAddress
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = checkUserStatus(await getCurrentUser());
   if (user instanceof Response) return user;
 
-  const { id } = params;
+  const { id } = await params;
   const { emailAddress } = await req.json();
 
   if (!emailAddress) {
@@ -59,7 +59,7 @@ export async function PUT(
     if (error.message === "User email not found or already deleted") {
       return NextResponse.json(error.message, { status: 404 });
     }
-    if (error.code === "P2002") {
+    if (error.code === "UNIQUE_CONSTRAINT") {
       return NextResponse.json("Email address already exists", { status: 409 });
     }
     return NextResponse.json("Internal Server Error", { status: 500 });
@@ -69,12 +69,12 @@ export async function PUT(
 // 删除 UserEmail
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = checkUserStatus(await getCurrentUser());
   if (user instanceof Response) return user;
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     await deleteUserEmail(id);

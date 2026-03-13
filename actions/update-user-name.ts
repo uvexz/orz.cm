@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { eq } from "drizzle-orm";
 
-import { prisma } from "@/lib/db";
+import { syncBetterAuthProfileForAppUser } from "@/lib/auth/server";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { userNameSchema } from "@/lib/validations/user";
 
 export type FormData = {
@@ -21,14 +24,15 @@ export async function updateUserName(userId: string, data: FormData) {
     const { name } = userNameSchema.parse(data);
 
     // Update the user name.
-    await prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
+    await db
+      .update(users)
+      .set({
         name: name,
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    await syncBetterAuthProfileForAppUser(userId);
 
     revalidatePath("/dashboard/settings");
     return { status: "success" };

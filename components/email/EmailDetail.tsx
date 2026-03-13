@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ForwardEmail } from "@prisma/client";
+import type { ForwardEmail } from "@/lib/db/types";
 import {
   File,
   FileArchive,
@@ -288,6 +288,7 @@ export default function EmailDetail({
         <Modal
           showModal={!!previewImage}
           setShowModal={() => setPreviewImage(null)}
+          title={t("Image preview")}
         >
           <div className="flex flex-col items-center p-2">
             <img

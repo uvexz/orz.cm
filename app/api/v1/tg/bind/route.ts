@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkApiKey } from "@/lib/dto/api-key";
-import { prisma } from "@/lib/db";
+import { updateUserTelegramBinding } from "@/lib/dto/user";
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,15 +35,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 更新用户表，保存 tgChatId 和 tgUsername
-    await prisma.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        tgChatId: chatId.toString(),
-        tgUsername: username || null,
-      },
-    });
+    await updateUserTelegramBinding(
+      user.id,
+      chatId.toString(),
+      username || null,
+    );
 
     return NextResponse.json(
       { status: "success", message: "Successfully bound Telegram Account." },

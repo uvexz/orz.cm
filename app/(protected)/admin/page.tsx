@@ -1,4 +1,3 @@
-import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
@@ -19,14 +18,12 @@ import {
 } from "@/components/dashboard/dashboard-info-card";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
-
-
-const DailyPVUVChart = dynamic(() => import("../dashboard/scrape/daily-chart").then((mod) => mod.DailyPVUVChart), { ssr: false });
 import LogsTable from "../dashboard/scrape/logs";
-
-const RadialShapeChart = dynamic(() => import("./api-key-active-chart").then((mod) => mod.RadialShapeChart), { ssr: false });
-
-const LineChartMultiple = dynamic(() => import("./line-chart-multiple").then((mod) => mod.LineChartMultiple), { ssr: false });
+import {
+  DailyPVUVChart,
+  LineChartMultiple,
+  RadialShapeChart,
+} from "./admin-charts";
 
 export const metadata = constructMetadata({
   title: "Admin",

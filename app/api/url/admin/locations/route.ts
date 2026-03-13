@@ -1,11 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { create } from "lodash-es";
+import { and, desc, eq, gt, gte, isNotNull, lte } from "drizzle-orm";
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { urlMetas, userUrls } from "@/lib/db/schema";
 import { checkUserStatus } from "@/lib/dto/user";
 import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+function mapLocationRow(
+  row: {
+    latitude: string | null;
+    longitude: string | null;
+    click: number;
+    city: string | null;
+    country: string | null;
+    device: string | null;
+    browser: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    url: string | null;
+    target: string | null;
+    prefix: string | null;
+  },
+) {
+  return {
+    latitude: row.latitude,
+    longitude: row.longitude,
+    click: row.click,
+    city: row.city,
+    country: row.country,
+    device: row.device,
+    browser: row.browser,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    userUrl: {
+      url: row.url ?? "",
+      target: row.target ?? "",
+      prefix: row.prefix ?? "",
+    },
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,47 +77,37 @@ export async function GET(request: NextRequest) {
       throw new Error("Invalid startAt or endAt parameters");
     }
 
-    const whereClause: any = {
-      ...(isAdmin === "true" ? {} : { userUrl: { userId: user.id } }),
-      createdAt: {
-        gte: startDate,
-        lte: endDate,
-      },
-      latitude: {
-        not: null,
-      },
-      longitude: {
-        not: null,
-      },
-    };
+    const conditions = [
+      gte(urlMetas.createdAt, startDate),
+      lte(urlMetas.createdAt, endDate),
+      isNotNull(urlMetas.latitude),
+      isNotNull(urlMetas.longitude),
+      ...(isAdmin === "true" ? [] : [eq(userUrls.userId, user.id)]),
+      ...(country ? [eq(urlMetas.country, country)] : []),
+    ];
 
-    if (country && country !== "") {
-      whereClause.country = country;
-    }
+    const rawRows = await db
+      .select({
+        latitude: urlMetas.latitude,
+        longitude: urlMetas.longitude,
+        click: urlMetas.click,
+        city: urlMetas.city,
+        country: urlMetas.country,
+        device: urlMetas.device,
+        browser: urlMetas.browser,
+        createdAt: urlMetas.createdAt,
+        updatedAt: urlMetas.updatedAt,
+        url: userUrls.url,
+        target: userUrls.target,
+        prefix: userUrls.prefix,
+      })
+      .from(urlMetas)
+      .leftJoin(userUrls, eq(urlMetas.urlId, userUrls.id))
+      .where(and(...conditions))
+      .orderBy(desc(urlMetas.updatedAt))
+      .limit(2000);
 
-    const rawData = await prisma.urlMeta.findMany({
-      where: whereClause,
-      select: {
-        latitude: true,
-        longitude: true,
-        click: true,
-        city: true,
-        country: true,
-        device: true,
-        browser: true,
-        createdAt: true,
-        updatedAt: true,
-        userUrl: {
-          select: {
-            url: true,
-            target: true,
-            prefix: true,
-          },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
-      take: 2000,
-    });
+    const rawData = rawRows.map(mapLocationRow);
 
     // console.log("Raw data fetched:", rawData.length, "records");
 
@@ -111,7 +136,7 @@ export async function GET(request: NextRequest) {
       if (item.latitude && item.longitude) {
         const lat = Math.round(Number(item.latitude) * 100) / 100;
         const lng = Math.round(Number(item.longitude) * 100) / 100;
-        const key = `${lat},${lng},${item.createdAt},${item.userUrl.url},${item.userUrl.prefix}`;
+        const key = `${lat},${lng},${item.createdAt},${item.userUrl?.url || ""},${item.userUrl?.prefix || ""}`;
 
         if (locationMap.has(key)) {
           const existing = locationMap.get(key)!;
@@ -133,7 +158,11 @@ export async function GET(request: NextRequest) {
             createdAt: item.createdAt,
             device: item.device || "",
             browser: item.browser || "",
-            userUrl: item.userUrl,
+            userUrl: item.userUrl || {
+              url: "",
+              target: "",
+              prefix: "",
+            },
           });
         }
       }
@@ -208,42 +237,35 @@ export async function POST(request: NextRequest) {
       throw new Error("Invalid lastUpdate parameter");
     }
 
-    const whereClause: any = {
-      ...(isAdmin ? {} : { userUrl: { userId: user.id } }),
-      createdAt: {
-        gt: sinceDate,
-      },
-      latitude: {
-        not: null,
-      },
-      longitude: {
-        not: null,
-      },
-    };
+    const newRows = await db
+      .select({
+        latitude: urlMetas.latitude,
+        longitude: urlMetas.longitude,
+        click: urlMetas.click,
+        city: urlMetas.city,
+        country: urlMetas.country,
+        device: urlMetas.device,
+        browser: urlMetas.browser,
+        createdAt: urlMetas.createdAt,
+        updatedAt: urlMetas.updatedAt,
+        url: userUrls.url,
+        target: userUrls.target,
+        prefix: userUrls.prefix,
+      })
+      .from(urlMetas)
+      .leftJoin(userUrls, eq(urlMetas.urlId, userUrls.id))
+      .where(
+        and(
+          gt(urlMetas.createdAt, sinceDate),
+          isNotNull(urlMetas.latitude),
+          isNotNull(urlMetas.longitude),
+          ...(isAdmin ? [] : [eq(userUrls.userId, user.id)]),
+        ),
+      )
+      .orderBy(desc(urlMetas.updatedAt))
+      .limit(1000);
 
-    const newData = await prisma.urlMeta.findMany({
-      where: whereClause,
-      select: {
-        latitude: true,
-        longitude: true,
-        click: true,
-        city: true,
-        country: true,
-        device: true,
-        browser: true,
-        createdAt: true,
-        updatedAt: true,
-        userUrl: {
-          select: {
-            url: true,
-            target: true,
-            prefix: true,
-          },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
-      take: 1000,
-    });
+    const newData = newRows.map(mapLocationRow);
 
     // console.log("Realtime updates fetched:", newData.length, "records");
 

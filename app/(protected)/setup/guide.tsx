@@ -84,7 +84,7 @@ export default function StepGuide({
   };
 
   return (
-    <Modal className="md:max-w-2xl">
+    <Modal className="md:max-w-2xl" title={t("Admin Setup Guide")}>
       <div className="w-full px-4 py-2 md:px-8 md:py-4">
         <div className="mb-6 mt-3 flex items-center justify-between gap-4">
           <h2 className="text-2xl font-bold">{t("Admin Setup Guide")}</h2>

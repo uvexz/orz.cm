@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { User, UserSendEmail } from "@prisma/client";
+import type { User, UserSendEmail } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import useSWR from "swr";
 

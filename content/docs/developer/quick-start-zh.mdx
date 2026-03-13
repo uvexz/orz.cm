@@ -15,7 +15,7 @@ git clone https://github.com/oiov/wr.do
 
 ```bash
 cd wrdo
-pnpm install
+bun install
 ```
 
 ### 创建 `.env` 文件
@@ -48,23 +48,21 @@ DATABASE_URL=
 ### 部署 Postgres
 
 ```bash
-pnpm postinstall
-pnpm db:push
+bun run db:push
 ```
 
-#### 或者手动初始化
+#### 或者先生成 SQL
 
-通过 [migration.sql](https://github.com/oiov/wr.do/blob/main/prisma/migrations)，
-将 SQL 代码复制到数据库中以初始化数据库结构。
+如果你希望先检查 SQL 再执行，可以运行 `bun run db:generate`，再用数据库工具手动应用 `drizzle/` 目录下生成的文件。
 
 ### 添加 AUTH_SECRET 环境变量
 
-`AUTH_SECRET` 环境变量用于加密 token 和邮件验证哈希（NextAuth.js）。
-你可以通过 [https://generate-secret.vercel.app/32](https://generate-secret.vercel.app/32) 生成
+`AUTH_SECRET` 环境变量用于签名 Better Auth 的会话和验证流程。
+你可以通过 [https://generate-secret.vercel.app/32](https://generate-secret.vercel.app/32) 生成。
 
-`AUTH_URL` 是用于 NextAuth.js 的回调 URL。
+`AUTH_URL` 是 Better Auth 使用的基础回调 URL。
 
-注意，`AUTH_URL` 与 `NEXT_PUBLIC_APP_URL` 需要保持一致
+注意，`AUTH_URL` 与 `NEXT_PUBLIC_APP_URL` 需要保持一致。
 
 ```js title=".env"
 AUTH_SECRET=10000032bsfasfafk4lkkfsa
@@ -193,7 +191,7 @@ GITHUB_TOKEN=
 ## 6. 启动开发服务器
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 通过浏览器访问：[http://localhost:3000](http://localhost:3000)

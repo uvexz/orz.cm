@@ -2,7 +2,7 @@
 
 import { Dispatch, SetStateAction, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, UserRole } from "@prisma/client";
+import type { User, UserRole } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";

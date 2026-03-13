@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { updateUserName, type FormData } from "@/actions/update-user-name";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User } from "@prisma/client";
-import { useSession } from "next-auth/react";
+import type { User } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { authClient } from "@/lib/auth-client";
 import { userNameSchema } from "@/lib/validations/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ interface UserNameFormProps {
 }
 
 export function UserNameForm({ user }: UserNameFormProps) {
-  const { update } = useSession();
+  const session = authClient.useSession();
   const [updated, setUpdated] = useState(false);
   const [isPending, startTransition] = useTransition();
   const updateUserNameWithId = updateUserName.bind(null, user.id);
@@ -52,7 +52,7 @@ export function UserNameForm({ user }: UserNameFormProps) {
           description: "Your name was not updated. Please try again.",
         });
       } else {
-        await update();
+        await session.refetch();
         setUpdated(false);
         toast.success("Your name has been updated.");
       }

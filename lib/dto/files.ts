@@ -1,9 +1,30 @@
-import { Prisma, UserFile } from "@prisma/client";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  ilike,
+  inArray,
+  lt,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
-import { prisma } from "../db";
+import { db } from "../db";
+import { userFiles, users } from "../db/schema";
 import { bytesToStorageValue, storageValueToBytes } from "../utils";
 
-export interface UserFileData extends UserFile {
+type UserFileRow = typeof userFiles.$inferSelect;
+type UserFileColumnsRow = UserFileRow & {
+  userName: string | null;
+  userEmail: string | null;
+};
+
+const userFileColumns = getTableColumns(userFiles);
+
+export interface UserFileData extends UserFileRow {
   user: {
     name: string;
     email: string;
@@ -61,23 +82,87 @@ export interface QueryUserFileOptions {
   order?: "asc" | "desc";
 }
 
+function generateId() {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
+function mapUserFileRow(row: UserFileColumnsRow): UserFileData {
+  const { userName, userEmail, ...file } = row;
+  return {
+    ...file,
+    user: {
+      name: userName ?? "",
+      email: userEmail ?? "",
+    },
+  };
+}
+
+function buildUserFileConditions(options: QueryUserFileOptions): SQL[] {
+  const conditions: SQL[] = [];
+
+  if (options.bucket) {
+    conditions.push(eq(userFiles.bucket, options.bucket));
+  }
+  if (options.userId) {
+    conditions.push(eq(userFiles.userId, options.userId));
+  }
+  if (options.providerName) {
+    conditions.push(eq(userFiles.providerName, options.providerName));
+  }
+  if (options.status !== undefined) {
+    conditions.push(eq(userFiles.status, options.status));
+  }
+  if (options.channel) {
+    conditions.push(eq(userFiles.channel, options.channel));
+  }
+  if (options.platform) {
+    conditions.push(eq(userFiles.platform, options.platform));
+  }
+  if (options.shortUrlId) {
+    conditions.push(eq(userFiles.shortUrlId, options.shortUrlId));
+  }
+  if (options.name) {
+    conditions.push(ilike(userFiles.name, `%${options.name}%`));
+  }
+  if (options.size) {
+    conditions.push(gte(userFiles.size, bytesToStorageValue(options.size)));
+  }
+  if (options.mimeType) {
+    conditions.push(ilike(userFiles.mimeType, `%${options.mimeType}%`));
+  }
+
+  return conditions;
+}
+
+async function getJoinedUserFileById(id: string) {
+  const [row] = await db
+    .select({
+      ...userFileColumns,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(userFiles)
+    .leftJoin(users, eq(userFiles.userId, users.id))
+    .where(eq(userFiles.id, id))
+    .limit(1);
+
+  return row ? mapUserFileRow(row) : null;
+}
+
 // 创建文件记录
 export async function createUserFile(data: CreateUserFileInput) {
   try {
-    const userFile = await prisma.userFile.create({
-      data: {
+    const [created] = await db
+      .insert(userFiles)
+      .values({
+        id: generateId(),
         ...data,
+        createdAt: new Date(),
         updatedAt: new Date(),
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+      })
+      .returning({ id: userFiles.id });
+
+    const userFile = created ? await getJoinedUserFileById(created.id) : null;
     return { success: true, data: userFile };
   } catch (error) {
     console.error("Failed to create file record:", error);
@@ -88,17 +173,7 @@ export async function createUserFile(data: CreateUserFileInput) {
 // 根据ID查询文件记录
 export async function getUserFileById(id: string) {
   try {
-    const userFile = await prisma.userFile.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const userFile = await getJoinedUserFileById(id);
     return { success: true, data: userFile };
   } catch (error) {
     console.error("Failed to query file record:", error);
@@ -113,69 +188,70 @@ export async function getUserFiles(options: QueryUserFileOptions = {}) {
       bucket,
       userId,
       providerName,
-      status,
-      channel,
-      platform,
-      shortUrlId,
-      name,
-      size,
-      mimeType,
       page = 1,
       limit = 20,
       orderBy = "createdAt",
       order = "desc",
     } = options;
 
-    const where: Prisma.UserFileWhereInput = {
-      bucket,
-      ...(status !== undefined && { status }),
-      ...(userId && { userId }),
-      ...(providerName && { providerName }),
-      ...(channel && { channel }),
-      ...(platform && { platform }),
-      ...(shortUrlId && { shortUrlId }),
-      ...(name && { name: { contains: name, mode: "insensitive" } }),
-      ...(size && { size: { gte: bytesToStorageValue(size) } }),
-      ...(mimeType && {
-        mimeType: { contains: mimeType, mode: "insensitive" },
-      }),
-    };
+    const whereConditions = buildUserFileConditions(options);
+    const whereClause =
+      whereConditions.length > 0 ? and(...whereConditions) : undefined;
+    const orderColumn =
+      orderBy === "size"
+        ? userFiles.size
+        : orderBy === "lastModified"
+          ? userFiles.lastModified
+          : userFiles.createdAt;
+    const orderExpr = order === "asc" ? asc(orderColumn) : desc(orderColumn);
 
-    const [files, total, totalSize] = await Promise.all([
-      prisma.userFile.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: { [orderBy]: order },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.userFile.count({ where }),
-      prisma.userFile.aggregate({
-        where: {
-          bucket,
-          providerName,
-          status: 1,
-          ...(userId && { userId }),
-        },
-        _sum: { size: true },
-        _count: {
-          id: true,
-        },
-      }),
+    let listQuery = db
+      .select({
+        ...userFileColumns,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(userFiles)
+      .leftJoin(users, eq(userFiles.userId, users.id))
+      .orderBy(orderExpr)
+      .limit(limit)
+      .offset((page - 1) * limit)
+      .$dynamic();
+
+    let totalQuery = db
+      .select({ count: sql<number>`count(*)` })
+      .from(userFiles)
+      .$dynamic();
+
+    if (whereClause) {
+      listQuery = listQuery.where(whereClause);
+      totalQuery = totalQuery.where(whereClause);
+    }
+
+    const [files, [totalResult], [totalSizeResult]] = await Promise.all([
+      listQuery,
+      totalQuery,
+      db
+        .select({
+          totalSize: sql<number>`coalesce(sum(${userFiles.size}), 0)`,
+          totalFiles: sql<number>`count(${userFiles.id})`,
+        })
+        .from(userFiles)
+        .where(
+          and(
+            eq(userFiles.bucket, bucket ?? ""),
+            eq(userFiles.providerName, providerName ?? ""),
+            eq(userFiles.status, 1),
+            ...(userId ? [eq(userFiles.userId, userId)] : []),
+          ),
+        ),
     ]);
 
     return {
-      total,
-      totalSize: storageValueToBytes(totalSize._sum.size || 0),
-      totalFiles: totalSize._count.id || 0,
-      list: files,
+      total: Number(totalResult?.count ?? 0),
+      totalSize: storageValueToBytes(Number(totalSizeResult?.totalSize ?? 0)),
+      totalFiles: Number(totalSizeResult?.totalFiles ?? 0),
+      list: files.map((file) => mapUserFileRow(file)),
     };
   } catch (error) {
     console.error("[GetUserFiles Error]", error);
@@ -186,21 +262,16 @@ export async function getUserFiles(options: QueryUserFileOptions = {}) {
 // 更新文件记录
 export async function updateUserFile(id: string, data: UpdateUserFileInput) {
   try {
-    const userFile = await prisma.userFile.update({
-      where: { id },
-      data: {
+    const [updated] = await db
+      .update(userFiles)
+      .set({
         ...data,
         updatedAt: new Date(),
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+      })
+      .where(eq(userFiles.id, id))
+      .returning({ id: userFiles.id });
+
+    const userFile = updated ? await getJoinedUserFileById(updated.id) : null;
     return { success: true, data: userFile };
   } catch (error) {
     console.error("Failed to update file record:", error);
@@ -211,14 +282,16 @@ export async function updateUserFile(id: string, data: UpdateUserFileInput) {
 // 软删除文件记录
 export async function softDeleteUserFile(id: string) {
   try {
-    const userFile = await prisma.userFile.update({
-      where: { id },
-      data: {
+    const [userFile] = await db
+      .update(userFiles)
+      .set({
         status: 0,
         updatedAt: new Date(),
-      },
-    });
-    return { success: true, data: userFile };
+      })
+      .where(eq(userFiles.id, id))
+      .returning();
+
+    return { success: true, data: userFile ?? null };
   } catch (error) {
     console.error("Delete file record failed:", error);
     return { success: false, error: "Delete file record failed" };
@@ -228,16 +301,16 @@ export async function softDeleteUserFile(id: string) {
 // 批量软删除
 export async function softDeleteUserFiles(ids: string[]) {
   try {
-    const result = await prisma.userFile.updateMany({
-      where: {
-        id: { in: ids },
-      },
-      data: {
+    const result = await db
+      .update(userFiles)
+      .set({
         status: 0,
         updatedAt: new Date(),
-      },
-    });
-    return { success: true, data: result };
+      })
+      .where(inArray(userFiles.id, ids))
+      .returning({ id: userFiles.id });
+
+    return { success: true, data: { count: result.length } };
   } catch (error) {
     console.error("Delete file records failed:", error);
     return { success: false, error: "Delete file records failed" };
@@ -247,10 +320,12 @@ export async function softDeleteUserFiles(ids: string[]) {
 // 物理删除文件记录
 export async function deleteUserFile(id: string) {
   try {
-    const userFile = await prisma.userFile.delete({
-      where: { id },
-    });
-    return { success: true, data: userFile };
+    const [userFile] = await db
+      .delete(userFiles)
+      .where(eq(userFiles.id, id))
+      .returning();
+
+    return { success: true, data: userFile ?? null };
   } catch (error) {
     console.error("Delete file record failed:", error);
     return { success: false, error: "Delete file record failed" };
@@ -260,28 +335,36 @@ export async function deleteUserFile(id: string) {
 // 获取用户文件统计
 export async function getUserFileStats(userId: string) {
   try {
-    const [totalFiles, totalSize, filesByProvider] = await Promise.all([
-      prisma.userFile.count({
-        where: { userId, status: 1 },
-      }),
-      prisma.userFile.aggregate({
-        where: { userId, status: 1 },
-        _sum: { size: true },
-      }),
-      prisma.userFile.groupBy({
-        by: ["providerName"],
-        where: { userId, status: 1 },
-        _count: { id: true },
-        _sum: { size: true },
-      }),
+    const [totalFilesRows, totalSizeRows, filesByProviderRows] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(userFiles)
+        .where(and(eq(userFiles.userId, userId), eq(userFiles.status, 1))),
+      db
+        .select({ totalSize: sql<number>`coalesce(sum(${userFiles.size}), 0)` })
+        .from(userFiles)
+        .where(and(eq(userFiles.userId, userId), eq(userFiles.status, 1))),
+      db
+        .select({
+          providerName: userFiles.providerName,
+          count: sql<number>`count(${userFiles.id})`,
+          totalSize: sql<number>`coalesce(sum(${userFiles.size}), 0)`,
+        })
+        .from(userFiles)
+        .where(and(eq(userFiles.userId, userId), eq(userFiles.status, 1)))
+        .groupBy(userFiles.providerName),
     ]);
 
     return {
       success: true,
       data: {
-        totalFiles,
-        totalSize: storageValueToBytes(totalSize._sum.size || 0),
-        filesByProvider,
+        totalFiles: Number(totalFilesRows[0]?.count ?? 0),
+        totalSize: storageValueToBytes(Number(totalSizeRows[0]?.totalSize ?? 0)),
+        filesByProvider: filesByProviderRows.map((row) => ({
+          providerName: row.providerName,
+          _count: { id: Number(row.count ?? 0) },
+          _sum: { size: Number(row.totalSize ?? 0) },
+        })),
       },
     };
   } catch (error) {
@@ -293,25 +376,23 @@ export async function getUserFileStats(userId: string) {
 // 根据路径查找文件
 export async function getUserFileByPath(path: string, providerName?: string) {
   try {
-    const where: Prisma.UserFileWhereInput = {
-      path,
-      status: 1,
-      ...(providerName && { providerName }),
-    };
+    const conditions: SQL[] = [eq(userFiles.path, path), eq(userFiles.status, 1)];
+    if (providerName) {
+      conditions.push(eq(userFiles.providerName, providerName));
+    }
 
-    const userFile = await prisma.userFile.findFirst({
-      where,
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const [row] = await db
+      .select({
+        ...userFileColumns,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(userFiles)
+      .leftJoin(users, eq(userFiles.userId, users.id))
+      .where(and(...conditions))
+      .limit(1);
 
-    return { success: true, data: userFile };
+    return { success: true, data: row ? mapUserFileRow(row) : null };
   } catch (error) {
     console.error("Failed to query file record:", error);
     return { success: false, error: "Failed to query file record" };
@@ -321,21 +402,18 @@ export async function getUserFileByPath(path: string, providerName?: string) {
 // 根据短链接ID查询文件
 export async function getUserFileByShortUrlId(shortUrlId: string) {
   try {
-    const userFile = await prisma.userFile.findFirst({
-      where: {
-        shortUrlId,
-        status: 1,
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-    return { success: true, data: userFile };
+    const [row] = await db
+      .select({
+        ...userFileColumns,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(userFiles)
+      .leftJoin(users, eq(userFiles.userId, users.id))
+      .where(and(eq(userFiles.shortUrlId, shortUrlId), eq(userFiles.status, 1)))
+      .limit(1);
+
+    return { success: true, data: row ? mapUserFileRow(row) : null };
   } catch (error) {
     console.error("Failed to query file record:", error);
     return { success: false, error: "Failed to query file record" };
@@ -348,16 +426,12 @@ export async function cleanupExpiredFiles(days: number = 30) {
     const expiredDate = new Date();
     expiredDate.setDate(expiredDate.getDate() - days);
 
-    const result = await prisma.userFile.deleteMany({
-      where: {
-        status: 0,
-        updatedAt: {
-          lt: expiredDate,
-        },
-      },
-    });
+    const result = await db
+      .delete(userFiles)
+      .where(and(eq(userFiles.status, 0), lt(userFiles.updatedAt, expiredDate)))
+      .returning({ id: userFiles.id });
 
-    return { success: true, data: result };
+    return { success: true, data: { count: result.length } };
   } catch (error) {
     console.error("Failed to clean up expired files:", error);
     return { success: false, error: "Failed to clean up expired files" };
@@ -374,26 +448,26 @@ export async function getBucketStorageUsage(
   | { success: false; error: string }
 > {
   try {
-    const result = await prisma.userFile.aggregate({
-      where: {
-        ...(userId && { userId }),
-        bucket,
-        providerName,
-        status: 1,
-      },
-      _sum: {
-        size: true,
-      },
-      _count: {
-        id: true,
-      },
-    });
+    const [result] = await db
+      .select({
+        totalSize: sql<number>`coalesce(sum(${userFiles.size}), 0)`,
+        totalFiles: sql<number>`count(${userFiles.id})`,
+      })
+      .from(userFiles)
+      .where(
+        and(
+          eq(userFiles.bucket, bucket),
+          eq(userFiles.providerName, providerName),
+          eq(userFiles.status, 1),
+          ...(userId ? [eq(userFiles.userId, userId)] : []),
+        ),
+      );
 
     return {
       success: true,
       data: {
-        totalSize: storageValueToBytes(result._sum.size || 0),
-        totalFiles: result._count.id || 0,
+        totalSize: storageValueToBytes(Number(result?.totalSize ?? 0)),
+        totalFiles: Number(result?.totalFiles ?? 0),
       },
     };
   } catch (error) {

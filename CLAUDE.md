@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Install dependencies: `bun install`
 - Create a local env file: `cp .env.example .env`
-- Generate the Prisma client: `bun run postinstall`
-- Apply database migrations: `bun run db:push`
-  - Note: despite the script name, this runs `prisma migrate deploy`, not `prisma db push`.
+- Generate Drizzle SQL migrations: `bun run db:generate`
+- Apply database schema changes: `bun run db:push`
+  - Note: this runs `drizzle-kit push`.
 - Start the local dev server: `bun run dev`
 - Start the local dev server with Turbopack: `bun run turbo`
 - Build for production: `bun run build`
@@ -24,20 +24,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - There is currently no `test` script and no Jest/Vitest/Playwright/Cypress config in the repository.
 - There is currently no single-test command available.
-- There is no dedicated `typecheck` script; in practice, `bun run lint` and `bun run build` are the main validation commands.
+- There is a dedicated `typecheck` script: `bun run typecheck`.
+- In practice, `bun run lint` and `bun run build` are still the main regression checks.
 - There is no repo `format` script; pre-commit formatting is handled by Husky with `npx pretty-quick --staged`.
 - Commit messages are checked by Husky + Commitlint and should follow conventional commit style.
 
 ## High-level architecture
 
-- This is a Next.js 14 App Router application in TypeScript.
+- This is a Next.js 16 App Router application in TypeScript.
 - The repo is a multi-product SaaS portal rather than a single-feature app. Main product areas are short URLs, DNS record management, temporary email / outbound email, S3-compatible file storage, public scraping/open APIs, and peer-to-peer chat.
 - The app is split into route groups under `app/`:
   - `(marketing)` for public landing/content pages
   - `(docs)` for the documentation site
   - `(auth)` for login/register flows
   - `(protected)` for dashboard, admin, and setup pages
-- Root application composition lives in `app/layout.tsx`, which wires up global styles/fonts, `next-intl`, `next-auth` session state, `next-themes`, modal providers, Sonner toasts, Google Analytics, Umami, and view transitions.
+- Root application composition lives in `app/layout.tsx`, which wires up global styles/fonts, `next-intl`, auth/session state, `next-themes`, modal providers, Sonner toasts, Google Analytics, Umami, and view transitions.
 - `next.config.mjs` composes `next-intl`, `next-contentlayer2`, and `next-pwa`, and builds with `output: "standalone"`.
 - Runtime environment access is centralized in `env.mjs` via `@t3-oss/env-nextjs`.
 
@@ -54,14 +55,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Auth and access control
 
-- Auth is built on Auth.js / NextAuth v5 beta with PrismaAdapter and JWT sessions.
+- Auth is built on Better Auth with the Drizzle adapter and cookie-based sessions.
 - Main auth files:
   - `auth.ts`
-  - `auth.config.ts`
-  - `app/api/auth/[...nextauth]/route.ts`
+  - `lib/auth/server.ts`
+  - `app/api/auth/[...all]/route.ts`
   - `app/api/auth/credentials/route.ts`
-- Providers currently include Google, GitHub, LinuxDo OAuth, and Credentials.
-- Session fields such as `role`, `team`, `active`, `apiKey`, and `emailVerified` are hydrated from Prisma in the `auth.ts` callbacks.
+- Providers currently include Google, GitHub, LinuxDo OAuth, email/password, and magic link.
+- Application session fields such as `role`, `team`, `active`, `apiKey`, and `emailVerified` are synchronized in `lib/auth/server.ts`.
 - The usual server-side access pattern is:
   - `getCurrentUser()` from `lib/session.ts`
   - `checkUserStatus()` from `lib/dto/user.ts`
@@ -70,9 +71,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Data layer and business logic
 
-- Persistence is Prisma + PostgreSQL.
-- Shared Prisma client: `lib/db.ts`
-- Schema: `prisma/schema.prisma`
+- Persistence is Drizzle ORM + PostgreSQL.
+- Shared database client: `lib/db.ts`
+- Schema: `lib/db/schema.ts`
 - The main domain boundary is the DTO/service layer in `lib/dto/*`. Route handlers and pages usually call these modules rather than embedding raw Prisma logic everywhere.
 - Important schema areas:
   - auth/users: `User`, `Account`, `Session`, `VerificationToken`

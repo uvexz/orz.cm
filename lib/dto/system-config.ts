@@ -1,4 +1,7 @@
-import { prisma } from "../db";
+import { asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+
+import { db } from "../db";
+import { systemConfigs } from "../db/schema";
 
 export type ConfigType = "BOOLEAN" | "STRING" | "NUMBER" | "OBJECT";
 
@@ -23,6 +26,38 @@ export interface UpdateSystemConfigData {
   type?: ConfigType;
   description?: string;
   version?: string;
+}
+
+type SystemConfigRow = typeof systemConfigs.$inferSelect;
+
+const DEFAULT_SYSTEM_CONFIG_VALUES = {
+  enable_user_registration: true,
+  enable_subdomain_apply: false,
+  system_notification: false,
+  enable_github_oauth: false,
+  enable_google_oauth: false,
+  enable_liunxdo_oauth: false,
+  enable_resend_email_login: false,
+  enable_email_password_login: true,
+  enable_email_catch_all: false,
+  catch_all_emails: "",
+  enable_tg_email_push: false,
+  tg_email_bot_token: "",
+  tg_email_chat_id: "",
+  tg_email_template: "",
+  tg_email_target_white_list: "",
+  enable_email_registration_suffix_limit: false,
+  email_registration_suffix_limit_white_list: "",
+  enable_subdomain_status_email_pusher: false,
+  enable_email_forward: false,
+  email_forward_targets: "",
+  email_forward_white_list: "",
+} as const;
+
+function getDefaultConfigValue(key: string) {
+  return DEFAULT_SYSTEM_CONFIG_VALUES[
+    key as keyof typeof DEFAULT_SYSTEM_CONFIG_VALUES
+  ];
 }
 
 // 解析配置值
@@ -64,18 +99,7 @@ function serializeConfigValue(value: any, type: ConfigType): string {
   }
 }
 
-// 获取单个配置
-export async function getSystemConfig(
-  key: string,
-): Promise<SystemConfigData | null> {
-  const config = await prisma.systemConfig.findUnique({
-    where: { key },
-  });
-
-  if (!config) {
-    return null;
-  }
-
+function toSystemConfigData(config: SystemConfigRow): SystemConfigData {
   return {
     key: config.key,
     value: parseConfigValue(config.value, config.type as ConfigType),
@@ -85,47 +109,74 @@ export async function getSystemConfig(
   };
 }
 
+// 获取单个配置
+export async function getSystemConfig(
+  key: string,
+): Promise<SystemConfigData | null> {
+  const [config] = await db
+    .select()
+    .from(systemConfigs)
+    .where(eq(systemConfigs.key, key))
+    .limit(1);
+
+  if (!config) {
+    return null;
+  }
+
+  return toSystemConfigData(config);
+}
+
 // 获取配置值（简化版本，直接返回解析后的值）
 export async function getConfigValue<T = any>(key: string): Promise<T | null> {
   const config = await getSystemConfig(key);
-  return config ? config.value : null;
+  if (config) {
+    return config.value;
+  }
+
+  const defaultValue = getDefaultConfigValue(key);
+  return defaultValue === undefined ? null : (defaultValue as T);
 }
 
 // 获取所有配置
 export async function getAllSystemConfigs(): Promise<SystemConfigData[]> {
-  const configs = await prisma.systemConfig.findMany({
-    orderBy: { key: "asc" },
-  });
+  const configs = await db
+    .select()
+    .from(systemConfigs)
+    .orderBy(asc(systemConfigs.key));
 
-  return configs.map((config) => ({
-    key: config.key,
-    value: parseConfigValue(config.value, config.type as ConfigType),
-    type: config.type as ConfigType,
-    description: config.description || undefined,
-    version: config.version,
-  }));
+  return configs.map(toSystemConfigData);
 }
 
 // 获取配置的原始数据（包含元数据）
 export async function getSystemConfigRaw(key: string) {
-  return await prisma.systemConfig.findUnique({
-    where: { key },
-  });
+  const [config] = await db
+    .select()
+    .from(systemConfigs)
+    .where(eq(systemConfigs.key, key))
+    .limit(1);
+
+  return config ?? null;
 }
 
 // 创建配置
 export async function createSystemConfig(data: CreateSystemConfigData) {
   const serializedValue = serializeConfigValue(data.value, data.type);
 
-  return await prisma.systemConfig.create({
-    data: {
+  const [config] = await db
+    .insert(systemConfigs)
+    .values({
+      id: crypto.randomUUID(),
       key: data.key,
       value: serializedValue,
       type: data.type,
       description: data.description,
       version: data.version || "0.5.0",
-    },
-  });
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return config ?? null;
 }
 
 // 更新配置
@@ -133,10 +184,14 @@ export async function updateSystemConfig(
   key: string,
   data: UpdateSystemConfigData,
 ) {
-  const updateData: any = {};
+  const currentConfig =
+    data.value !== undefined && !data.type ? await getSystemConfigRaw(key) : null;
 
-  if (data.value !== undefined && data.type) {
-    updateData.value = serializeConfigValue(data.value, data.type);
+  const nextType = (data.type ?? currentConfig?.type) as ConfigType | undefined;
+  const updateData: Partial<typeof systemConfigs.$inferInsert> = {};
+
+  if (data.value !== undefined && nextType) {
+    updateData.value = serializeConfigValue(data.value, nextType);
   }
   if (data.type !== undefined) {
     updateData.type = data.type;
@@ -147,11 +202,15 @@ export async function updateSystemConfig(
   if (data.version !== undefined) {
     updateData.version = data.version;
   }
+  updateData.updatedAt = new Date();
 
-  return await prisma.systemConfig.update({
-    where: { key },
-    data: updateData,
-  });
+  const [config] = await db
+    .update(systemConfigs)
+    .set(updateData)
+    .where(eq(systemConfigs.key, key))
+    .returning();
+
+  return config ?? null;
 }
 
 // 设置配置值（upsert操作）
@@ -162,41 +221,62 @@ export async function setSystemConfig(
   description?: string,
 ) {
   const serializedValue = serializeConfigValue(value, type);
+  const existingConfig = await getSystemConfigRaw(key);
 
-  return await prisma.systemConfig.upsert({
-    where: { key },
-    update: {
-      value: serializedValue,
-      type,
-      description,
-    },
-    create: {
+  if (existingConfig) {
+    const [updatedConfig] = await db
+      .update(systemConfigs)
+      .set({
+        value: serializedValue,
+        type,
+        description,
+        updatedAt: new Date(),
+      })
+      .where(eq(systemConfigs.key, key))
+      .returning();
+
+    return updatedConfig ?? null;
+  }
+
+  const [createdConfig] = await db
+    .insert(systemConfigs)
+    .values({
+      id: crypto.randomUUID(),
       key,
       value: serializedValue,
       type,
       description,
-    },
-  });
+      version: "0.5.0",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return createdConfig ?? null;
 }
 
 // 删除配置
 export async function deleteSystemConfig(key: string) {
-  return await prisma.systemConfig.delete({
-    where: { key },
-  });
+  const [config] = await db
+    .delete(systemConfigs)
+    .where(eq(systemConfigs.key, key))
+    .returning();
+
+  return config ?? null;
 }
 
 // 批量获取配置
 export async function getMultipleConfigs(
   keys: string[],
 ): Promise<Record<string, any>> {
-  const configs = await prisma.systemConfig.findMany({
-    where: {
-      key: {
-        in: keys,
-      },
-    },
-  });
+  if (keys.length === 0) {
+    return {};
+  }
+
+  const configs = await db
+    .select()
+    .from(systemConfigs)
+    .where(inArray(systemConfigs.key, keys));
 
   const result: Record<string, any> = {};
   configs.forEach((config) => {
@@ -206,6 +286,15 @@ export async function getMultipleConfigs(
     );
   });
 
+  for (const key of keys) {
+    if (!(key in result)) {
+      const defaultValue = getDefaultConfigValue(key);
+      if (defaultValue !== undefined) {
+        result[key] = defaultValue;
+      }
+    }
+  }
+
   return result;
 }
 
@@ -213,66 +302,68 @@ export async function getMultipleConfigs(
 export async function getConfigsByType(
   type: ConfigType,
 ): Promise<SystemConfigData[]> {
-  const configs = await prisma.systemConfig.findMany({
-    where: { type },
-    orderBy: { key: "asc" },
-  });
+  const configs = await db
+    .select()
+    .from(systemConfigs)
+    .where(eq(systemConfigs.type, type))
+    .orderBy(asc(systemConfigs.key));
 
-  return configs.map((config) => ({
-    key: config.key,
-    value: parseConfigValue(config.value, config.type as ConfigType),
-    type: config.type as ConfigType,
-    description: config.description || undefined,
-    version: config.version,
-  }));
+  return configs.map(toSystemConfigData);
 }
 
 // 搜索配置
 export async function searchConfigs(
   searchTerm: string,
 ): Promise<SystemConfigData[]> {
-  const configs = await prisma.systemConfig.findMany({
-    where: {
-      OR: [
-        { key: { contains: searchTerm, mode: "insensitive" } },
-        { description: { contains: searchTerm, mode: "insensitive" } },
-      ],
-    },
-    orderBy: { key: "asc" },
-  });
+  const pattern = `%${searchTerm}%`;
+  const configs = await db
+    .select()
+    .from(systemConfigs)
+    .where(
+      or(
+        ilike(systemConfigs.key, pattern),
+        ilike(systemConfigs.description, pattern),
+      ),
+    )
+    .orderBy(asc(systemConfigs.key));
 
-  return configs.map((config) => ({
-    key: config.key,
-    value: parseConfigValue(config.value, config.type as ConfigType),
-    type: config.type as ConfigType,
-    description: config.description || undefined,
-    version: config.version,
-  }));
+  return configs.map(toSystemConfigData);
 }
 
 // 配置是否存在
 export async function configExists(key: string): Promise<boolean> {
-  const count = await prisma.systemConfig.count({
-    where: { key },
-  });
-  return count > 0;
+  const [result] = await db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(systemConfigs)
+    .where(eq(systemConfigs.key, key));
+
+  return Number(result?.count ?? 0) > 0;
 }
 
 // 获取配置统计
 export async function getConfigStats() {
-  const total = await prisma.systemConfig.count();
-  const byType = await prisma.systemConfig.groupBy({
-    by: ["type"],
-    _count: {
-      type: true,
-    },
-  });
+  const [[totalResult], byType] = await Promise.all([
+    db
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(systemConfigs),
+    db
+      .select({
+        type: systemConfigs.type,
+        count: sql<number>`count(*)`,
+      })
+      .from(systemConfigs)
+      .groupBy(systemConfigs.type),
+  ]);
 
   return {
-    total,
+    total: Number(totalResult?.count ?? 0),
     byType: byType.reduce(
       (acc, item) => {
-        acc[item.type] = item._count.type;
+        acc[item.type] = Number(item.count ?? 0);
         return acc;
       },
       {} as Record<string, number>,

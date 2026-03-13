@@ -230,10 +230,12 @@ export function Mdx({ code, images }: MdxProps) {
   return (
     <div className="mdx">
       <Component
-        components={{
-          ...components,
-          Image: MDXImage,
-        }}
+        components={
+          {
+            ...components,
+            Image: MDXImage,
+          } as any
+        }
       />
     </div>
   );

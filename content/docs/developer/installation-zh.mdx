@@ -41,7 +41,7 @@ npx create-next-app wrdo --example "https://github.com/oiov/wr.do"
 
 ```bash
 cd wrdo
-pnpm install
+bun install
 ```
 
 ### 创建 `.env` 文件
@@ -53,7 +53,7 @@ pnpm install
 | NEXT_PUBLIC_APP_URL              | `http://localhost:3000`                           | Next.js 应用的 URL。                                                         |
 | NEXT_PUBLIC_APP_NAME              | `wr.do`                                           | 网站名称。                                                             |
 | AUTH\_SECRET               | `123465`                                          | 用于加密令牌和邮件验证哈希的密钥。                                                        |
-| AUTH_URL | `http://localhost:3000`                           | NextAuth.js 的回调 URL。                                                         |
+| AUTH_URL | `http://localhost:3000`                           | Better Auth 使用的基础 URL，用于回调和会话流程。                                  |
 | DATABASE\_URL              | `postgres://username:password@host:port/database` | Postgres 数据库的路径。                                                         |
 | GOOGLE\_CLIENT\_ID         | `123465`                                          | Google OAuth 客户端的 ID。                                                    |
 | GOOGLE\_CLIENT\_SECRET     | `123465`                                          | Google OAuth 客户端的密钥。                                                     |
@@ -80,6 +80,6 @@ pnpm install
 
 ### 配置部分
 
-在使用 `pnpm run dev` 之前，请确保检查配置部分并更新所有环境变量。
+在使用 `bun run dev` 之前，请确保检查配置部分并更新所有环境变量。
 
 </Steps>

@@ -1,4 +1,7 @@
-import { prisma } from "../db";
+import { asc, eq, ilike, sql } from "drizzle-orm";
+
+import { db } from "../db";
+import { plans } from "../db/schema";
 
 export interface PlanQuota {
   name: string;
@@ -28,9 +31,11 @@ export interface PlanQuotaFormData extends PlanQuota {
 
 // 获取计划配额
 export async function getPlanQuota(planName: string) {
-  const plan = await prisma.plan.findUnique({
-    where: { name: planName },
-  });
+  const [plan] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.name, planName))
+    .limit(1);
 
   if (!plan) {
     return {
@@ -77,49 +82,45 @@ export async function getPlanQuota(planName: string) {
 
 // 获取所有计划
 export async function getAllPlans(page = 1, size = 10, target: string = "") {
-  let option: any;
+  const nameFilter = target ? ilike(plans.name, `%${target}%`) : undefined;
 
-  if (target) {
-    option = {
-      name: {
-        contains: target,
-      },
-    };
+  let totalQuery = db
+    .select({ count: sql<number>`count(*)` })
+    .from(plans)
+    .$dynamic();
+  let listQuery = db
+    .select()
+    .from(plans)
+    .orderBy(asc(plans.slTrackedClicks))
+    .limit(size)
+    .offset((page - 1) * size)
+    .$dynamic();
+
+  if (nameFilter) {
+    totalQuery = totalQuery.where(nameFilter);
+    listQuery = listQuery.where(nameFilter);
   }
 
-  const [total, list] = await prisma.$transaction([
-    prisma.plan.count({
-      where: option,
-    }),
-    prisma.plan.findMany({
-      where: option,
-      skip: (page - 1) * size,
-      take: size,
-      orderBy: {
-        slTrackedClicks: "asc",
-      },
-    }),
-  ]);
-  return { list, total };
+  const [[totalResult], list] = await Promise.all([totalQuery, listQuery]);
+  return { list, total: Number(totalResult?.count ?? 0) };
 }
 
 // 获取计划所有名称
 export async function getPlanNames() {
-  const data = await prisma.plan.findMany({
-    where: { isActive: true },
-    select: { name: true },
-    orderBy: { name: "asc" },
-  });
+  const data = await db
+    .select({ name: plans.name })
+    .from(plans)
+    .where(eq(plans.isActive, true))
+    .orderBy(asc(plans.name));
 
   return data.map((item) => item.name);
 }
 
 // 更新计划配额
 export async function updatePlanQuota(plan: PlanQuotaFormData) {
-  return await prisma.plan.update({
-    where: { id: plan.id },
-    data: {
-      // name: plan.name,
+  const [updatedPlan] = await db
+    .update(plans)
+    .set({
       slTrackedClicks: plan.slTrackedClicks,
       slNewLinks: plan.slNewLinks,
       slAnalyticsRetention: plan.slAnalyticsRetention,
@@ -133,18 +134,23 @@ export async function updatePlanQuota(plan: PlanQuotaFormData) {
       stMaxFileSize: plan.stMaxFileSize,
       stMaxTotalSize: plan.stMaxTotalSize,
       stMaxFileCount: plan.stMaxFileCount,
-      appSupport: plan.appSupport.toUpperCase() as any,
+      appSupport: plan.appSupport.toUpperCase(),
       appApiAccess: plan.appApiAccess,
       isActive: plan.isActive,
       updatedAt: new Date(),
-    },
-  });
+    })
+    .where(eq(plans.id, plan.id!))
+    .returning();
+
+  return updatedPlan ?? null;
 }
 
 // 创建新计划
 export async function createPlan(plan: PlanQuota) {
-  return await prisma.plan.create({
-    data: {
+  const [createdPlan] = await db
+    .insert(plans)
+    .values({
+      id: crypto.randomUUID().replace(/-/g, ""),
       name: plan.name,
       slTrackedClicks: plan.slTrackedClicks,
       slNewLinks: plan.slNewLinks,
@@ -159,16 +165,23 @@ export async function createPlan(plan: PlanQuota) {
       stMaxFileSize: plan.stMaxFileSize,
       stMaxTotalSize: plan.stMaxTotalSize,
       stMaxFileCount: plan.stMaxFileCount,
-      appSupport: plan.appSupport.toUpperCase() as any,
+      appSupport: plan.appSupport.toUpperCase(),
       appApiAccess: plan.appApiAccess,
       isActive: true,
-    },
-  });
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return createdPlan ?? null;
 }
 
 // 删除计划（软删除）
 export async function deletePlan(id: string) {
-  return await prisma.plan.delete({
-    where: { id },
-  });
+  const [deletedPlan] = await db
+    .delete(plans)
+    .where(eq(plans.id, id))
+    .returning();
+
+  return deletedPlan ?? null;
 }

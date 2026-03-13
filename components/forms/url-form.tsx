@@ -9,7 +9,7 @@ import {
   useTransition,
 } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";

@@ -5,8 +5,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import { signIn } from "next-auth/react";
 
+import { authClient } from "@/lib/auth-client";
 import { siteConfig } from "@/config/site";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -22,7 +22,11 @@ function SignInModal({
   const [signInClicked, setSignInClicked] = useState(false);
 
   return (
-    <Modal showModal={showSignInModal} setShowModal={setShowSignInModal}>
+    <Modal
+      showModal={showSignInModal}
+      setShowModal={setShowSignInModal}
+      title="Sign In"
+    >
       <div className="w-full">
         <div className="flex flex-col items-center justify-center space-y-3 border-b bg-background px-4 py-6 pt-8 text-center md:px-16">
           <a href={siteConfig.url}>
@@ -41,13 +45,20 @@ function SignInModal({
           <Button
             variant="default"
             disabled={signInClicked}
-            onClick={() => {
+            onClick={async () => {
               setSignInClicked(true);
-              signIn("google", { redirect: false }).then(() =>
+              const { error } = await authClient.signIn.social({
+                provider: "google",
+                callbackURL: `${window.location.origin}/dashboard`,
+              });
+
+              if (error) {
+                setSignInClicked(false);
+              } else {
                 setTimeout(() => {
                   setShowSignInModal(false);
-                }, 400),
-              );
+                }, 400);
+              }
             }}
           >
             {signInClicked ? (

@@ -3,13 +3,13 @@
 import { useState, useTransition } from "react";
 import { updateUserRole, type FormData } from "@/actions/update-user-role";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, UserRole } from "@prisma/client";
-import { useSession } from "next-auth/react";
+import { UserRole, type User } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { authClient } from "@/lib/auth-client";
 import { userRoleSchema } from "@/lib/validations/user";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,7 @@ interface UserNameFormProps {
 }
 
 export function UserRoleForm({ user }: UserNameFormProps) {
-  const { update } = useSession();
+  const session = authClient.useSession();
   const [updated, setUpdated] = useState(false);
   const [isPending, startTransition] = useTransition();
   const updateUserRoleWithId = updateUserRole.bind(null, user.id);
@@ -61,7 +61,7 @@ export function UserRoleForm({ user }: UserNameFormProps) {
           description: "Your role was not updated. Please try again.",
         });
       } else {
-        await update();
+        await session.refetch();
         setUpdated(false);
         toast.success("Your role has been updated.");
       }

@@ -3,13 +3,13 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import useSWR from "swr";
 import * as z from "zod";
 
+import { authClient } from "@/lib/auth-client";
 import { cn, fetcher } from "@/lib/utils";
 import { userAuthSchema, userPasswordAuthSchema } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/shared/icons";
 
 import { Skeleton } from "../ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
   type?: string;
@@ -26,6 +25,18 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
 
 type FormData = z.infer<typeof userAuthSchema>;
 type FormData2 = z.infer<typeof userPasswordAuthSchema>;
+
+function getAuthErrorCode(error: unknown) {
+  if (typeof error === "object" && error && "code" in error) {
+    return String((error as { code?: unknown }).code || "Unknown");
+  }
+
+  if (typeof error === "object" && error && "message" in error) {
+    return String((error as { message?: unknown }).message || "Unknown");
+  }
+
+  return "Unknown";
+}
 
 export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
   const {
@@ -51,6 +62,7 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
   const searchParams = useSearchParams();
 
   const t = useTranslations("Auth");
+  const callbackURL = searchParams?.get("from") || "/dashboard";
 
   const { data: loginMethod, isLoading: isLoadingMethod } = useSWR<
     Record<string, any>
@@ -87,16 +99,16 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
   async function onSubmit(data: FormData) {
     if (!checkEmailSuffix(data.email)) return;
     startTransition(async () => {
-      const signInResult = await signIn("resend", {
+      const { error } = await authClient.signIn.magicLink({
         email: data.email.toLowerCase(),
-        redirect: false,
-        callbackUrl: searchParams?.get("from") || "/dashboard",
+        callbackURL,
       });
 
-      if (!signInResult?.ok) {
+      if (error) {
         toast.error(t("Something went wrong"), {
           description: "Your sign in request failed. Please try again.",
         });
+        return;
       }
 
       toast.success(t("Check your email"), {
@@ -104,33 +116,68 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
       });
     });
   }
+
   async function onSubmitPwd(data: FormData2) {
     if (!checkEmailSuffix(data.email)) return;
     startTransition(async () => {
-      const signInResult = await signIn("credentials", {
-        name: data.name,
-        email: data.email,
+      const email = data.email.toLowerCase();
+
+      const signInResult = await authClient.signIn.email({
+        email,
         password: data.password,
-        redirect: false,
-        callbackUrl: searchParams?.get("from") || "/dashboard",
+        callbackURL,
+        rememberMe: true,
       });
+      let authError: unknown = signInResult.error;
 
-      // console.log("[signInResult]", signInResult);
+      if (authError) {
+        const bootstrapResponse = await fetch("/api/auth/credentials", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: data.name,
+            email,
+            password: data.password,
+          }),
+        });
 
-      if (signInResult?.error) {
+        if (bootstrapResponse.ok) {
+          const retryResult = await authClient.signIn.email({
+            email,
+            password: data.password,
+            callbackURL,
+            rememberMe: true,
+          });
+
+          authError = retryResult.error;
+        } else {
+          authError = await bootstrapResponse.text();
+        }
+      }
+
+      if (authError) {
         const errorMaps = {
           Configuration: t("Auth configuration error"),
           CredentialsSignin: t("Incorrect email or password"),
+          INVALID_EMAIL_OR_PASSWORD: t("Incorrect email or password"),
+          "User registration is disabled": t(
+            "Administrator has disabled new user registration",
+          ),
         };
+        const errorCode =
+          typeof authError === "string"
+            ? authError
+            : getAuthErrorCode(authError);
         const errorMessage =
-          errorMaps[signInResult.error] || t("Unknown error");
+          errorMaps[errorCode] || t("Unknown error");
         toast.error(t("Something went wrong"), {
-          description: `[${signInResult.error}] ${errorMessage}.`,
+          description: `[${errorCode}] ${errorMessage}.`,
         });
       } else {
         toast.success(t("Welcome back!"));
-        window.location.reload();
-        // router.push(searchParams?.get("from") || "/dashboard");
+        window.location.href = callbackURL;
       }
     });
   }
@@ -289,9 +336,19 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
         <Button
           variant="outline"
           type="button"
-          onClick={() => {
+          onClick={async () => {
             setIsGoogleLoading(true);
-            signIn("google");
+            const { error } = await authClient.signIn.social({
+              provider: "google",
+              callbackURL,
+            });
+
+            if (error) {
+              setIsGoogleLoading(false);
+              toast.error(t("Something went wrong"), {
+                description: `[${getAuthErrorCode(error)}] ${t("Unknown error")}.`,
+              });
+            }
           }}
           disabled={
             !loginMethod.registration ||
@@ -313,9 +370,19 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
         <Button
           type="button"
           variant="outline"
-          onClick={() => {
+          onClick={async () => {
             setIsGithubLoading(true);
-            signIn("github");
+            const { error } = await authClient.signIn.social({
+              provider: "github",
+              callbackURL,
+            });
+
+            if (error) {
+              setIsGithubLoading(false);
+              toast.error(t("Something went wrong"), {
+                description: `[${getAuthErrorCode(error)}] ${t("Unknown error")}.`,
+              });
+            }
           }}
           disabled={
             !loginMethod.registration ||
@@ -337,9 +404,19 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
         <Button
           type="button"
           variant="outline"
-          onClick={() => {
+          onClick={async () => {
             setIsLinuxDoLoading(true);
-            signIn("linuxdo");
+            const { error } = await authClient.signIn.oauth2({
+              providerId: "linuxdo",
+              callbackURL,
+            });
+
+            if (error) {
+              setIsLinuxDoLoading(false);
+              toast.error(t("Something went wrong"), {
+                description: `[${getAuthErrorCode(error)}] ${t("Unknown error")}.`,
+              });
+            }
           }}
           disabled={
             !loginMethod.registration ||

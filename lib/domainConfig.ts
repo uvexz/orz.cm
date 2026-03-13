@@ -7,7 +7,8 @@ export async function getDomainConfig() {
 export async function getCloudflareCredentials(domain_name: string) {
   try {
     const domains = await getAllDomains();
-    const domain = domains.list.find((d) => d.domain_name === domain_name);
+    const domainList = Array.isArray(domains?.list) ? domains.list : [];
+    const domain = domainList.find((d) => d.domain_name === domain_name);
     if (!domain || !domain.cf_api_key || !domain.cf_email) {
       throw new Error(
         `No Cloudflare credentials found for domain: ${domain_name}`,

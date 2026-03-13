@@ -40,6 +40,7 @@ export default function S3Configs({}: {}) {
   const t = useTranslations("Setting");
   const [isPending, startTransition] = useTransition();
   const [s3Configs, setS3Configs] = useState<CloudStorageCredentials[]>([]);
+  const [hasSyncedConfigs, setHasSyncedConfigs] = useState(false);
 
   const {
     data: configs,
@@ -71,8 +72,11 @@ export default function S3Configs({}: {}) {
   ];
 
   useEffect(() => {
-    if (configs && configs?.s3_config_list) {
-      setS3Configs(configs.s3_config_list);
+    if (configs) {
+      setS3Configs(
+        Array.isArray(configs.s3_config_list) ? configs.s3_config_list : [],
+      );
+      setHasSyncedConfigs(true);
     }
   }, [configs]);
 
@@ -103,14 +107,14 @@ export default function S3Configs({}: {}) {
   };
 
   const canSaveR2Credentials = useMemo(() => {
-    if (!configs) return true;
+    if (!configs || !hasSyncedConfigs) return false;
 
-    return (
-      Object.keys(s3Configs).some(
-        (key) => s3Configs[key] !== configs.s3_config_list[key],
-      ) || configs.s3_config_list.length !== s3Configs.length
-    );
-  }, [s3Configs, configs]);
+    const savedS3Configs = Array.isArray(configs.s3_config_list)
+      ? configs.s3_config_list
+      : [];
+
+    return JSON.stringify(savedS3Configs) !== JSON.stringify(s3Configs);
+  }, [s3Configs, configs, hasSyncedConfigs]);
 
   if (isLoading) {
     return <Skeleton className="h-48 w-full rounded-lg" />;
@@ -119,19 +123,21 @@ export default function S3Configs({}: {}) {
   return (
     <Card>
       <Collapsible defaultOpen>
-        <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 bg-neutral-50 px-4 py-5 dark:bg-neutral-900">
-          <p className="mr-auto text-lg font-bold">
-            {t("Cloud Storage Configs")}
-          </p>
+        <div className="flex items-center gap-3 bg-neutral-50 px-4 py-5 dark:bg-neutral-900">
+          <CollapsibleTrigger className="flex flex-1 items-center justify-between gap-3 text-left">
+            <p className="mr-auto text-lg font-bold">
+              {t("Cloud Storage Configs")}
+            </p>
+            <Icons.chevronDown className="size-4" />
+          </CollapsibleTrigger>
           {canSaveR2Credentials && (
             <Button
               className="h-7 px-2 py-1 text-xs"
               size={"sm"}
               disabled={isPending || !canSaveR2Credentials}
-              onClick={(e) => {
-                e.preventDefault();
-                handleSaveConfigs(s3Configs, "s3_config_list", "OBJECT");
-              }}
+              onClick={() =>
+                handleSaveConfigs(s3Configs, "s3_config_list", "OBJECT")
+              }
             >
               {isPending ? (
                 <Icons.spinner className="mr-1 size-4 animate-spin" />
@@ -139,10 +145,10 @@ export default function S3Configs({}: {}) {
               {t("Save Modifications")}
             </Button>
           )}
-          <p
-            className="flex h-[30px] items-center gap-1 rounded-md border bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-80"
-            onClick={(e) => {
-              e.preventDefault();
+          <Button
+            className="h-7 gap-1 px-2 py-1 text-xs"
+            size={"sm"}
+            onClick={() => {
               setS3Configs([
                 ...s3Configs,
                 {
@@ -173,9 +179,8 @@ export default function S3Configs({}: {}) {
           >
             <Icons.add className="size-3" />
             {t("Add Provider")}
-          </p>
-          <Icons.chevronDown className="size-4" />
-        </CollapsibleTrigger>
+          </Button>
+        </div>
         <CollapsibleContent className="space-y-3 bg-neutral-100 p-4 dark:bg-neutral-800">
           {s3Configs.map((config, index) => {
             const updateBucket = (

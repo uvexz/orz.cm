@@ -24,14 +24,44 @@ import {
 } from "@/components/ui/tooltip";
 import { Icons } from "@/components/shared/icons";
 
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../ui/collapsible";
-
 interface DashboardSidebarProps {
   links: SidebarNavItem[];
+}
+
+const currentYear = new Date().getFullYear();
+
+function getNavItemKey(item: NavItem, parentKey = "") {
+  const baseKey = item.href || item.title;
+
+  return parentKey ? `${parentKey}/${baseKey}` : baseKey;
+}
+
+function getCollapsibleContentId(itemKey: string) {
+  return `sidebar-collapsible-${itemKey
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")}`;
+}
+
+function findOpenParentKeys(
+  items: NavItem[],
+  currentPath: string,
+  parentKey = "",
+): string[] {
+  return items.flatMap((item) => {
+    const itemKey = getNavItemKey(item, parentKey);
+
+    if (!item.items?.length) {
+      return [];
+    }
+
+    const nestedMatches = findOpenParentKeys(item.items, currentPath, itemKey);
+    const hasActiveDescendant =
+      item.items.some((subItem) => subItem.href === currentPath) ||
+      nestedMatches.length > 0;
+
+    return hasActiveDescendant ? [itemKey, ...nestedMatches] : nestedMatches;
+  });
 }
 
 export function DashboardSidebar({ links }: DashboardSidebarProps) {
@@ -48,13 +78,13 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
     setIsSidebarExpanded(!isSidebarExpanded);
   };
 
-  const toggleCollapsible = (itemTitle: string) => {
+  const toggleCollapsible = (itemKey: string) => {
     setOpenCollapsibles((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(itemTitle)) {
-        newSet.delete(itemTitle);
+      if (newSet.has(itemKey)) {
+        newSet.delete(itemKey);
       } else {
-        newSet.add(itemTitle);
+        newSet.add(itemKey);
       }
       return newSet;
     });
@@ -66,35 +96,39 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
 
   // Auto-open collapsibles that contain the current path
   useEffect(() => {
-    links.forEach((section) => {
-      section.items.forEach((item) => {
-        if (item.items) {
-          const hasActivePath = item.items.some(
-            (subItem) => subItem.href === path,
-          );
-          if (hasActivePath) {
-            setOpenCollapsibles((prev) => new Set(prev).add(item.title));
-          }
-        }
-      });
-    });
+    const keysToOpen = links.flatMap((section) =>
+      findOpenParentKeys(section.items, path),
+    );
+
+    if (keysToOpen.length === 0) {
+      return;
+    }
+
+    setOpenCollapsibles((prev) => new Set([...prev, ...keysToOpen]));
   }, [path, links]);
 
-  const renderNavItem = (item: NavItem, isNested = false) => {
+  const renderNavItem = (
+    item: NavItem,
+    parentKey = "",
+    isNested = false,
+  ) => {
     const Icon = Icons[item.icon ?? "arrowLeft"];
+    const itemKey = getNavItemKey(item, parentKey);
     const hasSubItems = item.items && item.items.length > 0;
-    const isOpen = openCollapsibles.has(item.title);
+    const isOpen = openCollapsibles.has(itemKey);
+    const contentId = getCollapsibleContentId(itemKey);
 
     // Item with sub-items (collapsible)
     if (hasSubItems) {
       return (
-        <Fragment key={`nav-item-${item.title}`}>
+        <Fragment key={`nav-item-${itemKey}`}>
           {isSidebarExpanded ? (
-            <Collapsible
-              open={isOpen}
-              onOpenChange={() => toggleCollapsible(item.title)}
-            >
-              <CollapsibleTrigger
+            <>
+              <button
+                type="button"
+                aria-controls={contentId}
+                aria-expanded={isOpen}
+                onClick={() => toggleCollapsible(itemKey)}
                 className={cn(
                   "flex w-full items-center rounded-md p-2 text-sm font-medium hover:bg-muted",
                   "text-muted-foreground hover:text-accent-foreground",
@@ -111,15 +145,19 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
                     isOpen && "rotate-180",
                   )}
                 />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pl-4 pt-1">
-                <div className="flex flex-col gap-0.5">
-                  {item.items!.map((subItem) => renderNavItem(subItem, true))}
+              </button>
+              {isOpen ? (
+                <div id={contentId} className="pl-4 pt-1">
+                  <div className="flex flex-col gap-0.5">
+                    {item.items!.map((subItem) =>
+                      renderNavItem(subItem, itemKey, true),
+                    )}
+                  </div>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+              ) : null}
+            </>
           ) : (
-            <Tooltip key={`tooltip-${item.title}`}>
+            <Tooltip key={`tooltip-${itemKey}`}>
               <TooltipTrigger asChild>
                 <div
                   className={cn(
@@ -136,14 +174,17 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
               </TooltipTrigger>
               <TooltipContent side="right">
                 <div className="flex flex-col gap-2">
-                  {item.items!.map((subItem) =>
+                  {item.items!.map((subItem, index) =>
                     subItem.disabled ? (
-                      <span className="cursor-pointer text-muted-foreground">
+                      <span
+                        key={`${itemKey}-${subItem.title}-${index}`}
+                        className="cursor-pointer text-muted-foreground"
+                      >
                         {t(subItem.title)}
                       </span>
                     ) : (
                       <Link
-                        key={subItem.title}
+                        key={`${itemKey}-${subItem.href || subItem.title}-${index}`}
                         href={subItem.href || "#"}
                         className="hover:underline"
                       >
@@ -162,10 +203,10 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
     // Regular link item
     if (item.href) {
       return (
-        <Fragment key={`link-fragment-${item.title}`}>
+        <Fragment key={`link-fragment-${itemKey}`}>
           {isSidebarExpanded ? (
             <Link
-              key={`link-${item.title}`}
+              key={`link-${itemKey}`}
               href={item.disabled ? "#" : item.href}
               className={cn(
                 "flex items-center rounded-md text-sm hover:bg-muted",
@@ -186,10 +227,10 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
               )}
             </Link>
           ) : (
-            <Tooltip key={`tooltip-${item.title}`}>
+            <Tooltip key={`tooltip-${itemKey}`}>
               <TooltipTrigger asChild>
                 <Link
-                  key={`link-tooltip-${item.title}`}
+                  key={`link-tooltip-${itemKey}`}
                   href={item.disabled ? "#" : item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-md py-2 text-sm font-medium hover:bg-muted",
@@ -217,7 +258,7 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="sticky top-0 z-[40] h-full">
+      <div className="sticky top-0 z-40 h-full">
         <ScrollArea className="h-full overflow-y-auto border-r">
           <aside
             className={cn(
@@ -286,7 +327,7 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
                   className="mx-3 mt-auto flex items-center gap-1 pb-3 pt-6 text-xs text-muted-foreground/90"
                   style={{ fontFamily: "Bahamas Bold" }}
                 >
-                  Copyright {new Date().getFullYear()} &copy;
+                  Copyright {currentYear} &copy;
                   <Link
                     href={siteConfig.url}
                     target="_blank"
@@ -322,13 +363,13 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
   const { isSm, isMobile } = useMediaQuery();
   const t = useTranslations("System");
 
-  const toggleCollapsible = (itemTitle: string) => {
+  const toggleCollapsible = (itemKey: string) => {
     setOpenCollapsibles((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(itemTitle)) {
-        newSet.delete(itemTitle);
+      if (newSet.has(itemKey)) {
+        newSet.delete(itemKey);
       } else {
-        newSet.add(itemTitle);
+        newSet.add(itemKey);
       }
       return newSet;
     });
@@ -336,34 +377,37 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
 
   // Auto-open collapsibles that contain the current path
   useEffect(() => {
-    links.forEach((section) => {
-      section.items.forEach((item) => {
-        if (item.items) {
-          const hasActivePath = item.items.some(
-            (subItem) => subItem.href === path,
-          );
-          if (hasActivePath) {
-            setOpenCollapsibles((prev) => new Set(prev).add(item.title));
-          }
-        }
-      });
-    });
+    const keysToOpen = links.flatMap((section) =>
+      findOpenParentKeys(section.items, path),
+    );
+
+    if (keysToOpen.length === 0) {
+      return;
+    }
+
+    setOpenCollapsibles((prev) => new Set([...prev, ...keysToOpen]));
   }, [path, links]);
 
-  const renderMobileNavItem = (item: NavItem, isNested = false) => {
+  const renderMobileNavItem = (
+    item: NavItem,
+    parentKey = "",
+    isNested = false,
+  ) => {
     const Icon = Icons[item.icon ?? "arrowLeft"];
+    const itemKey = getNavItemKey(item, parentKey);
     const hasSubItems = item.items && item.items.length > 0;
-    const isOpen = openCollapsibles.has(item.title);
+    const isOpen = openCollapsibles.has(itemKey);
+    const contentId = getCollapsibleContentId(`mobile-${itemKey}`);
 
     // Item with sub-items (collapsible)
     if (hasSubItems) {
       return (
-        <Collapsible
-          key={`nav-item-${item.title}`}
-          open={isOpen}
-          onOpenChange={() => toggleCollapsible(item.title)}
-        >
-          <CollapsibleTrigger
+        <div key={`nav-item-${itemKey}`}>
+          <button
+            type="button"
+            aria-controls={contentId}
+            aria-expanded={isOpen}
+            onClick={() => toggleCollapsible(itemKey)}
             className={cn(
               "flex w-full items-center rounded-md p-2 text-sm font-medium hover:bg-muted",
               "text-muted-foreground hover:text-accent-foreground",
@@ -380,22 +424,26 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
                 isOpen && "rotate-180",
               )}
             />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-4 pt-1">
-            <div className="flex flex-col gap-0.5">
-              {item.items!.map((subItem) => renderMobileNavItem(subItem, true))}
+          </button>
+          {isOpen ? (
+            <div id={contentId} className="pl-4 pt-1">
+              <div className="flex flex-col gap-0.5">
+                {item.items!.map((subItem) =>
+                  renderMobileNavItem(subItem, itemKey, true),
+                )}
+              </div>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+          ) : null}
+        </div>
       );
     }
 
     // Regular link item
     if (item.href) {
       return (
-        <Fragment key={`link-fragment-${item.title}`}>
+        <Fragment key={`link-fragment-${itemKey}`}>
           <Link
-            key={`link-${item.title}`}
+            key={`link-${itemKey}`}
             onClick={() => {
               if (!item.disabled) setOpen(false);
             }}
@@ -475,7 +523,7 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
                   className="mx-3 mt-auto flex items-center gap-1 pb-3 pt-6 font-mono text-xs text-muted-foreground/90"
                   style={{ fontFamily: "Bahamas Bold" }}
                 >
-                  Copyright {new Date().getFullYear()} &copy;
+                  Copyright {currentYear} &copy;
                   <Link
                     href={siteConfig.url}
                     target="_blank"

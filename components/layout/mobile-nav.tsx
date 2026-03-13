@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
+import { authClient } from "@/lib/auth-client";
 import { docsConfig } from "@/config/docs";
 import { marketingConfig } from "@/config/marketing";
 import { siteConfig } from "@/config/site";
@@ -18,7 +18,7 @@ import { ModeToggle } from "./mode-toggle";
 
 export function NavMobile() {
   const t = useTranslations("System");
-  const { data: session } = useSession();
+  const session = authClient.useSession();
   const [open, setOpen] = useState(false);
   const selectedLayout = useSelectedLayoutSegment();
   const documentation = selectedLayout === "docs";
@@ -76,9 +76,9 @@ export function NavMobile() {
               </li>
             ))}
 
-          {session ? (
+          {session.data ? (
             <>
-              {session.user.role === "ADMIN" ? (
+              {session.data.user.role === "ADMIN" ? (
                 <li className="py-3">
                   <Link
                     href="/admin"

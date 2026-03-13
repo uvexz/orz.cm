@@ -6,12 +6,12 @@ import {
   type FormData,
 } from "@/actions/update-user-password";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User } from "@prisma/client";
-import { useSession } from "next-auth/react";
+import type { User } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { authClient } from "@/lib/auth-client";
 import { userPasswordSchema } from "@/lib/validations/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ interface UserPasswordFormProps {
 }
 
 export function UserPasswordForm({ user }: UserPasswordFormProps) {
-  const { update } = useSession();
+  const session = authClient.useSession();
   const [updated, setUpdated] = useState(false);
   const [isPending, startTransition] = useTransition();
   const updateUserPasswordWithId = updateUserPassword.bind(null, user.id);
@@ -55,7 +55,7 @@ export function UserPasswordForm({ user }: UserPasswordFormProps) {
           description: "Your password was not updated. Please try again.",
         });
       } else {
-        await update();
+        await session.refetch();
         setUpdated(false);
         toast.success("Your password has been updated.");
       }

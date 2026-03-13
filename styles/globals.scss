@@ -1,9 +1,9 @@
+@use "./variables";
+@use "./keyframe-animations";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import "./_variables.scss";
-@import "./_keyframe-animations.scss";
 
 @layer base {
   :root {

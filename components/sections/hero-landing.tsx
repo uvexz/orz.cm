@@ -797,8 +797,8 @@ export function TechStackGrid() {
     },
     {
       icon: "🗂️",
-      title: "Prisma ORM",
-      description: "Lightweight, performant, headless TypeScript ORM.",
+      title: "Drizzle ORM",
+      description: "TypeScript-first SQL toolkit for relational databases.",
     },
     {
       icon: "✏️",

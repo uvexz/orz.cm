@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { User } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
@@ -401,6 +401,7 @@ export default function DomainList({ user, action }: DomainListProps) {
         className="md:max-w-2xl"
         showModal={isShowForm}
         setShowModal={setShowForm}
+        title={formType === "add" ? t("Add Domain") : `${t("Edit")} domain`}
       >
         <DomainForm
           user={{ id: user.id, name: user.name || "" }}
@@ -416,6 +417,7 @@ export default function DomainList({ user, action }: DomainListProps) {
       <Modal
         showModal={isShowDuplicateForm}
         setShowModal={setShowDuplicateForm}
+        title={t("Confirm duplicate domain")}
       >
         <div className="flex flex-col items-start border-b p-4 pt-8 sm:px-16">
           <h2 className="mb-2 text-lg font-bold">

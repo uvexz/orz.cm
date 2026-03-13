@@ -1,6 +1,6 @@
 "use client";
 
-import { ScrapeMeta } from "@prisma/client";
+import type { ScrapeMeta } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 

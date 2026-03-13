@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { ForwardEmail } from "@prisma/client";
+import type { ForwardEmail } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -176,11 +176,11 @@ export default function EmailList({
           <SendEmailModal emailAddress={emailAddress} onSuccess={mutate} />
           <TooltipProvider>
             <Tooltip delayDuration={200}>
-              <TooltipTrigger>
+              <TooltipTrigger asChild>
                 <Switch
                   className="mt-1 data-[state=checked]:bg-blue-500 data-[state=unchecked]:bg-neutral-300 dark:data-[state=unchecked]:bg-neutral-200"
                   onCheckedChange={handleSetAutoRefresh}
-                  defaultChecked={isAutoRefresh}
+                  checked={isAutoRefresh}
                   aria-label="Auto refresh"
                 />
               </TooltipTrigger>
@@ -214,7 +214,7 @@ export default function EmailList({
           </Button>
           {showMutiCheckBox && (
             <DropdownMenu>
-              <DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApiReference from "@/components/shared/api-reference";

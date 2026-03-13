@@ -1,10 +1,33 @@
-import { prisma } from "@/lib/db";
+import { and, gte, lt } from "drizzle-orm";
+
+import { db } from "@/lib/db";
+import {
+  forwardEmails,
+  userEmails,
+  userRecords,
+  userSendEmails,
+  users,
+  userUrls,
+} from "@/lib/db/schema";
 import { checkUserStatus } from "@/lib/dto/user";
 import { TIME_RANGES } from "@/lib/enums";
 import { getCurrentUser } from "@/lib/session";
 import { getStartDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+async function getDateRows(
+  table: any,
+  column: any,
+  startDate: Date,
+  endDate?: Date,
+) {
+  const conditions = endDate
+    ? and(gte(column, startDate), lt(column, endDate))
+    : gte(column, startDate);
+
+  return db.select({ createdAt: column }).from(table).where(conditions);
+}
 
 export async function GET(req: Request) {
   try {
@@ -30,152 +53,42 @@ export async function GET(req: Request) {
     const prevStartDate = new Date(startDate.getTime() - rangeDuration);
     const prevEndDate = startDate;
 
-    const users = await prisma.user.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const records = await prisma.userRecord.findMany({
-      where: {
-        created_on: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        created_on: "desc",
-      },
-      select: {
-        created_on: true,
-      },
-    });
-    const urls = await prisma.userUrl.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const emails = await prisma.userEmail.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const inbox = await prisma.forwardEmail.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const sends = await prisma.userSendEmail.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        createdAt: true,
-      },
-    });
+    const [currentUsers, records, urls, emails, inbox, sends] =
+      await Promise.all([
+        getDateRows(users, users.createdAt, startDate),
+        db
+          .select({ created_on: userRecords.created_on })
+          .from(userRecords)
+          .where(gte(userRecords.created_on, startDate)),
+        getDateRows(userUrls, userUrls.createdAt, startDate),
+        getDateRows(userEmails, userEmails.createdAt, startDate),
+        getDateRows(forwardEmails, forwardEmails.createdAt, startDate),
+        getDateRows(userSendEmails, userSendEmails.createdAt, startDate),
+      ]);
 
     // Fetch previous period data
-    const prevUsers = await prisma.user.findMany({
-      where: {
-        createdAt: {
-          gte: prevStartDate,
-          lt: prevEndDate,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const prevRecords = await prisma.userRecord.findMany({
-      where: {
-        created_on: {
-          gte: prevStartDate,
-          lt: prevEndDate,
-        },
-      },
-      select: {
-        created_on: true,
-      },
-    });
-    const prevUrls = await prisma.userUrl.findMany({
-      where: {
-        createdAt: {
-          gte: prevStartDate,
-          lt: prevEndDate,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const prevEmails = await prisma.userEmail.findMany({
-      where: {
-        createdAt: {
-          gte: prevStartDate,
-          lt: prevEndDate,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const prevInbox = await prisma.forwardEmail.findMany({
-      where: {
-        createdAt: {
-          gte: prevStartDate,
-          lt: prevEndDate,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
-    const prevSends = await prisma.userSendEmail.findMany({
-      where: {
-        createdAt: {
-          gte: prevStartDate,
-          lt: prevEndDate,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
+    const [prevUsers, prevRecords, prevUrls, prevEmails, prevInbox, prevSends] =
+      await Promise.all([
+        getDateRows(users, users.createdAt, prevStartDate, prevEndDate),
+        db
+          .select({ created_on: userRecords.created_on })
+          .from(userRecords)
+          .where(
+            and(
+              gte(userRecords.created_on, prevStartDate),
+              lt(userRecords.created_on, prevEndDate),
+            ),
+          ),
+        getDateRows(userUrls, userUrls.createdAt, prevStartDate, prevEndDate),
+        getDateRows(userEmails, userEmails.createdAt, prevStartDate, prevEndDate),
+        getDateRows(forwardEmails, forwardEmails.createdAt, prevStartDate, prevEndDate),
+        getDateRows(
+          userSendEmails,
+          userSendEmails.createdAt,
+          prevStartDate,
+          prevEndDate,
+        ),
+      ]);
 
     // Process current period data
     const userCountByDate: { [date: string]: number } = {};
@@ -185,7 +98,7 @@ export async function GET(req: Request) {
     const inboxCountByDate: { [date: string]: number } = {};
     const sendCountByDate: { [date: string]: number } = {};
 
-    users.forEach((user) => {
+    currentUsers.forEach((user) => {
       const date = user.createdAt!.toISOString().split("T")[0];
       userCountByDate[date] = (userCountByDate[date] || 0) + 1;
     });

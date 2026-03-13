@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 require("dotenv").config();
-const { PrismaClient } = require("@prisma/client");
 const chalk = require("chalk");
 const { execSync } = require("child_process");
+const postgres = require("postgres");
 const semver = require("semver");
 
 if (process.env.SKIP_DB_CHECK === "true") {
@@ -20,7 +20,10 @@ function getDatabaseType(url = process.env.DATABASE_URL) {
   return type;
 }
 
-const prisma = new PrismaClient();
+const sql = postgres(process.env.DATABASE_URL || "", {
+  prepare: false,
+  max: 1,
+});
 
 function success(msg) {
   console.log(chalk.greenBright(`✓ ${msg}`));
@@ -40,8 +43,7 @@ async function checkEnv() {
 
 async function checkConnection() {
   try {
-    await prisma.$connect();
-
+    await sql`select 1`;
     success("Database connection successful.");
   } catch (e) {
     throw new Error("Unable to connect to the database: " + e.message);
@@ -49,7 +51,7 @@ async function checkConnection() {
 }
 
 async function checkDatabaseVersion() {
-  const query = await prisma.$queryRaw`select version() as version`;
+  const query = await sql`select version() as version`;
   const version = semver.valid(semver.coerce(query[0].version));
 
   const databaseType = getDatabaseType();
@@ -66,8 +68,8 @@ async function checkDatabaseVersion() {
 
 async function applyMigration() {
   if (process.env.SKIP_DB_MIGRATION === "false") {
-    console.log(execSync("prisma generate").toString());
-    console.log(execSync("prisma migrate deploy").toString());
+    console.log(execSync("bun run db:generate").toString());
+    console.log(execSync("bun run db:push").toString());
 
     success("Database is up to date.");
   }
@@ -87,10 +89,12 @@ async function applyMigration() {
       error(e.message);
       err = true;
     } finally {
-      await prisma.$disconnect();
       if (err) {
+        await sql.end({ timeout: 5 });
         process.exit(1);
       }
     }
   }
+
+  await sql.end({ timeout: 5 });
 })();

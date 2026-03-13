@@ -1,10 +1,15 @@
-import { prisma } from "../db";
+import { desc, eq, like, sql, type SQL } from "drizzle-orm";
+
+import { db } from "../db";
+import { domains } from "../db/schema";
 
 export const FeatureMap = {
   short: "enable_short_link",
   email: "enable_email",
   record: "enable_dns",
-};
+} as const;
+
+type FeatureColumnName = (typeof FeatureMap)[keyof typeof FeatureMap];
 
 export interface DomainConfig {
   domain_name: string;
@@ -34,35 +39,48 @@ export interface DomainFormData extends DomainConfig {
   updatedAt: Date;
 }
 
+function getFeatureColumn(feature: string) {
+  switch (feature as FeatureColumnName) {
+    case "enable_short_link":
+      return domains.enable_short_link;
+    case "enable_email":
+      return domains.enable_email;
+    case "enable_dns":
+      return domains.enable_dns;
+    default:
+      return null;
+  }
+}
+
 export async function getAllDomains(page = 1, size = 10, target: string = "") {
   try {
-    let option: any;
+    const whereClause = target ? like(domains.domain_name, `%${target}%`) : undefined;
 
-    if (target) {
-      option = {
-        domain_name: {
-          contains: target,
-        },
-      };
+    let totalQuery = db
+      .select({ count: sql<number>`count(*)` })
+      .from(domains)
+      .$dynamic();
+    let listQuery = db
+      .select()
+      .from(domains)
+      .orderBy(desc(domains.updatedAt))
+      .limit(size)
+      .offset((page - 1) * size)
+      .$dynamic();
+
+    if (whereClause) {
+      totalQuery = totalQuery.where(whereClause);
+      listQuery = listQuery.where(whereClause);
     }
 
-    const [total, list] = await prisma.$transaction([
-      prisma.domain.count({
-        where: option,
-      }),
-      prisma.domain.findMany({
-        where: option,
-        skip: (page - 1) * size,
-        take: size,
-        orderBy: {
-          updatedAt: "desc",
-        },
-      }),
-    ]);
+    const [[totalResult], list] = await Promise.all([totalQuery, listQuery]);
 
-    return { list, total };
+    return {
+      list,
+      total: Number(totalResult?.count ?? 0),
+    };
   } catch (error) {
-    throw new Error(`Failed to fetch domain config: ${error.message}`);
+    throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -71,90 +89,103 @@ export async function getDomainsByFeature(
   admin: boolean = false,
 ) {
   try {
-    const domains = await prisma.domain.findMany({
-      where: { [feature]: true },
-      select: {
-        domain_name: true,
-        cf_record_types: true,
-        min_url_length: true,
-        min_email_length: true,
-        min_record_length: true,
-        enable_short_link: admin,
-        enable_email: admin,
-        enable_dns: admin,
-        cf_zone_id: admin,
-        cf_api_key: admin,
-        cf_email: admin,
-      },
-    });
-    return domains;
+    const featureColumn = getFeatureColumn(feature);
+    if (!featureColumn) {
+      return [];
+    }
+
+    const rows = await db
+      .select()
+      .from(domains)
+      .where(eq(featureColumn, true));
+
+    return rows.map((domain) => ({
+      domain_name: domain.domain_name,
+      cf_record_types: domain.cf_record_types,
+      min_url_length: domain.min_url_length,
+      min_email_length: domain.min_email_length,
+      min_record_length: domain.min_record_length,
+      enable_short_link: admin ? domain.enable_short_link : undefined,
+      enable_email: admin ? domain.enable_email : undefined,
+      enable_dns: admin ? domain.enable_dns : undefined,
+      cf_zone_id: admin ? domain.cf_zone_id : undefined,
+      cf_api_key: admin ? domain.cf_api_key : undefined,
+      cf_email: admin ? domain.cf_email : undefined,
+    }));
   } catch (error) {
-    throw new Error(`Failed to fetch domain config: ${error.message}`);
+    throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 export async function getDomainsByFeatureClient(feature: string) {
   try {
-    const domains = await prisma.domain.findMany({
-      where: { [feature]: true },
-      select: {
-        domain_name: true,
-        cf_record_types: true,
-        min_url_length: true,
-        min_email_length: true,
-        min_record_length: true,
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-    });
-    return domains;
+    const featureColumn = getFeatureColumn(feature);
+    if (!featureColumn) {
+      return [];
+    }
+
+    return await db
+      .select({
+        domain_name: domains.domain_name,
+        cf_record_types: domains.cf_record_types,
+        min_url_length: domains.min_url_length,
+        min_email_length: domains.min_email_length,
+        min_record_length: domains.min_record_length,
+      })
+      .from(domains)
+      .where(eq(featureColumn, true))
+      .orderBy(desc(domains.updatedAt));
   } catch (error) {
-    throw new Error(`Failed to fetch domain config: ${error.message}`);
+    throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 export async function getDomainByName(domain_name: string) {
-  return await prisma.domain.findUnique({
-    where: { domain_name },
-  });
+  const [domain] = await db
+    .select()
+    .from(domains)
+    .where(eq(domains.domain_name, domain_name))
+    .limit(1);
+
+  return domain ?? null;
 }
 
 export async function checkDomainIsConfiguratedEmailProvider(
   domain_name: string,
 ) {
   try {
-    const domain = await prisma.domain.findUnique({
-      where: { domain_name },
-      select: {
-        email_provider: true,
-        resend_api_key: true,
-        brevo_api_key: true,
-      },
-    });
-    if (domain?.email_provider === "Resend")
-      return { email_key: domain?.resend_api_key, provider: "Resend" };
-    if (domain?.email_provider === "Brevo")
-      return { email_key: domain?.brevo_api_key, provider: "Brevo" };
+    const [domain] = await db
+      .select({
+        email_provider: domains.email_provider,
+        resend_api_key: domains.resend_api_key,
+        brevo_api_key: domains.brevo_api_key,
+      })
+      .from(domains)
+      .where(eq(domains.domain_name, domain_name))
+      .limit(1);
+
+    if (domain?.email_provider === "Resend") {
+      return { email_key: domain.resend_api_key, provider: "Resend" };
+    }
+    if (domain?.email_provider === "Brevo") {
+      return { email_key: domain.brevo_api_key, provider: "Brevo" };
+    }
     return { email_key: null, provider: null };
   } catch (error) {
-    throw new Error(`Failed to fetch domain config: ${error.message}`);
+    throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 export async function getConfiguredEmailDomains() {
   try {
-    const domains = await prisma.domain.findMany({
-      where: { email_provider: "Brevo" },
-      select: {
-        domain_name: true,
-        brevo_api_key: true,
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-    });
-    return domains;
+    return await db
+      .select({
+        domain_name: domains.domain_name,
+        brevo_api_key: domains.brevo_api_key,
+      })
+      .from(domains)
+      .where(eq(domains.email_provider, "Brevo"))
+      .orderBy(desc(domains.updatedAt));
   } catch (error) {
     return [];
   }
@@ -162,35 +193,48 @@ export async function getConfiguredEmailDomains() {
 
 export async function createDomain(data: DomainConfig) {
   try {
-    const createdDomain = await prisma.domain.create({ data });
-    return createdDomain;
+    const [createdDomain] = await db
+      .insert(domains)
+      .values({
+        id: crypto.randomUUID(),
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return createdDomain ?? null;
   } catch (error) {
-    throw new Error(`Failed to create domain: ${error.message}`);
+    throw new Error(`Failed to create domain: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-export async function updateDomain(id: string, data) {
+export async function updateDomain(id: string, data: Partial<DomainConfig>) {
   try {
-    const updatedDomain = await prisma.domain.update({
-      where: { id },
-      data: {
+    const [updatedDomain] = await db
+      .update(domains)
+      .set({
         ...data,
         updatedAt: new Date(),
-      },
-    });
-    return updatedDomain;
+      })
+      .where(eq(domains.id, id))
+      .returning();
+
+    return updatedDomain ?? null;
   } catch (error) {
-    throw new Error(`Failed to update domain: ${error.message}`);
+    throw new Error(`Failed to update domain: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 export async function deleteDomain(domain_name: string) {
   try {
-    const deletedDomain = await prisma.domain.delete({
-      where: { domain_name },
-    });
-    return deletedDomain;
+    const [deletedDomain] = await db
+      .delete(domains)
+      .where(eq(domains.domain_name, domain_name))
+      .returning();
+
+    return deletedDomain ?? null;
   } catch (error) {
-    throw new Error(`Failed to delete domain`);
+    throw new Error("Failed to delete domain");
   }
 }

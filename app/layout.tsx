@@ -1,7 +1,6 @@
 import "@/styles/globals.scss";
 
 import { fontHeading, fontSans, fontSatoshi } from "@/assets/fonts";
-import { SessionProvider } from "next-auth/react";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
@@ -35,18 +34,16 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           )}
         >
           <NextIntlClientProvider messages={messages}>
-            <SessionProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="light"
-                enableSystem
-                disableTransitionOnChange
-              >
-                <ModalProvider>{children}</ModalProvider>
-                <Toaster richColors closeButton position="bottom-right" />
-                <TailwindIndicator />
-              </ThemeProvider>
-            </SessionProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="light"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <ModalProvider>{children}</ModalProvider>
+              <Toaster richColors closeButton position="bottom-right" />
+              <TailwindIndicator />
+            </ThemeProvider>
           </NextIntlClientProvider>
           <GoogleAnalytics />
           <UmamiAnalytics />

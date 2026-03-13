@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { User } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 import {
   Archive,
   Download,
@@ -592,6 +592,11 @@ export default function UserFileList({
         className="md:max-w-2xl"
         showModal={isShowForm}
         setShowModal={setShowForm}
+        title={
+          shortTarget?.name
+            ? `Create short link for ${shortTarget.name}`
+            : "Create short link"
+        }
       >
         <UrlForm
           user={{ id: "", name: "" }}
@@ -618,6 +623,11 @@ export default function UserFileList({
         className="md:max-w-lg"
         showModal={isShowQrcode}
         setShowModal={setShowQrcode}
+        title={
+          currentSelectFile?.name
+            ? `QR code for ${currentSelectFile.name}`
+            : "QR code"
+        }
       >
         {currentSelectFile && (
           <QRCodeEditor

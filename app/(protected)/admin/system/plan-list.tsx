@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 import { PenLine } from "lucide-react";
 import { useTranslations } from "next-intl";
 import useSWR, { useSWRConfig } from "swr";
@@ -252,6 +252,7 @@ export default function PlanList({ user, action }: PlanListProps) {
         className="md:max-w-2xl"
         showModal={isShowForm}
         setShowModal={setShowForm}
+        title={formType === "add" ? t("Add Plan") : `${t("Edit")} plan`}
       >
         <PlanForm
           user={{ id: user.id, name: user.name || "" }}

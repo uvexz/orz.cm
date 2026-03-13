@@ -1,26 +1,36 @@
-import { User, UserRole } from "@prisma/client";
+import { and, desc, eq, isNotNull, isNull, like, ne, sql, type SQL } from "drizzle-orm";
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 
 import { hashPassword, verifyPassword } from "../password";
 
+type UserRecord = typeof users.$inferSelect;
+type CreateUserInput = Omit<
+  typeof users.$inferInsert,
+  "id" | "createdAt" | "updatedAt"
+> & {
+  id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
 export interface UpdateUserForm
-  extends Omit<User, "id" | "createdAt" | "updatedAt" | "emailVerified"> {}
+  extends Omit<UserRecord, "id" | "createdAt" | "updatedAt" | "emailVerified"> {}
 
 export const getUserByEmail = async (email: string) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: {
-        email: email,
-      },
-      select: {
-        id: true,
-        name: true,
-        emailVerified: true,
-        active: true,
-        team: true,
-      },
-    });
+    const [user] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        emailVerified: users.emailVerified,
+        active: users.active,
+        team: users.team,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
     return user;
   } catch {
@@ -30,12 +40,48 @@ export const getUserByEmail = async (email: string) => {
 
 export const getUserById = async (id: string) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id } });
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
 
-    return user;
+    return user ?? null;
   } catch {
     return null;
   }
+};
+
+export const getUserRecordByEmail = async (email: string) => {
+  try {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    return user ?? null;
+  } catch {
+    return null;
+  }
+};
+
+export const createUser = async (data: CreateUserInput) => {
+  const [user] = await db
+    .insert(users)
+    .values({
+      id: data.id ?? crypto.randomUUID().replace(/-/g, ""),
+      ...data,
+      createdAt: data.createdAt ?? new Date(),
+      updatedAt: data.updatedAt ?? new Date(),
+    })
+    .returning();
+
+  if (!user) {
+    throw new Error("Failed to create user");
+  }
+
+  return user;
 };
 
 export const getAllUsers = async (
@@ -45,32 +91,43 @@ export const getAllUsers = async (
   userName?: string,
 ) => {
   try {
-    let options;
+    const conditions: SQL[] = [];
+
     if (email) {
-      options = { where: { email: { contains: email } } };
+      conditions.push(like(users.email, `%${email}%`));
     }
     if (userName) {
-      options = { where: { name: { contains: userName } } };
-    }
-    if (email && userName) {
-      options = {
-        where: { email: { contains: email }, name: { contains: userName } },
-      };
+      conditions.push(like(users.name, `%${userName}%`));
     }
 
-    const [total, list] = await prisma.$transaction([
-      prisma.user.count(options),
-      prisma.user.findMany({
-        skip: (page - 1) * size,
-        take: size,
-        orderBy: {
-          createdAt: "desc",
-        },
-        ...options,
-      }),
+    const whereClause =
+      conditions.length > 0 ? and(...conditions) : undefined;
+    const offset = (page - 1) * size;
+
+    let totalQuery = db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .$dynamic();
+    let listQuery = db
+      .select()
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(size)
+      .offset(offset)
+      .$dynamic();
+
+    if (whereClause) {
+      totalQuery = totalQuery.where(whereClause);
+      listQuery = listQuery.where(whereClause);
+    }
+
+    const [[totalResult], list] = await Promise.all([
+      totalQuery,
+      listQuery,
     ]);
+
     return {
-      total,
+      total: Number(totalResult?.count ?? 0),
       list,
     };
   } catch (error) {
@@ -81,7 +138,11 @@ export const getAllUsers = async (
 
 export async function getAllUsersCount() {
   try {
-    return await prisma.user.count();
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users);
+
+    return Number(result?.count ?? 0);
   } catch (error) {
     return -1;
   }
@@ -89,10 +150,16 @@ export async function getAllUsersCount() {
 
 export async function setFirstUserAsAdmin(userId: string) {
   try {
-    return await prisma.user.update({
-      where: { id: userId },
-      data: { role: UserRole.ADMIN },
-    });
+    const [user] = await db
+      .update(users)
+      .set({
+        role: "ADMIN",
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return user ?? null;
   } catch (error) {
     return null;
   }
@@ -100,7 +167,12 @@ export async function setFirstUserAsAdmin(userId: string) {
 
 export async function getAllUsersActiveApiKeyCount() {
   try {
-    return await prisma.user.count({ where: { apiKey: { not: null } } });
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(isNotNull(users.apiKey));
+
+    return Number(result?.count ?? 0);
   } catch (error) {
     return -1;
   }
@@ -109,33 +181,31 @@ export async function getAllUsersActiveApiKeyCount() {
 export const updateUser = async (userId: string, data: UpdateUserForm) => {
   try {
     // 1. 验证用户是否存在
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        password: true,
-        email: true,
-      },
-    });
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
     if (!existingUser) {
       throw new Error("用户不存在");
     }
 
     // 2. 准备更新数据
-    const updateData: Partial<UpdateUserForm> = {};
+    const updateData: Partial<typeof users.$inferInsert> = {};
 
     // 3. 处理基础字段
     if (data.name !== undefined) updateData.name = data.name;
     if (data.email !== undefined) {
       // 检查邮箱是否已被其他用户使用
       if (data.email !== existingUser.email) {
-        const emailExists = await prisma.user.findFirst({
-          where: {
-            email: data.email,
-            id: { not: userId },
-          },
-        });
+        const emailCondition =
+          data.email === null ? isNull(users.email) : eq(users.email, data.email);
+        const [emailExists] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(and(emailCondition, ne(users.id, userId)))
+          .limit(1);
         if (emailExists) {
           throw new Error("邮箱已被使用");
         }
@@ -147,6 +217,8 @@ export const updateUser = async (userId: string, data: UpdateUserForm) => {
     if (data.team !== undefined) updateData.team = data.team;
     if (data.image !== undefined) updateData.image = data.image;
     if (data.apiKey !== undefined) updateData.apiKey = data.apiKey;
+    if (data.tgChatId !== undefined) updateData.tgChatId = data.tgChatId;
+    if (data.tgUsername !== undefined) updateData.tgUsername = data.tgUsername;
 
     // 4. 处理密码更新
     if (data.password) {
@@ -167,25 +239,27 @@ export const updateUser = async (userId: string, data: UpdateUserForm) => {
       return existingUser;
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
         ...updateData,
         updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        active: true,
-        team: true,
-        image: true,
-        apiKey: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+      })
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        active: users.active,
+        team: users.team,
+        image: users.image,
+        apiKey: users.apiKey,
+        tgChatId: users.tgChatId,
+        tgUsername: users.tgUsername,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      });
 
     return updatedUser;
   } catch (error) {
@@ -200,18 +274,41 @@ export const updateUser = async (userId: string, data: UpdateUserForm) => {
 
 export const deleteUserById = async (userId: string) => {
   try {
-    const session = await prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
+    const [user] = await db
+      .update(users)
+      .set({
         active: 0,
-      },
-    });
-    return session;
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return user ?? null;
   } catch (error) {
     return null;
   }
+};
+
+export const updateUserTelegramBinding = async (
+  userId: string,
+  tgChatId: string,
+  tgUsername?: string | null,
+) => {
+  const [user] = await db
+    .update(users)
+    .set({
+      tgChatId,
+      tgUsername: tgUsername ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning({
+      id: users.id,
+      tgChatId: users.tgChatId,
+      tgUsername: users.tgUsername,
+    });
+
+  return user ?? null;
 };
 
 export function checkUserStatus(user: any) {
@@ -231,8 +328,16 @@ export function checkUserStatus(user: any) {
 }
 
 export function getFirstAdminUser() {
-  return prisma.user.findFirst({
-    where: { role: UserRole.ADMIN, email: { not: "admin@admin.com" } },
-    select: { email: true },
-  });
+  return db
+    .select({ email: users.email })
+    .from(users)
+    .where(
+      and(
+        eq(users.role, "ADMIN"),
+        isNotNull(users.email),
+        ne(users.email, "admin@admin.com"),
+      ),
+    )
+    .limit(1)
+    .then(([user]) => user ?? null);
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 import { PenLine } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -71,6 +71,8 @@ export interface UrlListProps {
   user: Pick<User, "id" | "name" | "apiKey" | "role" | "team">;
   action: string;
 }
+
+const TABLE_COLUMN_COUNT = 8;
 
 function TableColumnSekleton() {
   return (
@@ -202,6 +204,14 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
     </EmptyPlaceholder>
   );
 
+  const rendeEmptyRow = () => (
+    <TableRow>
+      <TableCell colSpan={TABLE_COLUMN_COUNT} className="p-6">
+        {rendeEmpty()}
+      </TableCell>
+    </TableRow>
+  );
+
   const renderSearchInputs = () => {
     const getCurrentSearchValue = () => {
       switch (searchType) {
@@ -322,48 +332,51 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
     );
 
   const rendeList = () => (
-    <Table>
-      <TableHeader className="bg-gray-100/50 dark:bg-primary-foreground">
-        <TableRow className="grid grid-cols-3 items-center sm:grid-cols-11">
-          <TableHead className="col-span-1 flex items-center font-bold sm:col-span-2">
-            {t("Slug")}
-          </TableHead>
-          <TableHead className="col-span-1 flex items-center font-bold sm:col-span-2">
-            {t("Target")}
-          </TableHead>
-          <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
-            {t("User")}
-          </TableHead>
-          <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
-            {t("Enabled")}
-          </TableHead>
-          <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
-            {t("Expiration")}
-          </TableHead>
-          <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
-            {t("Clicks")}
-          </TableHead>
-          <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
-            {t("Updated")}
-          </TableHead>
-          <TableHead className="col-span-1 flex items-center font-bold sm:col-span-2">
-            {t("Actions")}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {isLoading ? (
-          <>
-            <TableColumnSekleton />
-            <TableColumnSekleton />
-            <TableColumnSekleton />
-            <TableColumnSekleton />
-            <TableColumnSekleton />
-          </>
-        ) : data && data.list && data.list.length ? (
-          data.list.map((short) => (
-            <div className="border-b" key={short.id}>
-              <TableRow className="grid grid-cols-3 items-center sm:grid-cols-11">
+    <>
+      <Table>
+        <TableHeader className="bg-gray-100/50 dark:bg-primary-foreground">
+          <TableRow className="grid grid-cols-3 items-center sm:grid-cols-11">
+            <TableHead className="col-span-1 flex items-center font-bold sm:col-span-2">
+              {t("Slug")}
+            </TableHead>
+            <TableHead className="col-span-1 flex items-center font-bold sm:col-span-2">
+              {t("Target")}
+            </TableHead>
+            <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
+              {t("User")}
+            </TableHead>
+            <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
+              {t("Enabled")}
+            </TableHead>
+            <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
+              {t("Expiration")}
+            </TableHead>
+            <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
+              {t("Clicks")}
+            </TableHead>
+            <TableHead className="col-span-1 hidden items-center font-bold sm:flex">
+              {t("Updated")}
+            </TableHead>
+            <TableHead className="col-span-1 flex items-center font-bold sm:col-span-2">
+              {t("Actions")}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <>
+              <TableColumnSekleton />
+              <TableColumnSekleton />
+              <TableColumnSekleton />
+              <TableColumnSekleton />
+              <TableColumnSekleton />
+            </>
+          ) : data && data.list && data.list.length ? (
+            data.list.map((short) => (
+              <TableRow
+                className="grid grid-cols-3 items-center sm:grid-cols-11"
+                key={short.id}
+              >
                 <TableCell className="col-span-1 flex items-center gap-1 sm:col-span-2">
                   <Link
                     className="overflow-hidden text-ellipsis whitespace-normal text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-400"
@@ -469,14 +482,13 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
                   </Button>
                 </TableCell>
               </TableRow>
-              {/* {rendeStats(short)} */}
-            </div>
-          ))
-        ) : (
-          rendeEmpty()
-        )}
-      </TableBody>
-      {data && Math.ceil(data.total / pageSize) > 1 && (
+            ))
+          ) : (
+            rendeEmptyRow()
+          )}
+        </TableBody>
+      </Table>
+      {data && Math.ceil(data.total / pageSize) > 1 ? (
         <PaginationWrapper
           layout={isMobile ? "right" : "split"}
           total={data.total}
@@ -485,8 +497,8 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
           pageSize={pageSize}
           setPageSize={setPageSize}
         />
-      )}
-    </Table>
+      ) : null}
+    </>
   );
 
   const rendeGrid = () => (
@@ -759,6 +771,7 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
         className="md:max-w-lg"
         showModal={isShowQrcode}
         setShowModal={setShowQrcode}
+        title={selectedUrl ? `QR code for ${selectedUrl.url}` : t("QR Code Design")}
       >
         {selectedUrl && (
           <QRCodeEditor
@@ -773,6 +786,7 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
         className="md:max-w-2xl"
         showModal={isShowForm}
         setShowModal={setShowForm}
+        title={formType === "add" ? t("Create short link") : t("Edit short link")}
       >
         <UrlForm
           user={{ id: user.id, name: user.name || "" }}

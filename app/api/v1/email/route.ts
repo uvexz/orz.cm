@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     if (error.message === "Invalid userId") {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    if (error.code === "P2002") {
+    if (error.code === "UNIQUE_CONSTRAINT") {
       return NextResponse.json("Email address already exists", {
         status: 409,
       });

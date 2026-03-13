@@ -1,5 +1,6 @@
 // app/api/logs/route.ts
 import { NextRequest } from "next/server";
+import { ipAddress } from "@vercel/functions";
 
 import { getScrapeStatsByUserId } from "@/lib/dto/scrape";
 
@@ -48,7 +49,9 @@ function checkRateLimit(ip: string): boolean {
 export async function GET(request: NextRequest) {
   try {
     const ip =
-      request.ip || request.headers.get("x-forwarded-for") || "127.0.0.1";
+      ipAddress(request) ||
+      request.headers.get("x-forwarded-for") ||
+      "127.0.0.1";
 
     if (!checkRateLimit(ip)) {
       return Response.json(

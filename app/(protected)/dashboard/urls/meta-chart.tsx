@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
-import { UrlMeta, User } from "@prisma/client";
+import type { UrlMeta, User } from "@/lib/db/types";
 import { TopoJSONMap } from "@unovis/ts";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";

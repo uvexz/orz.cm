@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 
+import { useMounted } from "@/hooks/use-mounted";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +17,11 @@ import { Icons } from "@/components/shared/icons";
 export function ModeToggle() {
   const { setTheme } = useTheme();
   const t = useTranslations("System");
+  const mounted = useMounted();
+
+  if (!mounted) {
+    return <div className="size-8 rounded-md bg-muted" aria-hidden="true" />;
+  }
 
   return (
     <DropdownMenu>

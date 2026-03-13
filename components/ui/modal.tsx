@@ -1,12 +1,18 @@
 "use client";
 
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, ReactNode, SetStateAction } from "react";
 // import { useRouter } from "next/router";
+import { Root as VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Drawer } from "vaul";
 
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ModalProps {
   children: React.ReactNode;
@@ -18,6 +24,8 @@ interface ModalProps {
   preventDefaultClose?: boolean;
   maxHeight?: string; // 自定义最大高度
   contentClassName?: string; // 内容区域的额外样式
+  title: ReactNode;
+  description?: ReactNode;
 }
 
 export function Modal({
@@ -30,6 +38,8 @@ export function Modal({
   preventDefaultClose,
   maxHeight = "90vh",
   contentClassName,
+  title,
+  description,
 }: ModalProps) {
   // const router = useRouter();
 
@@ -61,7 +71,7 @@ export function Modal({
           }
         }}
       >
-        <Drawer.Overlay className="fixed inset-0 z-[40] bg-background/80 backdrop-blur-sm" />
+        <Drawer.Overlay className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm" />
         <Drawer.Portal>
           <Drawer.Content
             className={cn(
@@ -108,6 +118,12 @@ export function Modal({
         )}
         style={{ maxHeight }}
       >
+        <VisuallyHidden>
+          <DialogTitle>{title}</DialogTitle>
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : null}
+        </VisuallyHidden>
         <div
           className={cn(
             "flex-1 overflow-y-auto overscroll-contain",

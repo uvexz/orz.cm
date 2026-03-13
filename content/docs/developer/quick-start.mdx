@@ -15,7 +15,7 @@ Enter in the folder and install dependencies for your project:
 
 ```bash
 cd wrdo
-pnpm install
+bun install
 ```
 
 ### Create a `.env` file
@@ -48,18 +48,16 @@ DATABASE_URL=
 ### Deploy Postgres
 
 ```bash
-pnpm postinstall
-pnpm db:push
+bun run db:push
 ```
 
-#### Or manually init 
+#### Or generate SQL first
 
-Via [migration.sql](https://github.com/oiov/wr.do/blob/main/prisma/migrations), 
-copy the sql code to the database to initialize the database schema.
+If you prefer reviewing SQL before applying it, run `bun run db:generate` and apply the generated files from the `drizzle/` directory with your database tool.
 
 ### Add the AUTH_SECRET Environment Variable
 
-The `AUTH_SECRET` environment variable is used to encrypt tokens and email verification hashes(NextAuth.js).
+The `AUTH_SECRET` environment variable is used to sign Better Auth sessions and verification flows.
 You can generate one from https://generate-secret.vercel.app/32:
 
 ```js title=".env"
@@ -184,7 +182,7 @@ GITHUB_TOKEN=
 ## 6. Start the Dev Server
 
 ```bash
-pnpm dev
+bun run dev
 ```
 Via [http://localhost:3000](http://localhost:3000)
 

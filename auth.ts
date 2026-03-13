@@ -1,79 +1,156 @@
-import authConfig from "@/auth.config";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { UserRole } from "@prisma/client";
-import NextAuth, { type DefaultSession } from "next-auth";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { nextCookies } from "better-auth/next-js";
+import { customSession, genericOAuth, magicLink } from "better-auth/plugins";
+import { headers } from "next/headers";
 
-import { prisma } from "@/lib/db";
-import { getUserById } from "@/lib/dto/user";
+import { env } from "@/env.mjs";
+import { db } from "@/lib/db";
+import {
+  authAccount,
+  authSession,
+  authUser,
+  authVerification,
+} from "@/lib/db/schema";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { sendAuthMagicLink } from "@/lib/auth/email";
+import {
+  buildAppSession,
+  deactivateAppUserFromAuthUser,
+  syncAppUserFromAuthUser,
+  type AppSession,
+} from "@/lib/auth/server";
 
-// More info: https://authjs.dev/getting-started/typescript#module-augmentation
-declare module "next-auth" {
-  interface Session {
-    user: {
-      role: UserRole;
-      team: string;
-      active: number;
-      apiKey: string;
-      emailVerified: Date;
-    } & DefaultSession["user"];
-  }
-}
+export const betterAuthServer = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      user: authUser,
+      session: authSession,
+      account: authAccount,
+      verification: authVerification,
+    },
+  }),
+  secret: env.AUTH_SECRET || "development-secret-change-me",
+  baseURL: env.AUTH_URL || env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  trustedOrigins: [
+    env.AUTH_URL,
+    env.NEXT_PUBLIC_APP_URL,
+    env.NEXTAUTH_URL,
+  ].filter(Boolean) as string[],
+  plugins: [
+    nextCookies(),
+    customSession(async (session) => {
+      const appSession = await buildAppSession(session);
 
-export const {
-  handlers: { GET, POST },
-  auth,
-} = NextAuth({
-  trustHost: true, // TODO: Test with docker
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-    // error: "/auth/error",
-  },
-  callbacks: {
-    async session({ token, session }) {
-      if (session.user) {
-        if (token.sub) {
-          session.user.id = token.sub;
-        }
-
-        if (token.email) {
-          session.user.email = token.email;
-        }
-
-        if (token.role) {
-          session.user.role = token.role;
-        }
-
-        session.user.name = token.name;
-        session.user.image = token.picture;
-        session.user.active = token.active as number;
-        session.user.team = token.team as string;
-        session.user.apiKey = token.apiKey as string;
-        session.user.emailVerified = token.emailVerified as Date;
+      if (!appSession) {
+        throw new Error("Expected an authenticated session.");
       }
 
-      return session;
-    },
-    async jwt({ token }) {
-      if (!token.sub) return token;
-
-      const dbUser = await getUserById(token.sub);
-
-      if (!dbUser) return token;
-
-      token.name = dbUser.name;
-      token.email = dbUser.email;
-      token.picture = dbUser.image;
-      token.role = dbUser.role;
-      token.active = dbUser.active;
-      token.team = dbUser.team || "free";
-      token.apiKey = dbUser.apiKey;
-      token.emailVerified = dbUser.emailVerified;
-
-      return token;
+      return appSession;
+    }),
+    magicLink({
+      sendMagicLink: async ({ email, url }) => {
+        await sendAuthMagicLink(email, url);
+      },
+    }),
+    genericOAuth({
+      config:
+        env.LinuxDo_CLIENT_ID && env.LinuxDo_CLIENT_SECRET
+          ? [
+              {
+                providerId: "linuxdo",
+                clientId: env.LinuxDo_CLIENT_ID,
+                clientSecret: env.LinuxDo_CLIENT_SECRET,
+                discoveryUrl:
+                  "https://connect.linux.do/.well-known/openid-configuration",
+                scopes: ["openid", "profile", "email"],
+                mapProfileToUser: async (profile) => ({
+                  id: String(
+                    profile.sub ||
+                      profile.id ||
+                      profile.username ||
+                      profile.preferred_username ||
+                      profile.email,
+                  ),
+                  name:
+                    profile.name ||
+                    profile.username ||
+                    profile.preferred_username ||
+                    "",
+                  email: profile.email,
+                  emailVerified: Boolean(
+                    profile.email_verified ?? profile.emailVerified,
+                  ),
+                  image:
+                    profile.avatar_url || profile.picture || profile.avatar,
+                }),
+              },
+            ]
+          : [],
+    }),
+  ],
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    password: {
+      hash: async (password) => hashPassword(password),
+      verify: async ({ hash, password }) => verifyPassword(password, hash),
     },
   },
-  ...authConfig,
-  // debug: process.env.NODE_ENV !== "production"
+  socialProviders: {
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+    ...(env.GITHUB_ID && env.GITHUB_SECRET
+      ? {
+          github: {
+            clientId: env.GITHUB_ID,
+            clientSecret: env.GITHUB_SECRET,
+          },
+        }
+      : {}),
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await syncAppUserFromAuthUser(user);
+        },
+      },
+      update: {
+        after: async (user) => {
+          await syncAppUserFromAuthUser(user);
+        },
+      },
+      delete: {
+        after: async (user) => {
+          await deactivateAppUserFromAuthUser(user);
+        },
+      },
+    },
+  },
 });
+
+export type AppAuth = typeof betterAuthServer;
+
+export async function auth(): Promise<AppSession | null> {
+  const session = await betterAuthServer.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  if ("role" in (session.user || {})) {
+    return session as AppSession;
+  }
+
+  return buildAppSession(session as any);
+}

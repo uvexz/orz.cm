@@ -128,9 +128,12 @@ copy `.env.example` to `.env` and fill in the necessary environment variables.
 #### Init database
 
 ```bash
-bun run postinstall
 bun run db:push
 ```
+
+On first local boot, user registration is not controlled by an `.env` variable.
+It comes from the database system config `enable_user_registration`.
+For a brand-new local database, registration now defaults to enabled so you can create the first account on `/login`, then visit `/setup` to promote that user to admin.
 
 ```bash
 # run on localhost:3000
@@ -155,7 +158,7 @@ Via [Installation For Developer](https://wr.do/docs/developer).
 
 - Next.js + React + TypeScript
 - Tailwind CSS for styling and design
-- Prisma ORM as the database toolkit
+- Drizzle ORM as the database toolkit
 - Cloudflare as the primary cloud infrastructure
 - Vercel as the recommended deployment platform
 - Resend as the primary email service

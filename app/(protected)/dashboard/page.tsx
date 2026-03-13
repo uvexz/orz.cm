@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/db/types";
 
 import { getAllUserEmailsCount } from "@/lib/dto/email";
 import { getPlanQuota, PlanQuota } from "@/lib/dto/plan";

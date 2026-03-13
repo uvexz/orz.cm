@@ -1,4 +1,4 @@
-import { User } from "@prisma/client";
+import type { User } from "@/lib/db/types";
 import { AvatarProps } from "@radix-ui/react-avatar";
 
 import { Avatar, AvatarImage } from "@/components/ui/avatar";

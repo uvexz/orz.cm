@@ -210,22 +210,22 @@ export default function AppConfigs({}: {}) {
             </Collapsible>
 
             <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center justify-between space-x-2">
-                <div className="space-y-1 leading-none">
-                  <p className="flex items-center gap-2 font-medium">
-                    {t("Email Suffix Limit")}
-                  </p>
-                  <p className="text-start text-xs text-muted-foreground">
-                    {t(
-                      "Enable eamil suffix limit, only works for resend email login and email password login methods",
-                    )}
-                  </p>
-                </div>
+              <div className="flex items-start gap-3">
+                <CollapsibleTrigger className="flex flex-1 items-center justify-between space-x-2 text-left">
+                  <div className="space-y-1 leading-none">
+                    <p className="flex items-center gap-2 font-medium">
+                      {t("Email Suffix Limit")}
+                    </p>
+                    <p className="text-start text-xs text-muted-foreground">
+                      {t(
+                        "Enable eamil suffix limit, only works for resend email login and email password login methods",
+                      )}
+                    </p>
+                  </div>
+                  <Icons.chevronDown className="size-4 shrink-0" />
+                </CollapsibleTrigger>
                 {configs && (
-                  <div
-                    className="ml-auto flex items-center gap-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex items-center gap-3 pt-1">
                     {configs.enable_email_registration_suffix_limit &&
                       !configs.email_registration_suffix_limit_white_list && (
                         <Badge variant="yellow">
@@ -245,10 +245,9 @@ export default function AppConfigs({}: {}) {
                         )
                       }
                     />
-                    <Icons.chevronDown className="size-4" />
                   </div>
                 )}
-              </CollapsibleTrigger>
+              </div>
               <CollapsibleContent className="mt-4 space-y-4 rounded-md border p-4 shadow-md">
                 <div className="flex flex-col items-start justify-start gap-3">
                   <div className="space-y-1 leading-none">
@@ -371,22 +370,22 @@ export default function AppConfigs({}: {}) {
           <div className="space-y-6">
             {/* Catch-All*/}
             <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center justify-between space-x-2">
-                <div className="space-y-1 leading-none">
-                  <p className="flex items-center gap-2 font-medium">
-                    Catch-All
-                  </p>
-                  <p className="text-start text-xs text-muted-foreground">
-                    {t(
-                      "Enable email catch-all, all user's email address which created on this platform will be redirected to the catch-all email address",
-                    )}
-                  </p>
-                </div>
+              <div className="flex items-start gap-3">
+                <CollapsibleTrigger className="flex flex-1 items-center justify-between space-x-2 text-left">
+                  <div className="space-y-1 leading-none">
+                    <p className="flex items-center gap-2 font-medium">
+                      Catch-All
+                    </p>
+                    <p className="text-start text-xs text-muted-foreground">
+                      {t(
+                        "Enable email catch-all, all user's email address which created on this platform will be redirected to the catch-all email address",
+                      )}
+                    </p>
+                  </div>
+                  <Icons.chevronDown className="size-4 shrink-0" />
+                </CollapsibleTrigger>
                 {configs && (
-                  <div
-                    className="ml-auto flex items-center gap-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex items-center gap-3 pt-1">
                     {configs.enable_email_catch_all &&
                       !configs.catch_all_emails && (
                         <Badge variant="yellow">
@@ -400,11 +399,9 @@ export default function AppConfigs({}: {}) {
                         handleChange(v, "enable_email_catch_all", "BOOLEAN")
                       }
                     />
-
-                    <Icons.chevronDown className="size-4" />
                   </div>
                 )}
-              </CollapsibleTrigger>
+              </div>
               <CollapsibleContent className="mt-4 space-y-4 rounded-md border p-4 shadow-md">
                 <div className="flex flex-col items-start justify-start gap-3">
                   <div className="space-y-1 leading-none">
@@ -492,22 +489,22 @@ export default function AppConfigs({}: {}) {
             </Collapsible>
             {/* Forward Email to other email address */}
             <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center justify-between space-x-2">
-                <div className="space-y-1 leading-none">
-                  <p className="flex items-center gap-2 font-medium">
-                    {t("Email Forwarding")}
-                  </p>
-                  <p className="text-start text-xs text-muted-foreground">
-                    {t(
-                      "If enabled, forward all received emails to other platform email addresses (Send with Resend or Brevo)",
-                    )}
-                  </p>
-                </div>
+              <div className="flex items-start gap-3">
+                <CollapsibleTrigger className="flex flex-1 items-center justify-between space-x-2 text-left">
+                  <div className="space-y-1 leading-none">
+                    <p className="flex items-center gap-2 font-medium">
+                      {t("Email Forwarding")}
+                    </p>
+                    <p className="text-start text-xs text-muted-foreground">
+                      {t(
+                        "If enabled, forward all received emails to other platform email addresses (Send with Resend or Brevo)",
+                      )}
+                    </p>
+                  </div>
+                  <Icons.chevronDown className="size-4 shrink-0" />
+                </CollapsibleTrigger>
                 {configs && (
-                  <div
-                    className="ml-auto flex items-center gap-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex items-center gap-3 pt-1">
                     {configs.enable_email_forward &&
                       !configs.email_forward_targets && (
                         <Badge variant="yellow">
@@ -521,10 +518,9 @@ export default function AppConfigs({}: {}) {
                         handleChange(v, "enable_email_forward", "BOOLEAN")
                       }
                     />
-                    <Icons.chevronDown className="size-4" />
                   </div>
                 )}
-              </CollapsibleTrigger>
+              </div>
               <CollapsibleContent className="mt-4 space-y-4 rounded-md border p-4 shadow-md">
                 <div className="flex flex-col items-start justify-start gap-3">
                   <div className="space-y-1 leading-none">
@@ -611,27 +607,27 @@ export default function AppConfigs({}: {}) {
 
             {/* Telegram */}
             <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center justify-between space-x-2">
-                <div className="space-y-1 leading-none">
-                  <p className="flex items-center gap-2 font-medium">
-                    {t("Telegram Pusher")}
-                  </p>
-                  <p className="text-start text-xs text-muted-foreground">
-                    {t("Push message to Telegram groups")}.{" "}
-                    <Link
-                      href="/docs/developer/telegram-bot"
-                      className="text-blue-500"
-                      target="_blank"
-                    >
-                      {t("How to configure Telegram bot")} ?
-                    </Link>
-                  </p>
-                </div>
+              <div className="flex items-start gap-3">
+                <CollapsibleTrigger className="flex flex-1 items-center justify-between space-x-2 text-left">
+                  <div className="space-y-1 leading-none">
+                    <p className="flex items-center gap-2 font-medium">
+                      {t("Telegram Pusher")}
+                    </p>
+                    <p className="text-start text-xs text-muted-foreground">
+                      {t("Push message to Telegram groups")}.{" "}
+                      <Link
+                        href="/docs/developer/telegram-bot"
+                        className="text-blue-500"
+                        target="_blank"
+                      >
+                        {t("How to configure Telegram bot")} ?
+                      </Link>
+                    </p>
+                  </div>
+                  <Icons.chevronDown className="size-4 shrink-0" />
+                </CollapsibleTrigger>
                 {configs && (
-                  <div
-                    className="ml-auto flex items-center gap-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex items-center gap-3 pt-1">
                     {configs.enable_tg_email_push &&
                       (!configs.tg_email_bot_token ||
                         !configs.tg_email_chat_id) && (
@@ -646,10 +642,9 @@ export default function AppConfigs({}: {}) {
                         handleChange(v, "enable_tg_email_push", "BOOLEAN")
                       }
                     />
-                    <Icons.chevronDown className="size-4" />
                   </div>
                 )}
-              </CollapsibleTrigger>
+              </div>
               <CollapsibleContent className="mt-4 space-y-4 rounded-md border p-4 shadow-md">
                 <div className="flex flex-col items-start justify-start gap-3">
                   <div className="space-y-1 leading-none">

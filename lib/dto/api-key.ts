@@ -1,26 +1,44 @@
 import crypto from "crypto";
+import { and, eq } from "drizzle-orm";
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 
 export const getApiKeyByUserId = async (userId: string) => {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    select: { apiKey: true },
-  });
+  const [user] = await db
+    .select({ apiKey: users.apiKey })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return user ?? null;
 };
 
 export const checkApiKey = async (apiKey: string) => {
-  return prisma.user.findFirst({
-    where: { apiKey, active: 1 },
-    select: { id: true, team: true, name: true, active: true },
-  });
+  const [user] = await db
+    .select({
+      id: users.id,
+      team: users.team,
+      name: users.name,
+      active: users.active,
+    })
+    .from(users)
+    .where(and(eq(users.apiKey, apiKey), eq(users.active, 1)))
+    .limit(1);
+
+  return user ?? null;
 };
 
 export const generateApiKey = async (userId: string) => {
   const apiKey = crypto.randomUUID();
-  return prisma.user.update({
-    where: { id: userId, active: 1 },
-    data: { apiKey },
-    select: { apiKey: true },
-  });
+  const [user] = await db
+    .update(users)
+    .set({
+      apiKey,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(users.id, userId), eq(users.active, 1)))
+    .returning({ apiKey: users.apiKey });
+
+  return user ?? null;
 };

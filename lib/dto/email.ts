@@ -1,12 +1,122 @@
-import { ForwardEmail, UserEmail, UserRole } from "@prisma/client";
+import {
+  and,
+  desc,
+  eq,
+  exists,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { forwardEmails, userEmails, userSendEmails, users } from "@/lib/db/schema";
+
+type UserRole = "ADMIN" | "USER";
+type UserEmailRow = typeof userEmails.$inferSelect;
+type ForwardEmailRow = typeof forwardEmails.$inferSelect;
+
+const generateId = () => crypto.randomUUID().replace(/-/g, "");
+
+function isUniqueViolation(error: unknown): error is { code: string } {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505",
+  );
+}
+
+function toUniqueConstraintError() {
+  const error = new Error("Unique constraint failed");
+  (error as Error & { code?: string }).code = "UNIQUE_CONSTRAINT";
+  return error;
+}
+
+function getMonthRange() {
+  const now = new Date();
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    ),
+  };
+}
+
+function buildUserEmailWhere(
+  userId: string,
+  search: string,
+  admin: boolean,
+  onlyUnread: boolean,
+) {
+  const conditions: SQL[] = [
+    ilike(userEmails.emailAddress, `%${search}%`),
+  ];
+
+  if (!admin) {
+    conditions.push(eq(userEmails.userId, userId), isNull(userEmails.deletedAt));
+  } else {
+    conditions.push(isNull(userEmails.deletedAt));
+  }
+
+  if (onlyUnread) {
+    conditions.push(
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(forwardEmails)
+          .where(
+            and(
+              eq(forwardEmails.to, userEmails.emailAddress),
+              isNull(forwardEmails.readAt),
+            ),
+          ),
+      ),
+    );
+  }
+
+  return and(...conditions);
+}
+
+async function getForwardEmailCountMap(emailAddresses: string[], unreadOnly = false) {
+  if (emailAddresses.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const conditions: SQL[] = [inArray(forwardEmails.to, emailAddresses)];
+  if (unreadOnly) {
+    conditions.push(isNull(forwardEmails.readAt));
+  }
+
+  const rows = await db
+    .select({
+      emailAddress: forwardEmails.to,
+      count: sql<number>`count(*)`,
+    })
+    .from(forwardEmails)
+    .where(and(...conditions))
+    .groupBy(forwardEmails.to);
+
+  return new Map(
+    rows.map((row) => [row.emailAddress, Number(row.count ?? 0)] as const),
+  );
+}
 
 export type EmailAddress = {
   name: string;
   address?: string;
   group?: EmailAddress[];
 };
+
 export type EmailHeader = Record<string, string>;
 
 export interface OriginalEmail {
@@ -29,7 +139,7 @@ export interface OriginalEmail {
   }[];
 }
 
-export interface UserEmailList extends UserEmail {
+export interface UserEmailList extends UserEmailRow {
   count: number;
   unreadCount: number;
   user: string;
@@ -37,15 +147,18 @@ export interface UserEmailList extends UserEmail {
 }
 
 export async function saveForwardEmail(emailData: OriginalEmail) {
-  const user_email = await prisma.userEmail.findFirst({
-    where: {
-      emailAddress: emailData.to,
-    },
-  });
-  if (!user_email) return null;
+  const [userEmail] = await db
+    .select({ id: userEmails.id })
+    .from(userEmails)
+    .where(eq(userEmails.emailAddress, emailData.to))
+    .limit(1);
 
-  const res = await prisma.forwardEmail.create({
-    data: {
+  if (!userEmail) return null;
+
+  const [savedEmail] = await db
+    .insert(forwardEmails)
+    .values({
+      id: generateId(),
       from: emailData.from,
       fromName: emailData.fromName,
       to: emailData.to,
@@ -56,20 +169,17 @@ export async function saveForwardEmail(emailData: OriginalEmail) {
       messageId: emailData.messageId,
       replyTo: emailData.replyTo,
       cc: emailData.cc,
-      headers: "[]",
-      attachments: JSON.stringify(emailData.attachments),
+      headers: emailData.headers ?? "[]",
+      attachments: JSON.stringify(emailData.attachments ?? []),
       readAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  });
-  if (!res) {
-    return null;
-  }
-  return res.id;
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning({ id: forwardEmails.id });
+
+  return savedEmail?.id ?? null;
 }
 
-// 查询所有 UserEmail
 export async function getAllUserEmails(
   userId: string,
   page: number,
@@ -78,280 +188,317 @@ export async function getAllUserEmails(
   admin: boolean,
   onlyUnread: boolean = false,
 ) {
-  let whereOptions: any = {};
+  const whereClause = buildUserEmailWhere(userId, search, admin, onlyUnread);
 
-  if (admin) {
-    whereOptions = {
-      emailAddress: { contains: search, mode: "insensitive" },
-    };
-  } else {
-    whereOptions = {
-      userId,
-      deletedAt: null,
-      emailAddress: { contains: search, mode: "insensitive" },
-    };
-  }
+  let listQuery = db
+    .select({
+      userEmail: userEmails,
+      userName: users.name,
+      userAccountEmail: users.email,
+    })
+    .from(userEmails)
+    .leftJoin(users, eq(userEmails.userId, users.id))
+    .orderBy(desc(userEmails.updatedAt))
+    .limit(size)
+    .offset((page - 1) * size)
+    .$dynamic();
 
-  if (onlyUnread) {
-    whereOptions.forwardEmails = {
-      some: {
-        readAt: null,
-      },
-    };
-  }
+  let totalQuery = db
+    .select({ count: sql<number>`count(*)` })
+    .from(userEmails)
+    .$dynamic();
 
-  // Fetch paginated UserEmail records
-  const userEmailsPromise = prisma.userEmail.findMany({
-    where: whereOptions,
-    select: {
-      id: true,
-      userId: true,
-      emailAddress: true,
-      createdAt: true,
-      updatedAt: true,
-      deletedAt: true,
-      _count: { select: { forwardEmails: true } },
-      user: { select: { name: true, email: true } },
-      forwardEmails: {
-        select: {
-          readAt: true,
-        },
-      },
-    },
-    skip: (page - 1) * size,
-    take: size,
-    orderBy: {
-      updatedAt: "desc",
-    },
-  });
+  let emailAddressQuery = db
+    .select({ emailAddress: userEmails.emailAddress })
+    .from(userEmails)
+    .$dynamic();
 
-  const totalPromise = prisma.userEmail.count({
-    where: whereOptions,
-  });
+  listQuery = listQuery.where(whereClause);
+  totalQuery = totalQuery.where(whereClause);
+  emailAddressQuery = emailAddressQuery.where(whereClause);
 
-  const emailAddressesPromise = prisma.userEmail.findMany({
-    where: whereOptions,
-    select: { emailAddress: true },
-  });
-
-  const [userEmails, total, emailAddresses] = await Promise.all([
-    userEmailsPromise,
-    totalPromise,
-    emailAddressesPromise,
+  const [[totalResult], pagedRows, allEmailRows] = await Promise.all([
+    totalQuery,
+    listQuery,
+    emailAddressQuery,
   ]);
 
-  const emailAddressList = emailAddresses.map((e) => e.emailAddress);
+  const pageEmailAddresses = pagedRows.map((row) => row.userEmail.emailAddress);
+  const allEmailAddresses = allEmailRows.map((row) => row.emailAddress);
 
-  const [totalInboxCount, totalUnreadCount] = await Promise.all([
-    prisma.forwardEmail.count({
-      where: {
-        to: { in: emailAddressList },
-      },
-    }),
-    prisma.forwardEmail.count({
-      where: {
-        to: { in: emailAddressList },
-        readAt: null,
-      },
-    }),
+  const [
+    pageCountMap,
+    pageUnreadCountMap,
+    totalInboxCountRows,
+    totalUnreadCountRows,
+  ] = await Promise.all([
+    getForwardEmailCountMap(pageEmailAddresses),
+    getForwardEmailCountMap(pageEmailAddresses, true),
+    allEmailAddresses.length === 0
+      ? Promise.resolve([{ count: 0 }])
+      : db
+          .select({ count: sql<number>`count(*)` })
+          .from(forwardEmails)
+          .where(inArray(forwardEmails.to, allEmailAddresses)),
+    allEmailAddresses.length === 0
+      ? Promise.resolve([{ count: 0 }])
+      : db
+          .select({ count: sql<number>`count(*)` })
+          .from(forwardEmails)
+          .where(
+            and(
+              inArray(forwardEmails.to, allEmailAddresses),
+              isNull(forwardEmails.readAt),
+            ),
+          ),
   ]);
 
-  const result = userEmails.map((email) => {
-    const unreadCount = email.forwardEmails.filter(
-      (mail) => mail.readAt === null,
-    ).length;
-
-    return {
-      ...email,
-      count: email._count.forwardEmails,
-      unreadCount,
-      user: email.user.name,
-      email: email.user.email,
-      forwardEmails: undefined,
-    };
-  });
+  const list: UserEmailList[] = pagedRows.map((row) => ({
+    ...row.userEmail,
+    count: pageCountMap.get(row.userEmail.emailAddress) ?? 0,
+    unreadCount: pageUnreadCountMap.get(row.userEmail.emailAddress) ?? 0,
+    user: row.userName ?? "",
+    email: row.userAccountEmail ?? "",
+  }));
 
   return {
-    list: result,
-    total,
-    totalInboxCount,
-    totalUnreadCount,
+    list,
+    total: Number(totalResult?.count ?? 0),
+    totalInboxCount: Number(totalInboxCountRows[0]?.count ?? 0),
+    totalUnreadCount: Number(totalUnreadCountRows[0]?.count ?? 0),
   };
 }
 
-// 查询所有 UserEmail 数量
 export async function getAllUserEmailsCount(
   userId: string,
   role: UserRole = "USER",
 ) {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    0,
-    23,
-    59,
-    59,
-    999,
-  );
+  const { start, end } = getMonthRange();
+  const baseConditions =
+    role === "USER"
+      ? [eq(userEmails.userId, userId), isNull(userEmails.deletedAt)]
+      : [isNull(userEmails.deletedAt)];
 
-  const [total, month_total] = await prisma.$transaction([
-    prisma.userEmail.count({
-      where:
-        role === "USER" ? { userId, deletedAt: null } : { deletedAt: null },
-    }),
-    prisma.userEmail.count({
-      where:
-        role === "USER"
-          ? { userId, createdAt: { gte: start, lte: end }, deletedAt: null }
-          : { createdAt: { gte: start, lte: end }, deletedAt: null },
-    }),
+  const [totalRows, monthRows] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(userEmails)
+      .where(and(...baseConditions)),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(userEmails)
+      .where(
+        and(
+          ...baseConditions,
+          gte(userEmails.createdAt, start),
+          lte(userEmails.createdAt, end),
+        ),
+      ),
   ]);
-  return { total, month_total };
+
+  return {
+    total: Number(totalRows[0]?.count ?? 0),
+    month_total: Number(monthRows[0]?.count ?? 0),
+  };
 }
 
-// 查询所有 inbox 数量
 export async function getAllUserInboxEmailsCount() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    0,
-    23,
-    59,
-    59,
-    999,
-  );
+  const { start, end } = getMonthRange();
 
-  const [total, month_total] = await prisma.$transaction([
-    prisma.forwardEmail.count(),
-    prisma.forwardEmail.count({
-      where: { createdAt: { gte: start, lte: end } },
-    }),
+  const [totalRows, monthRows] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(forwardEmails),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(forwardEmails)
+      .where(
+        and(
+          gte(forwardEmails.createdAt, start),
+          lte(forwardEmails.createdAt, end),
+        ),
+      ),
   ]);
-  return { total, month_total };
+
+  return {
+    total: Number(totalRows[0]?.count ?? 0),
+    month_total: Number(monthRows[0]?.count ?? 0),
+  };
 }
 
-// 创建 UserEmail
 export async function createUserEmail(
   userId: string,
   emailAddress: string,
-): Promise<UserEmail> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+): Promise<UserEmailRow> {
+  const [user] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
   if (!user) {
     throw new Error("Invalid userId");
   }
 
-  return prisma.userEmail.create({
-    data: {
-      userId,
-      emailAddress,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  });
+  try {
+    const [createdUserEmail] = await db
+      .insert(userEmails)
+      .values({
+        id: generateId(),
+        userId,
+        emailAddress,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return createdUserEmail;
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw toUniqueConstraintError();
+    }
+
+    throw error;
+  }
 }
 
-// 查询单个 UserEmail
-export async function getUserEmailById(id: string): Promise<UserEmail | null> {
-  return prisma.userEmail.findUnique({
-    where: { id, deletedAt: null },
-  });
+export async function getUserEmailById(id: string): Promise<UserEmailRow | null> {
+  const [userEmail] = await db
+    .select()
+    .from(userEmails)
+    .where(and(eq(userEmails.id, id), isNull(userEmails.deletedAt)))
+    .limit(1);
+
+  return userEmail ?? null;
 }
 
-// 更新 UserEmail
 export async function updateUserEmail(
   id: string,
   emailAddress: string,
-): Promise<UserEmail> {
-  return prisma.userEmail.update({
-    where: { id, deletedAt: null },
-    data: { emailAddress, updatedAt: new Date().toISOString() },
-  });
-}
+): Promise<UserEmailRow> {
+  try {
+    const [updatedUserEmail] = await db
+      .update(userEmails)
+      .set({
+        emailAddress,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(userEmails.id, id), isNull(userEmails.deletedAt)))
+      .returning();
 
-// 删除 UserEmail (软删除)
-export async function deleteUserEmail(id: string) {
-  const userEmail = await prisma.userEmail.findFirst({
-    where: { id, deletedAt: null },
-  });
-  if (userEmail) {
-    await prisma.userEmail.update({
-      where: { id },
-      data: { deletedAt: new Date() }, // 设置删除时间
-    });
+    if (!updatedUserEmail) {
+      throw new Error("User email not found or already deleted");
+    }
+
+    return updatedUserEmail;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "User email not found or already deleted"
+    ) {
+      throw error;
+    }
+
+    if (isUniqueViolation(error)) {
+      throw toUniqueConstraintError();
+    }
+
+    throw error;
   }
 }
-// 删除 UserEmail (软删除)
-export async function deleteUserEmailByAddress(email: string) {
-  const userEmail = await prisma.userEmail.findFirst({
-    where: { emailAddress: email, deletedAt: null },
-  });
 
-  if (userEmail) {
-    await prisma.userEmail.update({
-      where: { emailAddress: email },
-      data: { deletedAt: new Date() },
-    });
-  } else {
+export async function deleteUserEmail(id: string) {
+  const [userEmail] = await db
+    .select({ id: userEmails.id })
+    .from(userEmails)
+    .where(and(eq(userEmails.id, id), isNull(userEmails.deletedAt)))
+    .limit(1);
+
+  if (!userEmail) {
+    return;
+  }
+
+  await db
+    .update(userEmails)
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(userEmails.id, id));
+}
+
+export async function deleteUserEmailByAddress(email: string) {
+  const [userEmail] = await db
+    .select({ id: userEmails.id })
+    .from(userEmails)
+    .where(and(eq(userEmails.emailAddress, email), isNull(userEmails.deletedAt)))
+    .limit(1);
+
+  if (!userEmail) {
     throw new Error("User email not found or already deleted");
   }
+
+  await db
+    .update(userEmails)
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(userEmails.emailAddress, email));
 }
 
-// 通过 emailAddress 查询邮件列表
 export async function getEmailsByEmailAddress(
   emailAddress: string,
   page: number,
   pageSize: number,
-): Promise<{ list: ForwardEmail[]; total: number }> {
-  const userEmail = await prisma.userEmail.findUnique({
-    where: { emailAddress, deletedAt: null },
-  });
+): Promise<{ list: ForwardEmailRow[]; total: number }> {
+  const [userEmail] = await db
+    .select({ id: userEmails.id })
+    .from(userEmails)
+    .where(
+      and(
+        eq(userEmails.emailAddress, emailAddress),
+        isNull(userEmails.deletedAt),
+      ),
+    )
+    .limit(1);
 
   if (!userEmail) {
-    throw new Error("Email address not found");
+    throw new Error("Email address not found or has been deleted");
   }
 
-  const list = await prisma.forwardEmail.findMany({
-    where: { to: emailAddress },
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * pageSize, // 从第 (page-1)*pageSize 条开始
-    take: pageSize, // 取 pageSize 条
-  });
-
-  const total = await prisma.forwardEmail.count({
-    where: { to: emailAddress },
-  });
+  const [list, totalRows] = await Promise.all([
+    db
+      .select()
+      .from(forwardEmails)
+      .where(eq(forwardEmails.to, emailAddress))
+      .orderBy(desc(forwardEmails.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(forwardEmails)
+      .where(eq(forwardEmails.to, emailAddress)),
+  ]);
 
   return {
     list,
-    total,
+    total: Number(totalRows[0]?.count ?? 0),
   };
 }
 
-/**
- * 将邮件标记为已读
- * @param emailId 需要标记为已读的邮件ID
- * @param userId 当前用户ID (用于权限验证)
- * @returns 更新后的邮件信息
- */
 export async function markEmailAsRead(emailId: string, userId: string) {
   try {
-    // 首先查询邮件是否存在，并检查权限
-    const email = await prisma.forwardEmail.findFirst({
-      where: {
-        id: emailId,
-        UserEmail: {
-          userId,
-        },
-        readAt: null,
-      },
-      include: {
-        UserEmail: true,
-      },
-    });
+    const [email] = await db
+      .select({ id: forwardEmails.id })
+      .from(forwardEmails)
+      .innerJoin(userEmails, eq(forwardEmails.to, userEmails.emailAddress))
+      .where(
+        and(
+          eq(forwardEmails.id, emailId),
+          eq(userEmails.userId, userId),
+          isNull(forwardEmails.readAt),
+        ),
+      )
+      .limit(1);
 
     if (!email) {
       throw new Error(
@@ -359,15 +506,14 @@ export async function markEmailAsRead(emailId: string, userId: string) {
       );
     }
 
-    // 更新邮件的 readAt 字段为当前时间
-    const updatedEmail = await prisma.forwardEmail.update({
-      where: {
-        id: emailId,
-      },
-      data: {
+    const [updatedEmail] = await db
+      .update(forwardEmails)
+      .set({
         readAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(forwardEmails.id, emailId))
+      .returning();
 
     return updatedEmail;
   } catch (error) {
@@ -376,25 +522,25 @@ export async function markEmailAsRead(emailId: string, userId: string) {
   }
 }
 
-/**
- * 批量将邮件标记为已读
- * @param emailIds 需要标记为已读的邮件ID数组
- * @param userId 当前用户ID (用于权限验证)
- * @returns 更新的邮件数量
- */
 export async function markEmailsAsRead(emailIds: string[], userId: string) {
   try {
-    // 验证所有邮件是否属于该用户
-    const emails = await prisma.forwardEmail.findMany({
-      where: {
-        id: { in: emailIds },
-        UserEmail: {
-          userId: userId,
-        },
-      },
-    });
+    if (emailIds.length === 0) {
+      throw new Error(
+        "There are no valid emails to mark as read or you do not have permission",
+      );
+    }
 
-    // 获取有效的邮件IDs (用户有权限的)
+    const emails = await db
+      .select({ id: forwardEmails.id })
+      .from(forwardEmails)
+      .innerJoin(userEmails, eq(forwardEmails.to, userEmails.emailAddress))
+      .where(
+        and(
+          inArray(forwardEmails.id, emailIds),
+          eq(userEmails.userId, userId),
+        ),
+      );
+
     const validEmailIds = emails.map((email) => email.id);
 
     if (validEmailIds.length === 0) {
@@ -403,19 +549,18 @@ export async function markEmailsAsRead(emailIds: string[], userId: string) {
       );
     }
 
-    // 批量更新邮件的 readAt 字段
-    const updateResult = await prisma.forwardEmail.updateMany({
-      where: {
-        id: { in: validEmailIds },
-      },
-      data: {
+    const updatedRows = await db
+      .update(forwardEmails)
+      .set({
         readAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(inArray(forwardEmails.id, validEmailIds))
+      .returning({ id: forwardEmails.id });
 
     return {
-      updatedCount: updateResult.count,
-      message: `Successfully marked ${updateResult.count} emails as read`,
+      updatedCount: updatedRows.length,
+      message: `Successfully marked ${updatedRows.length} emails as read`,
     };
   } catch (error) {
     console.error("批量标记邮件为已读失败:", error);
@@ -423,21 +568,13 @@ export async function markEmailsAsRead(emailIds: string[], userId: string) {
   }
 }
 
-/**
- * 将指定用户邮箱的所有邮件标记为已读
- * @param userEmailId 用户邮箱ID
- * @param userId 当前用户ID (用于权限验证)
- * @returns 更新的邮件数量
- */
 export async function markAllEmailsAsRead(userEmailId: string, userId: string) {
   try {
-    // 验证用户邮箱是否属于该用户
-    const userEmail = await prisma.userEmail.findFirst({
-      where: {
-        id: userEmailId,
-        userId: userId,
-      },
-    });
+    const [userEmail] = await db
+      .select({ emailAddress: userEmails.emailAddress })
+      .from(userEmails)
+      .where(and(eq(userEmails.id, userEmailId), eq(userEmails.userId, userId)))
+      .limit(1);
 
     if (!userEmail) {
       throw new Error(
@@ -445,20 +582,23 @@ export async function markAllEmailsAsRead(userEmailId: string, userId: string) {
       );
     }
 
-    // 更新该邮箱下所有未读邮件
-    const updateResult = await prisma.forwardEmail.updateMany({
-      where: {
-        to: userEmail.emailAddress,
-        readAt: null,
-      },
-      data: {
+    const updatedRows = await db
+      .update(forwardEmails)
+      .set({
         readAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(forwardEmails.to, userEmail.emailAddress),
+          isNull(forwardEmails.readAt),
+        ),
+      )
+      .returning({ id: forwardEmails.id });
 
     return {
-      updatedCount: updateResult.count,
-      message: `Successfully marked ${updateResult.count} emails as read`,
+      updatedCount: updatedRows.length,
+      message: `Successfully marked ${updatedRows.length} emails as read`,
     };
   } catch (error) {
     console.error("标记所有邮件为已读失败:", error);
@@ -466,11 +606,17 @@ export async function markAllEmailsAsRead(userEmailId: string, userId: string) {
   }
 }
 
-// 删除邮件
 export async function deleteEmailsByIds(ids: string[]) {
-  return prisma.forwardEmail.deleteMany({
-    where: { id: { in: ids } },
-  });
+  if (ids.length === 0) {
+    return { count: 0 };
+  }
+
+  const deletedRows = await db
+    .delete(forwardEmails)
+    .where(inArray(forwardEmails.id, ids))
+    .returning({ id: forwardEmails.id });
+
+  return { count: deletedRows.length };
 }
 
 export async function saveUserSendEmail(
@@ -480,24 +626,32 @@ export async function saveUserSendEmail(
   subject: string,
   html: string,
 ) {
-  return prisma.userSendEmail.create({
-    data: {
+  const [email] = await db
+    .insert(userSendEmails)
+    .values({
+      id: generateId(),
       userId,
       from,
       to,
       subject,
       html,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  });
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return email;
 }
 
 export async function getUserSendEmailCount(userId: string, admin: boolean) {
-  if (admin) {
-    return prisma.userSendEmail.count();
-  }
-  return prisma.userSendEmail.count({ where: { userId } });
+  const rows = admin
+    ? await db.select({ count: sql<number>`count(*)` }).from(userSendEmails)
+    : await db
+        .select({ count: sql<number>`count(*)` })
+        .from(userSendEmails)
+        .where(eq(userSendEmails.userId, userId));
+
+  return Number(rows[0]?.count ?? 0);
 }
 
 export async function getUserSendEmailList(
@@ -507,39 +661,36 @@ export async function getUserSendEmailList(
   size: number,
   search: string,
 ) {
-  const select = {
-    from: true,
-    to: true,
-    subject: true,
-    html: true,
-    createdAt: true,
-  };
-  let where: any = {};
+  const conditions: SQL[] = [ilike(userSendEmails.to, `%${search}%`)];
 
-  if (admin) {
-    where = {
-      to: { contains: search, mode: "insensitive" },
-    };
-  } else {
-    where = {
-      userId,
-      to: { contains: search, mode: "insensitive" },
-    };
+  if (!admin) {
+    conditions.push(eq(userSendEmails.userId, userId));
   }
 
-  const listPromise = prisma.userSendEmail.findMany({
-    where,
-    select,
-    skip: (page - 1) * size,
-    take: size,
-    orderBy: {
-      updatedAt: "desc",
-    },
-  });
-  const totalPromise = prisma.userSendEmail.count({
-    where,
-  });
+  const whereClause = and(...conditions);
 
-  const [list, total] = await Promise.all([listPromise, totalPromise]);
-  return { list, total };
+  const [list, totalRows] = await Promise.all([
+    db
+      .select({
+        from: userSendEmails.from,
+        to: userSendEmails.to,
+        subject: userSendEmails.subject,
+        html: userSendEmails.html,
+        createdAt: userSendEmails.createdAt,
+      })
+      .from(userSendEmails)
+      .where(whereClause)
+      .orderBy(desc(userSendEmails.updatedAt))
+      .limit(size)
+      .offset((page - 1) * size),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(userSendEmails)
+      .where(whereClause),
+  ]);
+
+  return {
+    list,
+    total: Number(totalRows[0]?.count ?? 0),
+  };
 }

@@ -121,7 +121,7 @@
 
 - Next.js + React + TypeScript
 - Tailwind CSS 用于样式设计
-- Prisma ORM 作为数据库工具
+- Drizzle ORM 作为数据库工具
 - Cloudflare 作为主要的云基础设施
 - Vercel 作为推荐的部署平台
 - Resend 作为邮件服务
@@ -178,9 +178,11 @@ bun install
 #### 初始化数据库
 
 ```bash
-bun run postinstall
 bun run db:push
 ```
+
+首次本地启动时，用户注册开关不是 `.env` 环境变量，而是数据库里的系统配置 `enable_user_registration`。
+对于全新的本地数据库，项目现在会默认允许注册，这样你可以先在 `/login` 创建第一个账号，再访问 `/setup` 将首个用户提升为管理员。
 
 ```bash
 # 在 localhost:3000 上运行

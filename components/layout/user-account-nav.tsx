@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { LayoutDashboard, Lock, LogOut, Settings } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Drawer } from "vaul";
 
+import { authClient } from "@/lib/auth-client";
+import { useMounted } from "@/hooks/use-mounted";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   DropdownMenu,
@@ -20,8 +21,9 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "../ui/badge";
 
 export function UserAccountNav() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const session = authClient.useSession();
+  const user = session.data?.user;
+  const mounted = useMounted();
 
   const [open, setOpen] = useState(false);
   const closeDrawer = () => {
@@ -31,7 +33,7 @@ export function UserAccountNav() {
   const { isMobile } = useMediaQuery();
   const t = useTranslations("System");
 
-  if (!user)
+  if (!mounted || !user)
     return (
       <div className="size-8 animate-pulse rounded-full border bg-muted" />
     );
@@ -118,8 +120,8 @@ export function UserAccountNav() {
                 className="rounded-lg text-foreground hover:bg-muted"
                 onClick={(event) => {
                   event.preventDefault();
-                  signOut({
-                    callbackUrl: `${window.location.origin}/`,
+                  authClient.signOut().then(() => {
+                    window.location.href = `${window.location.origin}/`;
                   });
                 }}
               >
@@ -198,8 +200,8 @@ export function UserAccountNav() {
           className="cursor-pointer"
           onSelect={(event) => {
             event.preventDefault();
-            signOut({
-              callbackUrl: `${window.location.origin}/`,
+            authClient.signOut().then(() => {
+              window.location.href = `${window.location.origin}/`;
             });
           }}
         >

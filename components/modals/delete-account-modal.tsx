@@ -5,10 +5,10 @@ import {
   useMemo,
   useState,
 } from "react";
-import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -21,7 +21,7 @@ function DeleteAccountModal({
   showDeleteAccountModal: boolean;
   setShowDeleteAccountModal: Dispatch<SetStateAction<boolean>>;
 }) {
-  const { data: session } = useSession();
+  const session = authClient.useSession();
   const [deleting, setDeleting] = useState(false);
 
   const t = useTranslations("Setting");
@@ -38,8 +38,8 @@ function DeleteAccountModal({
         // delay to allow for the route change to complete
         await new Promise((resolve) =>
           setTimeout(() => {
-            signOut({
-              callbackUrl: `${window.location.origin}/`,
+            authClient.signOut().then(() => {
+              window.location.href = `${window.location.origin}/`;
             });
             resolve(null);
           }, 500),
@@ -57,13 +57,14 @@ function DeleteAccountModal({
       showModal={showDeleteAccountModal}
       setShowModal={setShowDeleteAccountModal}
       className="gap-0"
+      title={t("Delete Account")}
     >
       <div className="flex flex-col items-center justify-center space-y-3 border-b p-4 pt-8 sm:px-16">
         <UserAvatar
           user={{
-            name: session?.user?.name || null,
-            image: session?.user?.image || null,
-            email: session?.user?.email || null,
+            name: session.data?.user?.name || null,
+            image: session.data?.user?.image || null,
+            email: session.data?.user?.email || null,
           }}
         />
         <h3 className="text-lg font-semibold">{t("Delete Account")}</h3>

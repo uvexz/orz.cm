@@ -1,7 +1,10 @@
 import { getConfiguredEmailDomains } from "@/lib/dto/domains";
 import { OriginalEmail, saveForwardEmail } from "@/lib/dto/email";
 import { getMultipleConfigs } from "@/lib/dto/system-config";
+import { db } from "@/lib/db";
+import { userEmails, users } from "@/lib/db/schema";
 import { brevoSendEmail } from "@/lib/email/brevo";
+import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
@@ -278,23 +281,25 @@ async function sendToTelegram(email: OriginalEmail, configs: any) {
   }
 }
 
-import { prisma } from "@/lib/db";
-
 async function sendToPersonalTelegram(email: OriginalEmail, botToken: string, template?: string) {
   if (!botToken) return;
 
   try {
     // 查找该邮箱所属的用户
-    const userEmail = await prisma.userEmail.findUnique({
-      where: { emailAddress: email.to },
-      include: { user: true },
-    });
+    const [userEmail] = await db
+      .select({
+        tgChatId: users.tgChatId,
+      })
+      .from(userEmails)
+      .innerJoin(users, eq(userEmails.userId, users.id))
+      .where(eq(userEmails.emailAddress, email.to))
+      .limit(1);
 
-    if (!userEmail || !userEmail.user || !userEmail.user.tgChatId) {
+    if (!userEmail?.tgChatId) {
       return; // 找不到用户，或者用户没绑定 tgChatId
     }
 
-    const chatId = userEmail.user.tgChatId;
+    const chatId = userEmail.tgChatId;
     const message = formatEmailForTelegram(email, template);
 
     const response = await fetch(

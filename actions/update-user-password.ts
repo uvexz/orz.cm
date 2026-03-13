@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { eq } from "drizzle-orm";
 
-import { prisma } from "@/lib/db";
+import { syncBetterAuthCredentialForAppUser } from "@/lib/auth/server";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/password";
 import { userPasswordSchema } from "@/lib/validations/user";
 
@@ -20,15 +23,17 @@ export async function updateUserPassword(userId: string, data: FormData) {
     }
 
     const { password } = userPasswordSchema.parse(data);
+    const passwordHash = hashPassword(password);
 
-    await prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        password: hashPassword(password),
-      },
-    });
+    await db
+      .update(users)
+      .set({
+        password: passwordHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    await syncBetterAuthCredentialForAppUser(userId, passwordHash);
 
     revalidatePath("/dashboard/settings");
     return { status: "success" };

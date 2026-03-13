@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 
 import { useState } from "react";
-import { UrlMeta, User } from "@prisma/client";
+import type { UrlMeta, User } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import useSWR from "swr";
 

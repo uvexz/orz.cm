@@ -1,11 +1,51 @@
-import { PrismaClient } from "@prisma/client";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 
-import { prisma } from "../lib/db";
+import { db } from "../lib/db";
+import {
+  scrapeMetas,
+  userEmails,
+  userFiles,
+  userRecords,
+  userSendEmails,
+  userUrls,
+} from "../lib/db/schema";
 
 type TimeRangeType = "day" | "month";
+const restrictableModels = {
+  userEmail: {
+    table: userEmails,
+    userIdColumn: userEmails.userId,
+    createdAtColumn: userEmails.createdAt,
+  },
+  userFile: {
+    table: userFiles,
+    userIdColumn: userFiles.userId,
+    createdAtColumn: userFiles.createdAt,
+  },
+  userRecord: {
+    table: userRecords,
+    userIdColumn: userRecords.userId,
+    createdAtColumn: userRecords.created_on,
+  },
+  userSendEmail: {
+    table: userSendEmails,
+    userIdColumn: userSendEmails.userId,
+    createdAtColumn: userSendEmails.createdAt,
+  },
+  userUrl: {
+    table: userUrls,
+    userIdColumn: userUrls.userId,
+    createdAtColumn: userUrls.createdAt,
+  },
+  scrapeMeta: {
+    table: scrapeMetas,
+    userIdColumn: scrapeMetas.userId,
+    createdAtColumn: scrapeMetas.createdAt,
+  },
+} as const;
 
 interface RestrictOptions {
-  model: keyof PrismaClient;
+  model: keyof typeof restrictableModels;
   userId: string;
   limit: number;
   rangeType: TimeRangeType;
@@ -45,24 +85,26 @@ export async function restrictByTimeRange({
     };
   }
 
-  const modelInstance = prisma[model] as any;
-
-  if (!modelInstance) {
+  const target = restrictableModels[model];
+  if (!target) {
     return {
       status: 400,
       statusText: `Invalid model: ${model.toString()}`,
     };
   }
 
-  const count = await modelInstance.count({
-    where: {
-      userId,
-      createdAt: {
-        gte: start,
-        lte: end,
-      },
-    },
-  });
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(target.table)
+    .where(
+      and(
+        eq(target.userIdColumn, userId),
+        gte(target.createdAtColumn, start),
+        lte(target.createdAtColumn, end),
+      ),
+    );
+
+  const count = Number(result?.count ?? 0);
 
   if (count >= limit) {
     return {
