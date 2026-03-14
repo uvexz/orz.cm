@@ -33,9 +33,12 @@ import {
   insertForwardEmail,
   insertUserEmail,
   insertUserSendEmail,
+  listDeletedUserEmails,
   listForwardEmailsByAddress,
   listUserEmailsWithStats,
   listUserSendEmails,
+  permanentlyDeleteUserEmailById,
+  restoreDeletedUserEmailById,
   softDeleteUserEmailByAddress,
   softDeleteUserEmailById,
   updateAllForwardEmailsReadState,
@@ -213,6 +216,37 @@ export async function deleteUserEmailByAddress(emailAddress: string) {
   );
 
   await softDeleteUserEmailByAddress(normalizedEmailAddress);
+}
+
+export async function getDeletedUserEmailsForActor(
+  actor: EmailActor,
+  options: {
+    page: number;
+    size: number;
+    search: string;
+  },
+) {
+  return listDeletedUserEmails(
+    actor.id,
+    options.page,
+    options.size,
+    options.search,
+  );
+}
+
+export async function restoreDeletedUserEmail(id: string, userId: string) {
+  const userEmail = await restoreDeletedUserEmailById(id, userId);
+  assertEmailRecordExists(userEmail, "Deleted user email not found");
+  return userEmail;
+}
+
+export async function permanentlyDeleteDeletedUserEmail(
+  id: string,
+  userId: string,
+) {
+  const userEmail = await permanentlyDeleteUserEmailById(id, userId);
+  assertEmailRecordExists(userEmail, "Deleted user email not found");
+  return userEmail;
 }
 
 export async function getEmailsByEmailAddress(

@@ -6,6 +6,7 @@ import {
   gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lte,
   sql,
@@ -383,6 +384,80 @@ export async function softDeleteUserEmailByAddress(emailAddress: string) {
       updatedAt: new Date(),
     })
     .where(eq(userEmails.emailAddress, emailAddress));
+}
+
+export async function listDeletedUserEmails(
+  userId: string,
+  page: number,
+  pageSize: number,
+  search: string,
+) {
+  const whereClause = and(
+    eq(userEmails.userId, userId),
+    isNotNull(userEmails.deletedAt),
+    ilike(userEmails.emailAddress, `%${search}%`),
+  );
+
+  const [list, totalRows] = await Promise.all([
+    db
+      .select()
+      .from(userEmails)
+      .where(whereClause)
+      .orderBy(desc(userEmails.deletedAt), desc(userEmails.updatedAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(userEmails)
+      .where(whereClause),
+  ]);
+
+  return {
+    list,
+    total: Number(totalRows[0]?.count ?? 0),
+  };
+}
+
+export async function restoreDeletedUserEmailById(id: string, userId: string) {
+  try {
+    const [restoredUserEmail] = await db
+      .update(userEmails)
+      .set({
+        deletedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(userEmails.id, id),
+          eq(userEmails.userId, userId),
+          isNotNull(userEmails.deletedAt),
+        ),
+      )
+      .returning();
+
+    return restoredUserEmail ?? null;
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw toUniqueConstraintError();
+    }
+
+    throw error;
+  }
+}
+
+export async function permanentlyDeleteUserEmailById(id: string, userId: string) {
+  const [deletedUserEmail] = await db
+    .delete(userEmails)
+    .where(
+      and(
+        eq(userEmails.id, id),
+        eq(userEmails.userId, userId),
+        isNotNull(userEmails.deletedAt),
+      ),
+    )
+    .returning({ id: userEmails.id });
+
+  return deletedUserEmail ?? null;
 }
 
 export async function listForwardEmailsByAddress(

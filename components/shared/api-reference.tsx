@@ -22,7 +22,7 @@ export default function ApiReference({
       <CardContent>
         <Badge>{badge}</Badge>
         <div className="mt-2">
-          <span style={{ fontFamily: "Bahamas Bold" }}>WR.DO</span>{" "}
+          <span style={{ fontFamily: "Bahamas Bold" }}>Orz</span>{" "}
           {t("provide a api for {target}", { target: t(target) })}.{" "}
           {t("View the usage tutorial")}{" "}
           <Link

@@ -27,8 +27,8 @@ export const sidebarLinks: SidebarNavItem[] = [
         items: [
           { href: "/emails", title: "Inbox" },
           { href: "/emails/sent", title: "Sent" },
-          { href: "/emails/trash", title: "Trash", disabled: true },
-          { href: "/emails/api", title: "API", disabled: true },
+          { href: "/emails/trash", title: "Trash" },
+          { href: "/emails/api", title: "API" },
         ],
       },
       {
