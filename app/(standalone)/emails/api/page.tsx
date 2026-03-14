@@ -32,7 +32,6 @@ export default async function EmailApiPage() {
         <ApiReference
           badge="POST /api/v1/email"
           target="creating email boxes"
-          link="/docs/emails#api-reference"
         />
 
         <Card>

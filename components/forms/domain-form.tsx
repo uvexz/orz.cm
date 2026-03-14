@@ -1,7 +1,6 @@
 "use client";
 
 import { Dispatch, SetStateAction, useState, useTransition } from "react";
-import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { User } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
@@ -391,14 +390,7 @@ export function DomainForm({
                       </p>
                     ) : (
                       <p className="pb-0.5 text-[13px] text-muted-foreground">
-                        {t("Optional")}.{" "}
-                        <Link
-                          className="text-blue-500"
-                          href="/docs/developer/cloudflare"
-                          target="_blank"
-                        >
-                          {t("How to get zone id?")}
-                        </Link>
+                        {t("Optional")}. {t("How to get zone id?")}
                       </p>
                     )}
                   </div>
@@ -425,14 +417,7 @@ export function DomainForm({
                       </p>
                     ) : (
                       <p className="pb-0.5 text-[13px] text-muted-foreground">
-                        {t("Optional")}.{" "}
-                        <Link
-                          className="text-blue-500"
-                          href="/docs/developer/cloudflare"
-                          target="_blank"
-                        >
-                          {t("How to get api key?")}
-                        </Link>
+                        {t("Optional")}. {t("How to get api key?")}
                       </p>
                     )}
                   </div>
@@ -459,14 +444,7 @@ export function DomainForm({
                       </p>
                     ) : (
                       <p className="pb-0.5 text-[13px] text-muted-foreground">
-                        {t("Optional")}.{" "}
-                        <Link
-                          className="text-blue-500"
-                          href="/docs/developer/cloudflare"
-                          target="_blank"
-                        >
-                          {t("How to get cloudflare account email?")}
-                        </Link>
+                        {t("Optional")}. {t("How to get cloudflare account email?")}
                       </p>
                     )}
                   </div>
@@ -579,14 +557,7 @@ export function DomainForm({
                       </p>
                     ) : (
                       <p className="pb-0.5 text-[13px] text-muted-foreground">
-                        {t("Optional")}.{" "}
-                        <Link
-                          className="text-blue-500"
-                          href="/docs/developer/email"
-                          target="_blank"
-                        >
-                          {t("How to get resend api key?")}
-                        </Link>
+                        {t("Optional")}. {t("How to get resend api key?")}
                       </p>
                     )}
                   </div>
@@ -613,14 +584,7 @@ export function DomainForm({
                       </p>
                     ) : (
                       <p className="pb-0.5 text-[13px] text-muted-foreground">
-                        {t("Optional")}.{" "}
-                        <Link
-                          className="text-blue-500"
-                          href="/docs/developer/email"
-                          target="_blank"
-                        >
-                          {t("How to get brevo api key?")}
-                        </Link>
+                        {t("Optional")}. {t("How to get brevo api key?")}
                       </p>
                     )}
                   </div>

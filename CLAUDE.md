@@ -94,22 +94,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Content and documentation system
 
-- The repo uses Contentlayer for MDX-backed docs and content pages.
+- The repo uses Contentlayer for MDX-backed content pages.
 - Content sources:
-  - `content/docs/**/*.mdx`
   - `content/pages/**/*.mdx`
 - Rendering entry points:
-  - docs: `app/(docs)/docs/[[...slug]]/page.tsx`
   - content pages: `app/(marketing)/[slug]/page.tsx`
 - `contentlayer.config.ts` defines computed slugs, MDX image extraction, GitHub-flavored markdown, heading anchors, and pretty-code rendering.
-- Docs navigation is config-driven in `config/docs.ts`; sidebar structure does not come only from the filesystem.
 
 ## UI, config, and localization structure
 
-- Shared UI is organized by shell/feature under `components/`, especially `layout`, `shared`, `docs`, `dashboard`, `email`, `file`, `charts`, and `chat`.
+- Shared UI is organized by shell/feature under `components/`, especially `layout`, `shared`, `dashboard`, `email`, `file`, and `charts`.
 - Navigation and other cross-app structure are centralized in `config/`, especially:
   - `config/dashboard.ts`
-  - `config/docs.ts`
   - `config/marketing.ts`
   - `config/site.ts`
 - Internationalization uses `next-intl`; locale messages live under `locales/`.
@@ -124,9 +120,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Working notes for future agents
 
-- If a change affects routing or custom domains, start with `middleware.ts`.
+- If a change affects routing or custom domains, start with `proxy.ts`.
 - If a change affects business rules, validation, quotas, or persistence, inspect the relevant `lib/dto/*` module before editing route handlers.
 - If auth/session fields seem wrong, trace the `auth.ts` callbacks before changing UI code.
-- If a change affects docs navigation or docs rendering, check both `content/` and `config/docs.ts`.
 - If a change affects file uploads, signed URLs, or storage backends, inspect `lib/s3.ts` and the related `app/api/storage/**` handlers together.
 - If a feature appears env-sensitive, confirm the required variables in `env.mjs` and the deployment expectations in `docker-compose.yml`, `docker-compose-localdb.yml`, and `vercel.json`.

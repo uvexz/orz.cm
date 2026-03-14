@@ -22,13 +22,10 @@ export default async function DashboardPage() {
       <DashboardHeader
         heading="Url to Meta Info"
         text="Quickly extract valuable structured website data"
-        link="/docs/open-api/meta-info"
-        linkText="Meta Info API"
       />
       <ApiReference
         badge="GET /api/v1/scraping/meta"
         target="extracting url as meta info"
-        link="/docs/open-api/meta-info"
       />
       <MetaScraping user={{ id: user.id, apiKey: user.apiKey }} />
     </>

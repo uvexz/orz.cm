@@ -73,13 +73,18 @@ const nextConfig = {
   redirects() {
     return [
       {
-        source: "/s",
+        source: "/docs/:path*",
         destination: "/",
         permanent: true,
       },
       {
-        source: "/docs/developer",
-        destination: "/docs/developer/installation",
+        source: "/chat/:path*",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/s",
+        destination: "/",
         permanent: true,
       },
       {

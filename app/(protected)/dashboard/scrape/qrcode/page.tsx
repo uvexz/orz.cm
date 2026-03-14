@@ -23,13 +23,10 @@ export default async function DashboardPage() {
       <DashboardHeader
         heading="Url to QR Code"
         text="Generate QR Code from URL"
-        link="/docs/open-api/qrcode"
-        linkText="QR Code API"
       />
       <ApiReference
         badge="GET /api/v1/scraping/qrcode"
         target="extracting url as QR code"
-        link="/docs/open-api/qrcode"
       />
       <CodeLight content={`https://orz.cm/api/v1/scraping/qrcode`} />
       <QRCodeEditor

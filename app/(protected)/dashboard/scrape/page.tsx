@@ -22,8 +22,6 @@ export default async function DashboardPage() {
       <DashboardHeader
         heading="Scraping API Overview"
         text="Quickly extract valuable structured website data"
-        link="/docs/open-api"
-        linkText="Open API."
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StaticInfoCard

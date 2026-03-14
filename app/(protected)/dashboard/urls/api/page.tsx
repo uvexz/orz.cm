@@ -23,7 +23,6 @@ export default async function DashboardPage() {
       <ApiReference
         badge="POST /api/v1/short"
         target="creating short urls"
-        link="/docs/short-urls#api-reference"
       />
       <CodeLight
         content={`

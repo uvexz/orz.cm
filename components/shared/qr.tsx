@@ -271,15 +271,7 @@ export default function QRCodeEditor({
                 <Icons.help className="ml-1 size-4 text-neutral-400" />
               </TooltipTrigger>
               <TooltipContent className="max-w-64 text-left">
-                {t("Display your logo in the center of the QR code")}.{" "}
-                <Link
-                  className="border-b text-neutral-500"
-                  href="/docs/open-api/qrcode"
-                  target="_blank"
-                >
-                  {t("Learn more")}
-                </Link>
-                .
+                {t("Display your logo in the center of the QR code")}.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -306,15 +298,7 @@ export default function QRCodeEditor({
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-64 text-left">
-                  {t("Customize your QR code logo")}.{" "}
-                  <Link
-                    className="border-b text-neutral-500"
-                    href="/docs/open-api/qrcode"
-                    target="_blank"
-                  >
-                    {t("Learn more")}
-                  </Link>
-                  .
+                  {t("Customize your QR code logo")}.
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -443,16 +427,7 @@ export default function QRCodeEditor({
       {!user.apiKey && (
         <div className="absolute left-0 top-0 z-20 flex size-full flex-col items-center justify-center gap-2 bg-neutral-100/20 px-4 backdrop-blur">
           <p className="text-center text-sm">
-            {t("Please create a api key before use this feature")}. <br />{" "}
-            {t("Learn more about")}{" "}
-            <Link
-              className="py-1 text-blue-600 hover:text-blue-400 hover:underline dark:hover:text-primary-foreground"
-              href={"/docs/open-api#api-key"}
-              target="_blank"
-            >
-              Api key
-            </Link>
-            .
+            {t("Please create a api key before use this feature")}.
           </p>
 
           <Link href={"/dashboard/settings"}>

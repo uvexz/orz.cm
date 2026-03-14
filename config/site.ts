@@ -27,7 +27,7 @@ export const footerLinks: SidebarNavItem[] = [
   {
     title: "Company",
     items: [
-      { title: "About", href: "/docs" },
+      { title: "About", href: "/" },
       { title: "Terms", href: "/terms" },
       { title: "Privacy", href: "/privacy" },
       { title: "Blog", href: "https://www.oiov.dev" },
@@ -45,12 +45,12 @@ export const footerLinks: SidebarNavItem[] = [
     ],
   },
   {
-    title: "Docs",
+    title: "Resources",
     items: [
-      { title: "Introduction", href: "/docs" },
-      { title: "Guide", href: "/docs/quick-start" },
-      { title: "Developer", href: "/docs/developer" },
-      { title: "Contact", href: siteConfig.mailSupport },
+      { title: "Home", href: "/" },
+      { title: "Dashboard", href: "/dashboard" },
+      { title: "Feedback", href: "/feedback" },
+      { title: "Contact", href: `mailto:${siteConfig.mailSupport}` },
     ],
   },
 ];

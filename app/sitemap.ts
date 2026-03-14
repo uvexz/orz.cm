@@ -1,11 +1,6 @@
 import { MetadataRoute } from "next";
-import { allDocs, allPages } from "contentlayer/generated";
+import { allPages } from "contentlayer/generated";
 
-async function getDocumentSlugs() {
-  return allDocs.map((doc) => ({
-    slug: doc.slugAsParams,
-  }));
-}
 async function getStaticPageSlugs() {
   return allPages.map((page) => ({
     slug: page.slugAsParams,
@@ -38,15 +33,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // (docs)/[slug]
-  const documentSlugs = await getDocumentSlugs();
-  const documentPages: MetadataRoute.Sitemap = documentSlugs.map((slug) => ({
-    url: `${baseUrl}/docs/${slug.slug}`,
-    lastModified: currentDate,
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
-  }));
-
   // (marketing)/[slug]
   const marketingPageSlugs = await getStaticPageSlugs();
   const marketingPages: MetadataRoute.Sitemap = marketingPageSlugs.map(
@@ -69,7 +55,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticPages,
-    ...documentPages,
     ...marketingPages,
     ...protectedPages,
   ];

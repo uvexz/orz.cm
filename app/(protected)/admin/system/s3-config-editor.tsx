@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
@@ -456,13 +455,9 @@ function ProviderEditor({
         ))}
 
         <div className="flex items-center justify-between gap-3">
-          <Link
-            className="text-sm text-blue-500 hover:underline"
-            href="/docs/developer/cloud-storage"
-            target="_blank"
-          >
+          <p className="text-sm text-muted-foreground">
             {t("How to get the S3 credentials?")}
-          </Link>
+          </p>
           <Button disabled={isPending || !canSave} onClick={onSave}>
             {isPending ? (
               <Icons.spinner className="mr-1 size-4 animate-spin" />

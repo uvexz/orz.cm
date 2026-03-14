@@ -242,17 +242,6 @@ function SetAdminRole({ id, email }: { id: string; email: string }) {
           )}
           .
         </p>
-        <p>
-          •{t("Via")}{" "}
-          <a
-            className="text-blue-500 after:content-['_↗']"
-            target="_blank"
-            href="/docs/developer/quick-start"
-          >
-            {t("quick start")}
-          </a>{" "}
-          {t("docs to get more information")}.
-        </p>
       </div>
     </div>
   );

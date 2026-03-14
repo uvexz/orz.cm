@@ -106,14 +106,6 @@ export default function PasswordPrompt() {
               <strong>
                 {t("Please contact the owner to get the password")}
               </strong>
-              . {t("Learn more about this from our")}{" "}
-              <Link
-                className="underline"
-                target="_blank"
-                href="/docs/short-urls#password"
-              >
-                {t("docs")}
-              </Link>
               .
             </p>
           </div>

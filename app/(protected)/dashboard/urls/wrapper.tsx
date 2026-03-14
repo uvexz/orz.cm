@@ -45,7 +45,6 @@ export function Wrapper({
         <ApiReference
           badge="POST /api/v1/short"
           target="creating short urls"
-          link="/docs/short-urls#api-reference"
         />
       </TabsContent>
       <TabsContent value="Realtime">

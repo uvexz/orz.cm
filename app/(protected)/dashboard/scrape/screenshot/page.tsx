@@ -24,13 +24,10 @@ export default async function DashboardPage() {
       <DashboardHeader
         heading="Url to Screenshot"
         text="Quickly extract website screenshots"
-        link="/docs/open-api/screenshot"
-        linkText="Screenshot API"
       />
       <ApiReference
         badge="GET /api/v1/scraping/screenshot"
         target="extracting url as screenshot"
-        link="/docs/open-api/screenshot"
       />
       <ScreenshotScraping user={{ id: user.id, apiKey: user.apiKey }} />
     </>

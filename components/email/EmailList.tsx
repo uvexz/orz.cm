@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import Link from "next/link";
 import type { ForwardEmail } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -382,46 +381,10 @@ export function EmptyInboxSection() {
         {t("Once selected, your emails will appear here automatically")}.
       </p>
       <ul className="mt-3 list-disc text-left">
-        <li>
-          <Link
-            className="text-blue-500 underline"
-            href="/docs/emails#how-it-works"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("How to use email to send or receive emails?")}
-          </Link>
-        </li>
-        <li>
-          <Link
-            className="text-blue-500 underline"
-            href="/docs/emails#expiration"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("Will my email or inbox expire?")}
-          </Link>
-        </li>
-        <li>
-          <Link
-            className="text-blue-500 underline"
-            href="/docs/emails#limit"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("What is the limit? It's free?")}
-          </Link>
-        </li>
-        <li>
-          <Link
-            className="text-blue-500 underline"
-            href="/docs/emails#api-reference"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("How to create emails with api?")}
-          </Link>
-        </li>
+        <li>{t("How to use email to send or receive emails?")}</li>
+        <li>{t("Will my email or inbox expire?")}</li>
+        <li>{t("What is the limit? It's free?")}</li>
+        <li>{t("How to create emails with api?")}</li>
       </ul>
       <div className="mt-6 flex gap-2">
         <span className="h-2 w-2 animate-pulse rounded-full bg-neutral-300 dark:bg-neutral-600" />

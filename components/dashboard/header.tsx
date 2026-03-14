@@ -1,19 +1,14 @@
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 interface DashboardHeaderProps {
   heading: string;
   text?: string;
-  link?: string;
-  linkText?: string;
   children?: React.ReactNode;
 }
 
 export function DashboardHeader({
   heading,
   text,
-  link,
-  linkText,
   children,
 }: DashboardHeaderProps) {
   const t = useTranslations("Components");
@@ -24,20 +19,6 @@ export function DashboardHeader({
 
         <p className="text-sm text-muted-foreground">
           {text && <span>{t(text)}.</span>}
-          {link && (
-            <span>
-              {" "}
-              {t("See documentation")}:{" "}
-              <Link
-                href={link}
-                target="_blank"
-                className="font-semibold after:content-['_↗'] hover:text-blue-500 hover:underline"
-              >
-                {linkText}
-              </Link>
-              .
-            </span>
-          )}
         </p>
       </div>
       {children}

@@ -103,19 +103,16 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Content and documentation system
 
-- The repo uses Contentlayer for MDX-backed docs and content pages.
+- The repo uses Contentlayer for MDX-backed content pages.
 - Content sources:
-  - `content/docs/**/*.mdx`
   - `content/pages/**/*.mdx`
 - Rendering entry points:
-  - docs: `app/(docs)/docs/[[...slug]]/page.tsx`
   - content pages: `app/(marketing)/[slug]/page.tsx`
 - `contentlayer.config.ts` defines computed slugs, MDX image extraction, GitHub-flavored markdown, heading anchors, and pretty-code rendering.
-- Docs navigation is config-driven in `config/docs.ts`; sidebar structure does not come only from the filesystem.
 
 ## UI, config, and localization structure
 
-- Shared UI is organized by shell/feature under `components/`, especially `layout`, `shared`, `docs`, `dashboard`, `email`, `file`, `charts`, and `chat`.
+- Shared UI is organized by shell/feature under `components/`, especially `layout`, `shared`, `dashboard`, `email`, `file`, and `charts`.
 - Protected dashboard/admin pages are gradually moving to a `server loader + presentational component` split. Recent examples live under:
   - `app/(protected)/admin/admin-page-data.ts`
   - `app/(protected)/admin/admin-overview.tsx`
@@ -124,7 +121,6 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
   - `app/(protected)/dashboard/urls/url-list*.tsx`
 - Navigation and other cross-app structure are centralized in `config/`, especially:
   - `config/dashboard.ts`
-  - `config/docs.ts`
   - `config/marketing.ts`
   - `config/site.ts`
 - Internationalization uses `next-intl`; locale messages live under `locales/`.
@@ -143,7 +139,6 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - If a change affects business rules for email, short URLs, or file storage, inspect the corresponding `lib/email/*`, `lib/short-urls/*`, or `lib/files/*` module before falling back to `lib/dto/*`.
 - If auth/session fields seem wrong, trace the `auth.ts` callbacks before changing UI code.
 - If a change affects protected dashboard/admin pages, look for an existing loader/presentational split before adding more data orchestration to the page file itself.
-- If a change affects docs navigation or docs rendering, check both `content/` and `config/docs.ts`.
 - If a change affects file uploads, signed URLs, or storage backends, inspect `lib/s3.ts` and the related `app/api/storage/**` handlers together.
 - If a feature appears env-sensitive, confirm the required variables in `env.mjs` and the deployment expectations in `docker-compose.yml`, `docker-compose-localdb.yml`, and `vercel.json`.
 - `SLIM_DOWN_PLAN.md` only covers the main app in this repository and explicitly does not include `.tgbot`.

@@ -11,7 +11,7 @@ export default function ApiReference({
 }: {
   badge: string;
   target: string;
-  link: string;
+  link?: string;
 }) {
   const t = useTranslations("Components");
   return (
@@ -23,16 +23,21 @@ export default function ApiReference({
         <Badge>{badge}</Badge>
         <div className="mt-2">
           <span style={{ fontFamily: "Bahamas Bold" }}>Orz</span>{" "}
-          {t("provide a api for {target}", { target: t(target) })}.{" "}
-          {t("View the usage tutorial")}{" "}
-          <Link
-            href={link}
-            target="_blank"
-            className="font-semibold after:content-['_↗'] hover:text-blue-500 hover:underline"
-          >
-            {t("document")}
-          </Link>
-          .
+          {t("provide a api for {target}", { target: t(target) })}.
+          {link ? (
+            <>
+              {" "}
+              {t("View the usage tutorial")}{" "}
+              <Link
+                href={link}
+                target="_blank"
+                className="font-semibold after:content-['_↗'] hover:text-blue-500 hover:underline"
+              >
+                {t("document")}
+              </Link>
+              .
+            </>
+          ) : null}
         </div>
       </CardContent>
     </Card>

@@ -645,13 +645,7 @@ export default function AppConfigs() {
                     </p>
                     <p className="text-start text-xs text-muted-foreground">
                       {t("Push message to Telegram groups")}.{" "}
-                      <Link
-                        href="/docs/developer/telegram-bot"
-                        className="text-blue-500"
-                        target="_blank"
-                      >
-                        {t("How to configure Telegram bot")} ?
-                      </Link>
+                      {t("How to configure Telegram bot")}?
                     </p>
                   </div>
                   <Icons.chevronDown className="size-4 shrink-0" />

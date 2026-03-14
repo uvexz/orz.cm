@@ -77,15 +77,16 @@ export default function HeroLanding({
             className="shadow-sm"
           /> */}
           <Link
-            href="/docs/developer"
-            prefetch={true}
+            href={siteConfig.links.github}
+            target="_blank"
+            rel="noreferrer"
             className={cn(
               buttonVariants({ rounded: "xl", size: "lg", variant: "outline" }),
               "gap-2 bg-primary-foreground px-4 text-[15px] font-semibold text-primary hover:bg-slate-100",
             )}
           >
-            <span>{t("documents")}</span>
-            <Icons.bookOpen className="size-4" />
+            <span>GitHub</span>
+            <Icons.github className="size-4" />
           </Link>
           <Link
             href="/dashboard"
