@@ -1,55 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import { getBucketStorageUsage } from "@/lib/dto/files";
+import { badRequest, forbidden } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import {
+  assertS3BucketExists,
+  getS3ConfigListOrThrow,
+  getS3ProviderConfigOrThrow,
+  type S3ProviderConfig,
+} from "@/lib/api/storage";
+import { getBucketStorageUsage } from "@/lib/files/services";
 import { getMultipleConfigs } from "@/lib/dto/system-config";
-import { checkUserStatus } from "@/lib/dto/user";
 import { createS3Client } from "@/lib/s3";
-import { getCurrentUser } from "@/lib/session";
 import { generateFileKey } from "@/lib/utils";
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+type LegacyS3Config = Omit<
+  S3ProviderConfig,
+  "provider_name" | "platform" | "channel"
+>;
 
+export const POST = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const { provider, bucket, files, prefix } = await request.json();
 
     if (!bucket || !files || !Array.isArray(files)) {
-      return NextResponse.json("Invalid request parameters", { status: 400 });
+      throw badRequest("Invalid request parameters");
     }
 
-    const configs = await getMultipleConfigs(["s3_config_list"]);
-    if (!configs || !configs.s3_config_list) {
-      return NextResponse.json("Invalid S3 configs", {
-        status: 400,
-      });
-    }
-
-    const providerChannel = configs.s3_config_list.find(
-      (c) => c.provider_name === provider,
-    );
-    if (!providerChannel) {
-      return NextResponse.json("Provider does not exist", {
-        status: 400,
-      });
-    }
-
-    const buckets = providerChannel.buckets || [];
-    if (!buckets.find((b) => b.bucket === bucket)) {
-      return NextResponse.json("Bucket does not exist", {
-        status: 400,
-      });
-    }
+    const configList = await getS3ConfigListOrThrow();
+    const providerChannel = getS3ProviderConfigOrThrow(configList, provider);
+    const buckets = assertS3BucketExists(providerChannel, bucket);
 
     const bucketConfig = buckets.find((b) => b.bucket === bucket);
     if (bucketConfig?.file_size) {
       for (const file of files) {
         if (Number(file.size) > Number(bucketConfig?.file_size)) {
-          return Response.json(`File size limit exceeded`, {
-            status: 400,
-          });
+          throw badRequest("File size limit exceeded");
         }
       }
     }
@@ -86,9 +77,8 @@ export async function POST(request: NextRequest) {
             remainingSpace /
             (1024 * 1024 * 1024)
           ).toFixed(2);
-          return Response.json(
+          throw forbidden(
             `Bucket storage limit exceeded. Remaining space: ${remainingSpaceGB} GB.`,
-            { status: 403 },
           );
         }
       }
@@ -125,34 +115,29 @@ export async function POST(request: NextRequest) {
       }),
     );
 
-    return NextResponse.json({ urls: signedUrls });
-  } catch (error) {
-    console.error("生成预签名 URL 失败:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
-  }
-}
+    return apiOk({ urls: signedUrls });
+  },
+  {
+    fallbackBody: { error: "Server Error" },
+    logMessage: "生成预签名 URL 失败:",
+  },
+);
 
-// Get download url
-export async function GET(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const GET = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext) => {
     const url = new URL(request.url);
     const path = url.searchParams.get("path");
     const bucket = url.searchParams.get("bucket");
 
     if (!path || !bucket) {
-      return NextResponse.json("Invalid request parameters", {
-        status: 400,
-      });
+      throw badRequest("Invalid request parameters");
     }
 
-    const configs = await getMultipleConfigs(["s3_config_01"]);
+    const configs = await getMultipleConfigs<{
+      s3_config_01: LegacyS3Config;
+    }>(["s3_config_01"]);
     if (!configs.s3_config_01.enabled) {
-      return NextResponse.json("S3 is not enabled", {
-        status: 403,
-      });
+      throw forbidden("S3 is not enabled");
     }
     if (
       !configs.s3_config_01 ||
@@ -160,15 +145,11 @@ export async function GET(request: NextRequest) {
       !configs.s3_config_01.secret_access_key ||
       !configs.s3_config_01.endpoint
     ) {
-      return NextResponse.json("Invalid S3 config", {
-        status: 403,
-      });
+      throw forbidden("Invalid S3 config");
     }
     const buckets = configs.s3_config_01.buckets || [];
     if (!buckets.find((b) => b.bucket === bucket)) {
-      return NextResponse.json("Bucket does not exist", {
-        status: 403,
-      });
+      throw forbidden("Bucket does not exist");
     }
 
     const R2 = createS3Client(
@@ -187,8 +168,9 @@ export async function GET(request: NextRequest) {
         expiresIn: 600,
       },
     );
-    return Response.json({ url: pre_url });
-  } catch (error: any) {
-    return Response.json({ error: error.message });
-  }
-}
+    return apiOk({ url: pre_url });
+  },
+  {
+    fallbackBody: { error: "Server Error" },
+  },
+);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { checkApiKey } from "@/lib/dto/api-key";
-import { getEmailsByEmailAddress } from "@/lib/dto/email";
+import { getEmailsByEmailAddress } from "@/lib/email/services";
 
 // 通过 emailAddress 查询所有相关 ForwardEmail
 export async function GET(req: NextRequest) {

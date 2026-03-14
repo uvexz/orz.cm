@@ -1,18 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-import { createUserEmail, getAllUserEmails } from "@/lib/dto/email";
-import { getPlanQuota } from "@/lib/dto/plan";
-import { checkUserStatus } from "@/lib/dto/user";
-import { reservedAddressSuffix } from "@/lib/enums";
-import { getCurrentUser } from "@/lib/session";
-import { restrictByTimeRange } from "@/lib/team";
+import {
+  badRequest,
+  conflict,
+  getErrorMessage,
+  hasErrorCode,
+  hasErrorMessage,
+} from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiCreated,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import {
+  createManagedUserEmail,
+  getAllUserEmailsForActor,
+} from "@/lib/email/services";
 
-// 查询所有 UserEmail 地址
-export async function GET(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+function mapEmailMutationError(error: unknown) {
+  if (hasErrorMessage(error, "Invalid userId")) {
+    return badRequest({ error: getErrorMessage(error) });
+  }
 
+  if (hasErrorMessage(error, "Invalid email address")) {
+    return badRequest({ error: getErrorMessage(error) });
+  }
+
+  if (hasErrorCode(error, "UNIQUE_CONSTRAINT")) {
+    return conflict("Email address already exists");
+  }
+
+  return null;
+}
+
+export const GET = createAuthedApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const size = parseInt(searchParams.get("size") || "10", 10);
@@ -20,72 +43,33 @@ export async function GET(req: NextRequest) {
     const all = searchParams.get("all") || "false";
     const unread = searchParams.get("unread") || "false";
 
-    const userEmails = await getAllUserEmails(
-      user.id,
+    const userEmails = await getAllUserEmailsForActor(user, {
       page,
       size,
       search,
-      user.role === "ADMIN" && all === "true",
-      unread === "true",
-    );
-    return NextResponse.json(userEmails, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching user emails:", error);
-    if (error instanceof Response) return error;
-    return NextResponse.json(error.statusText || error.message || "Internal Server Error", {
-      status: error.status || 500,
+      includeAll: all === "true",
+      unreadOnly: unread === "true",
     });
-  }
-}
 
-// 创建新 UserEmail
-export async function POST(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+    return apiOk(userEmails);
+  },
+  {
+    logMessage: "Error fetching user emails:",
+  },
+);
 
-    const plan = await getPlanQuota(user.team);
-
-    // check limit
-    const limit = await restrictByTimeRange({
-      model: "userEmail",
-      userId: user.id,
-      limit: plan.emEmailAddresses,
-      rangeType: "month",
-    });
-    if (limit)
-      return NextResponse.json(limit.statusText, { status: limit.status });
-
+export const POST = createAuthedApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const { emailAddress } = await req.json();
-
     if (!emailAddress) {
-      return NextResponse.json("Missing userId or emailAddress", {
-        status: 400,
-      });
+      throw badRequest("Missing userId or emailAddress");
     }
 
-    const prefix = emailAddress.split("@")[0];
-    if (reservedAddressSuffix.includes(prefix)) {
-      return NextResponse.json("Invalid email address", { status: 400 });
-    }
-
-    const userEmail = await createUserEmail(user.id, emailAddress);
-    return NextResponse.json(userEmail, { status: 201 });
-  } catch (error) {
-    console.error("Error creating user email:", error);
-    if (error instanceof Response) return error;
-
-    if (error.message === "Invalid userId") {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    if (error.code === "UNIQUE_CONSTRAINT") {
-      return NextResponse.json("Email address already exists", {
-        status: 409,
-      });
-    }
-
-    return NextResponse.json(error.statusText || error.message || "Internal Server Error", {
-      status: error.status || 500,
-    });
-  }
-}
+    const userEmail = await createManagedUserEmail(user, emailAddress);
+    return apiCreated(userEmail);
+  },
+  {
+    logMessage: "Error creating user email:",
+    mapError: mapEmailMutationError,
+  },
+);

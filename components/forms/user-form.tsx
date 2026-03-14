@@ -88,7 +88,7 @@ export function UserForm({
 
   const handleCreate = async (data: User) => {
     startTransition(async () => {
-      const response = await fetch("/api/user/admin/add", {
+      const response = await fetch("/api/user/admin", {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -107,8 +107,8 @@ export function UserForm({
   const handleUpdate = async (data: User) => {
     startTransition(async () => {
       if (type === "edit") {
-        const response = await fetch("/api/user/admin/update", {
-          method: "POST",
+        const response = await fetch("/api/user/admin", {
+          method: "PUT",
           body: JSON.stringify({ id: initData?.id, data }),
         });
         if (!response.ok || response.status !== 200) {
@@ -127,8 +127,8 @@ export function UserForm({
   const handleDelete = async () => {
     if (type === "edit") {
       startDeleteTransition(async () => {
-        const response = await fetch("/api/user/admin/delete", {
-          method: "POST",
+        const response = await fetch("/api/user/admin", {
+          method: "DELETE",
           body: JSON.stringify({ id: initData?.id }),
         });
         if (!response.ok || response.status !== 200) {

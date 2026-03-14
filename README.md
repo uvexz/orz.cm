@@ -127,6 +127,24 @@
 - Resend 作为邮件服务
 - Next-Intl 作为国际化支持
 
+## 当前架构
+
+- 这是一个 Next.js 16 App Router 的多产品 SaaS 门户，不是单一功能站点；主线模块包括短链、邮箱、DNS 记录、S3 文件存储、开放 API 和聊天。
+- 路由按 `app/` 路由组拆分：`(marketing)`、`(docs)`、`(auth)`、`(protected)`、`(standalone)`。
+- 路由层的统一鉴权与错误映射在 `lib/api/route.ts`、`lib/api/errors.ts`，新的 API route 应优先复用这套 helper。
+- `email`、`short-urls`、`files` 三个高频模块已经从大 DTO 中拆到 `lib/<domain>/{types,queries,services,policies}.ts`；`lib/dto/*` 主要保留兼容导出和未迁移模块。
+- 受保护页面正在采用 `server loader + presentational component` 分层，最近的例子可参考 `app/(protected)/admin/admin-page-data.ts`、`app/(protected)/admin/admin-overview.tsx`、`app/(protected)/dashboard/dashboard-page-data.ts`、`app/(protected)/dashboard/dashboard-overview.tsx`。
+- 域名和短链入口逻辑现在集中在 `proxy.ts`，涉及自定义域名、短链解析或跳转行为时应先看这个文件。
+- 当前 `SLIM_DOWN_PLAN.md` 只覆盖主应用，不处理 `.tgbot`。
+
+## 回归验证
+
+- 运行测试：`bun run test`
+- 运行 lint：`bun run lint`
+- 运行类型检查：`bun run typecheck`
+- 运行生产构建：`bun run build`
+- 当前自动化回归重点覆盖 `email`、`short-urls`、`files` 的 policy/service/API 边界，测试默认使用 mock，不依赖真实数据库、S3 或邮件服务。
+
 ## 快速开始
 
 查看开发者[手把手部署教程](https://likedo.vercel.app/docs/developer/quick-start-zh)文档。
@@ -188,11 +206,6 @@ bun run db:push
 # 在 localhost:3000 上运行
 bun run dev
 ```
-
-- 默认账号(管理员)：`admin@admin.com`
-- 默认密码：`123456`
-
-> 登录后请及时修改密码
 
 #### 管理员初始化
 

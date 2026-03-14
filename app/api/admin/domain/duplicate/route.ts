@@ -1,25 +1,23 @@
 import { NextRequest } from "next/server";
 
+import { badRequest, notFound } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAdminApiRoute,
+} from "@/lib/api/route";
 import { createDomain, getDomainByName } from "@/lib/dto/domains";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-    if (user.role !== "ADMIN") {
-      return Response.json("Unauthorized", { status: 401 });
-    }
-
+export const POST = createAdminApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext) => {
     const { domain } = await req.json();
     if (!domain) {
-      return Response.json("Domain name is required", { status: 400 });
+      throw badRequest("Domain name is required");
     }
 
     const target_domain = await getDomainByName(domain);
     if (!target_domain) {
-      return Response.json("Domain not found", { status: 404 });
+      throw notFound("Domain not found");
     }
 
     const newDomain = await createDomain({
@@ -45,12 +43,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (!newDomain) {
-      return Response.json("Failed to create domain", { status: 400 });
+      throw badRequest("Failed to create domain");
     }
 
-    return Response.json("Success", { status: 200 });
-  } catch (error) {
-    console.error("[Error]", error);
-    return Response.json(error.message || "Server error", { status: 500 });
-  }
-}
+    return apiOk("Success");
+  },
+  {
+    fallbackBody: "Server error",
+    logMessage: "[Error]",
+  },
+);

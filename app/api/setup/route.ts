@@ -1,18 +1,18 @@
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
+import { isApiError } from "@/lib/api/errors";
+import { requireUser } from "@/lib/api/route";
 import {
-  checkUserStatus,
   getAllUsersCount,
   setFirstUserAsAdmin,
 } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+    const user = await requireUser();
 
     const count = await getAllUsersCount();
 
@@ -26,8 +26,16 @@ export async function GET(req: Request) {
 
     return redirect("/admin");
   } catch (error) {
-    return Response.json(error?.statusText || error, {
-      status: error.status || 500,
-    });
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    if (isApiError(error)) {
+      return Response.json(error.body, {
+        status: error.status,
+      });
+    }
+
+    return Response.json("Server error", { status: 500 });
   }
 }

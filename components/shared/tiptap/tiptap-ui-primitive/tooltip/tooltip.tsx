@@ -120,6 +120,13 @@ function useTooltip({
 
 const TooltipContext = React.createContext<TooltipContextValue | null>(null);
 
+type TooltipChildWithRef = React.ReactElement & {
+  ref?: React.Ref<HTMLElement>;
+  props: {
+    ref?: React.Ref<HTMLElement>;
+  };
+};
+
 function useTooltipContext() {
   const context = React.useContext(TooltipContext);
 
@@ -160,10 +167,11 @@ export const TooltipTrigger = React.forwardRef<
   TooltipTriggerProps
 >(function TooltipTrigger({ children, asChild = false, ...props }, propRef) {
   const context = useTooltipContext();
+  const childWithRef = children as TooltipChildWithRef;
   const childrenRef = React.isValidElement(children)
     ? parseInt(React.version, 10) >= 19
-      ? (children as { props: { ref?: React.Ref<any> } }).props.ref
-      : (children as any).ref
+      ? childWithRef.props.ref
+      : childWithRef.ref
     : undefined;
   const ref = useMergeRefs([context.refs.setReference, propRef, childrenRef]);
 

@@ -13,6 +13,7 @@
     "start-docker": "bun run check-db && bun run start-server",
     "start-server": "node server.js",
     "lint": "bunx eslint .",
+    "test": "bun test",
     "preview": "next build && next start",
     "typecheck": "bunx tsc --noEmit",
     "db:generate": "drizzle-kit generate",

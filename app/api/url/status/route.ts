@@ -1,18 +1,16 @@
-import { getUrlStatusOptimized } from "@/lib/dto/short-urls";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import { getUrlStatusOptimized } from "@/lib/short-urls/services";
 
-export async function GET(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
-    const status = await getUrlStatusOptimized(user.id, "USER");
-
-    return Response.json(status);
-  } catch (error) {
-    return Response.json(error?.statusText || error, {
-      status: error.status || 500,
-    });
-  }
-}
+export const GET = createAuthedApiRoute(
+  async (_req: Request, _context: AppRouteHandlerContext, { user }) => {
+    const status = await getUrlStatusOptimized(user.id, user.role);
+    return apiOk(status);
+  },
+  {
+    fallbackBody: "Internal Server Error",
+  },
+);

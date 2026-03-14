@@ -1,28 +1,25 @@
-import { getUserUrlMetaInfo } from "@/lib/dto/short-urls";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import { badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import { getUserUrlMetaInfo } from "@/lib/short-urls/services";
 
-export async function GET(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const GET = createAuthedApiRoute(
+  async (req: Request, _context: AppRouteHandlerContext) => {
     const url = new URL(req.url);
     const urlId = url.searchParams.get("id");
     const range = url.searchParams.get("range") || "24h";
 
     if (!urlId) {
-      return Response.json("url id is required", {
-        status: 400,
-      });
+      throw badRequest("url id is required");
     }
 
     const data = await getUserUrlMetaInfo(urlId, range);
-
-    return Response.json(data);
-  } catch (error) {
-    return Response.json(error?.statusText || error, {
-      status: error.status || 500,
-    });
-  }
-}
+    return apiOk(data);
+  },
+  {
+    fallbackBody: "Internal Server Error",
+  },
+);

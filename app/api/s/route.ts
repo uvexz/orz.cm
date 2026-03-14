@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { createUserShortUrlMeta, getUrlBySuffix } from "@/lib/dto/short-urls";
+import { createUserShortUrlMeta, getUrlBySuffix } from "@/lib/short-urls/services";
 
 export async function POST(req: NextRequest) {
   try {

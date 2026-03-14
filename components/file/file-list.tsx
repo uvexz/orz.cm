@@ -599,7 +599,7 @@ export default function UserFileList({
         }
       >
         <UrlForm
-          user={{ id: "", name: "" }}
+          user={{ id: "", name: "", role: user.role }}
           isShowForm={isShowForm}
           setShowForm={setShowForm}
           type="add"

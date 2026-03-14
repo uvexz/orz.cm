@@ -48,7 +48,7 @@ export default function EmailList({
   selectedEmailId,
   onSelectEmail,
   className,
-  isAdminModel,
+  isAdminModel: _isAdminModel,
 }: EmailListProps) {
   const t = useTranslations("Email");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -113,7 +113,7 @@ export default function EmailList({
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to mark emails as read");
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Error marking emails as read");
     }
   };
@@ -318,7 +318,7 @@ export default function EmailList({
                           </span>
                           <span className="ml-auto text-xs text-neutral-600 dark:text-neutral-400">
                             <TimeAgoIntl
-                              date={(email.date as any) || email.createdAt}
+                              date={new Date(email.date ?? email.createdAt)}
                             />
                           </span>
                           {email.readAt && (

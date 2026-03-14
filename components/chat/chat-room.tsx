@@ -6,15 +6,13 @@ import { useSearchParams } from "next/navigation";
 import randomName from "@scaleway/random-name";
 import {
   Check,
-  Copy,
   Image as ImageIcon,
-  Menu,
   PanelLeftClose,
   PanelRightClose,
   Plus,
   Share2,
 } from "lucide-react";
-import Peer from "peerjs";
+import Peer, { type DataConnection } from "peerjs";
 import { toast } from "sonner";
 
 import { siteConfig } from "@/config/site";
@@ -44,9 +42,95 @@ type User = {
   username: string;
 };
 
+type ChatTextPayload = {
+  username: string;
+  text: string;
+};
+
+type ChatImagePayload = {
+  username: string;
+  image: string;
+};
+
+type ChatConnectionPayload =
+  | { type: "JOIN"; data: User }
+  | { type: "LEAVE"; data: User }
+  | { type: "COUNT"; data: number }
+  | { type: "USERLIST"; data: string }
+  | { type: "IMAGE"; data: ChatImagePayload }
+  | { type: "TEXT"; data: ChatTextPayload };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isUser = (value: unknown): value is User =>
+  isRecord(value) &&
+  typeof value.peerId === "string" &&
+  typeof value.username === "string";
+
+const isChatTextPayload = (value: unknown): value is ChatTextPayload =>
+  isRecord(value) &&
+  typeof value.username === "string" &&
+  typeof value.text === "string";
+
+const isChatImagePayload = (value: unknown): value is ChatImagePayload =>
+  isRecord(value) &&
+  typeof value.username === "string" &&
+  typeof value.image === "string";
+
+const parseChatConnectionPayload = (
+  value: unknown,
+): ChatConnectionPayload | null => {
+  if (!isRecord(value) || typeof value.type !== "string" || !("data" in value)) {
+    return null;
+  }
+
+  switch (value.type) {
+    case "JOIN":
+    case "LEAVE":
+      return isUser(value.data) ? { type: value.type, data: value.data } : null;
+    case "COUNT":
+      return typeof value.data === "number"
+        ? { type: "COUNT", data: value.data }
+        : null;
+    case "USERLIST":
+      return typeof value.data === "string"
+        ? { type: "USERLIST", data: value.data }
+        : null;
+    case "IMAGE":
+      return isChatImagePayload(value.data)
+        ? { type: "IMAGE", data: value.data }
+        : null;
+    case "TEXT":
+      return isChatTextPayload(value.data)
+        ? { type: "TEXT", data: value.data }
+        : null;
+    default:
+      return null;
+  }
+};
+
+const parseUserList = (value: string): User[] | null => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every(isUser) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 const formatTime = (date: Date) => {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
+
+const createSystemMessage = (text: string): Message => ({
+  id: crypto.randomUUID(),
+  text,
+  isSelf: false,
+  timestamp: formatTime(new Date()),
+  username: "System",
+  isSystem: true,
+});
 
 export default function ChatRoom() {
   const { isMobile, isSm } = useMediaQuery();
@@ -57,7 +141,6 @@ export default function ChatRoom() {
   const [username, setUsername] = useState("");
   const [avatarClasses, setAvatarClasses] = useState<string>("");
   const [isConnected, setIsConnected] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [isShareCopied, setIsShareCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -66,8 +149,8 @@ export default function ChatRoom() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(!isSm);
   const peerInstance = useRef<Peer | null>(null);
-  const connRef = useRef<any>(null);
-  const connections = useRef<any[]>([]);
+  const connRef = useRef<DataConnection | null>(null);
+  const connections = useRef<DataConnection[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const [isInvited, setIsInvited] = useState(false);
@@ -175,7 +258,31 @@ export default function ChatRoom() {
     }
   }, [initializePeer, username]);
 
-  const handleConnection = (conn: any) => {
+  const syncUsersFromSerializedList = useCallback(
+    (serializedUserList: string) => {
+      const userList = parseUserList(serializedUserList);
+
+      if (!userList) {
+        console.error("Error parsing user list:", serializedUserList);
+        return;
+      }
+
+      setUsers(() => {
+        const mergedUsers = [...userList];
+        if (!mergedUsers.some((user) => user.peerId === peerId)) {
+          mergedUsers.push({ peerId, username });
+        }
+
+        return mergedUsers.filter(
+          (user, index, self) =>
+            index === self.findIndex((item) => item.peerId === user.peerId),
+        );
+      });
+    },
+    [peerId, username],
+  );
+
+  const handleConnection = (conn: DataConnection) => {
     conn.on("open", () => {
       setIsConnected(true);
       setConnectedCount((prev) => {
@@ -190,89 +297,58 @@ export default function ChatRoom() {
       }, 100);
     });
 
-    conn.on("data", (data: any) => {
-      if (typeof data === "object" && data.type) {
-        if (data.type === "JOIN") {
-          const { username: joiningUsername, peerId: joiningPeerId } =
-            data.data;
-          const joinMessage = {
-            id: crypto.randomUUID(),
-            text: `[${joiningUsername}] entered the room`,
-            isSelf: false,
-            timestamp: formatTime(new Date()),
-            username: "System",
-            isSystem: true,
-          };
-          setMessages((prev) => [...prev, joinMessage]);
-          setUsers((prev) => {
-            if (!prev.some((u) => u.peerId === joiningPeerId)) {
-              const updatedUsers = [
-                ...prev,
-                { peerId: joiningPeerId, username: joiningUsername },
-              ];
-              setTimeout(() => {
-                broadcastUserList(updatedUsers);
-                broadcastCount(updatedUsers.length);
-              }, 100);
-              return updatedUsers;
-            }
-            return prev;
-          });
-          broadcastMessage(joinMessage, conn);
-        } else if (data.type === "COUNT") {
-          setConnectedCount(data.data);
-        } else if (data.type === "USERLIST") {
-          try {
-            const userList = JSON.parse(data.data);
-            setUsers((prev) => {
-              const mergedUsers = [...userList];
-              if (!mergedUsers.some((u) => u.peerId === peerId)) {
-                mergedUsers.push({ peerId, username });
-              }
-              return mergedUsers.filter(
-                (user, index, self) =>
-                  index === self.findIndex((u) => u.peerId === user.peerId),
-              );
-            });
-          } catch (err) {
-            console.error("Error parsing user list:", err);
+    conn.on("data", (data: unknown) => {
+      const payload = parseChatConnectionPayload(data);
+
+      if (!payload) return;
+
+      if (payload.type === "JOIN") {
+        const joinMessage = createSystemMessage(
+          `[${payload.data.username}] entered the room`,
+        );
+        setMessages((prev) => [...prev, joinMessage]);
+        setUsers((prev) => {
+          if (!prev.some((user) => user.peerId === payload.data.peerId)) {
+            const updatedUsers = [...prev, payload.data];
+            setTimeout(() => {
+              broadcastUserList(updatedUsers);
+              broadcastCount(updatedUsers.length);
+            }, 100);
+            return updatedUsers;
           }
-        } else if (data.type === "LEAVE") {
-          const { username: leavingUsername, peerId: leavingPeerId } =
-            data.data;
-          const leaveMessage = {
-            id: crypto.randomUUID(),
-            text: `[${leavingUsername}] left the room`,
-            isSelf: false,
-            timestamp: formatTime(new Date()),
-            username: "System",
-            isSystem: true,
-          };
-          setMessages((prev) => [...prev, leaveMessage]);
-          broadcastMessage(leaveMessage, conn);
-        } else if (data.type === "IMAGE") {
-          const { username: senderUsername, image } = data.data;
-          const newMessage = {
-            id: crypto.randomUUID(),
-            image,
-            isSelf: false,
-            timestamp: formatTime(new Date()),
-            username: senderUsername,
-          };
-          setMessages((prev) => [...prev, newMessage]);
-          broadcastMessage(newMessage, conn);
-        } else if (data.type === "TEXT") {
-          const { username: senderUsername, text } = data.data;
-          const newMessage = {
-            id: crypto.randomUUID(),
-            text,
-            isSelf: false,
-            timestamp: formatTime(new Date()),
-            username: senderUsername,
-          };
-          setMessages((prev) => [...prev, newMessage]);
-          broadcastMessage(newMessage, conn);
-        }
+          return prev;
+        });
+        broadcastMessage(joinMessage, conn);
+      } else if (payload.type === "COUNT") {
+        setConnectedCount(payload.data);
+      } else if (payload.type === "USERLIST") {
+        syncUsersFromSerializedList(payload.data);
+      } else if (payload.type === "LEAVE") {
+        const leaveMessage = createSystemMessage(
+          `[${payload.data.username}] left the room`,
+        );
+        setMessages((prev) => [...prev, leaveMessage]);
+        broadcastMessage(leaveMessage, conn);
+      } else if (payload.type === "IMAGE") {
+        const newMessage = {
+          id: crypto.randomUUID(),
+          image: payload.data.image,
+          isSelf: false,
+          timestamp: formatTime(new Date()),
+          username: payload.data.username,
+        };
+        setMessages((prev) => [...prev, newMessage]);
+        broadcastMessage(newMessage, conn);
+      } else if (payload.type === "TEXT") {
+        const newMessage = {
+          id: crypto.randomUUID(),
+          text: payload.data.text,
+          isSelf: false,
+          timestamp: formatTime(new Date()),
+          username: payload.data.username,
+        };
+        setMessages((prev) => [...prev, newMessage]);
+        broadcastMessage(newMessage, conn);
       }
     });
 
@@ -304,7 +380,7 @@ export default function ChatRoom() {
     });
   };
 
-  const broadcastMessage = (message: Message, senderConn: any) => {
+  const broadcastMessage = (message: Message, senderConn: DataConnection) => {
     connections.current.forEach((conn) => {
       if (conn !== senderConn && conn.open) {
         try {
@@ -368,80 +444,49 @@ export default function ChatRoom() {
         setIsConnected(true);
       });
 
-      conn.on("data", (data: any) => {
-        if (typeof data === "object" && data.type) {
-          if (data.type === "JOIN") {
-            const { username: joiningUsername, peerId: joiningPeerId } =
-              data.data;
-            const joinMessage = {
-              id: crypto.randomUUID(),
-              text: `[${joiningUsername}] entered the room`,
-              isSelf: false,
-              timestamp: formatTime(new Date()),
-              username: "System",
-              isSystem: true,
-            };
-            setMessages((prev) => [...prev, joinMessage]);
-            setUsers((prev) => {
-              if (!prev.some((u) => u.peerId === joiningPeerId)) {
-                return [
-                  ...prev,
-                  { peerId: joiningPeerId, username: joiningUsername },
-                ];
-              }
-              return prev;
-            });
-          } else if (data.type === "COUNT") {
-            setConnectedCount(data.data);
-          } else if (data.type === "USERLIST") {
-            try {
-              const userList = JSON.parse(data.data);
-              setUsers((prev) => {
-                const mergedUsers = [...userList];
-                if (!mergedUsers.some((u) => u.peerId === peerId)) {
-                  mergedUsers.push({ peerId, username });
-                }
-                return mergedUsers.filter(
-                  (user, index, self) =>
-                    index === self.findIndex((u) => u.peerId === user.peerId),
-                );
-              });
-            } catch (err) {
-              console.error("Error parsing user list:", err);
+      conn.on("data", (data: unknown) => {
+        const payload = parseChatConnectionPayload(data);
+
+        if (!payload) return;
+
+        if (payload.type === "JOIN") {
+          const joinMessage = createSystemMessage(
+            `[${payload.data.username}] entered the room`,
+          );
+          setMessages((prev) => [...prev, joinMessage]);
+          setUsers((prev) => {
+            if (!prev.some((user) => user.peerId === payload.data.peerId)) {
+              return [...prev, payload.data];
             }
-          } else if (data.type === "LEAVE") {
-            const { username: leavingUsername, peerId: leavingPeerId } =
-              data.data;
-            const leaveMessage = {
-              id: crypto.randomUUID(),
-              text: `[${leavingUsername}] left the room`,
-              isSelf: false,
-              timestamp: formatTime(new Date()),
-              username: "System",
-              isSystem: true,
-            };
-            setMessages((prev) => [...prev, leaveMessage]);
-          } else if (data.type === "IMAGE") {
-            const { username: senderUsername, image } = data.data;
-            const newMessage = {
-              id: crypto.randomUUID(),
-              image,
-              isSelf: false,
-              timestamp: formatTime(new Date()),
-              username: senderUsername,
-            };
-            setMessages((prev) => [...prev, newMessage]);
-          } else if (data.type === "TEXT") {
-            const { username: senderUsername, text } = data.data;
-            const newMessage = {
-              id: crypto.randomUUID(),
-              text,
-              isSelf: false,
-              timestamp: formatTime(new Date()),
-              username: senderUsername,
-            };
-            setMessages((prev) => [...prev, newMessage]);
-          }
+            return prev;
+          });
+        } else if (payload.type === "COUNT") {
+          setConnectedCount(payload.data);
+        } else if (payload.type === "USERLIST") {
+          syncUsersFromSerializedList(payload.data);
+        } else if (payload.type === "LEAVE") {
+          const leaveMessage = createSystemMessage(
+            `[${payload.data.username}] left the room`,
+          );
+          setMessages((prev) => [...prev, leaveMessage]);
+        } else if (payload.type === "IMAGE") {
+          const newMessage = {
+            id: crypto.randomUUID(),
+            image: payload.data.image,
+            isSelf: false,
+            timestamp: formatTime(new Date()),
+            username: payload.data.username,
+          };
+          setMessages((prev) => [...prev, newMessage]);
+        } else if (payload.type === "TEXT") {
+          const newMessage = {
+            id: crypto.randomUUID(),
+            text: payload.data.text,
+            isSelf: false,
+            timestamp: formatTime(new Date()),
+            username: payload.data.username,
+          };
+          setMessages((prev) => [...prev, newMessage]);
         }
       });
 
@@ -576,19 +621,6 @@ export default function ChatRoom() {
     setMessage("");
     setIsSending(false);
   }, [message, username, isSending, isInvited]);
-
-  const copyPeerId = () => {
-    navigator.clipboard
-      .writeText(peerId)
-      .then(() => {
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-      })
-      .catch((err) => {
-        console.error("Failed to copy:", err);
-        toast.error("Failed to copy ID");
-      });
-  };
 
   const shareRoom = () => {
     const roomId = remotePeerId || peerId;

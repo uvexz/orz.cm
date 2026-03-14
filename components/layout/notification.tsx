@@ -9,10 +9,14 @@ import { fetcher } from "@/lib/utils";
 import { Icons } from "../shared/icons";
 import { Button } from "../ui/button";
 
+interface NotificationConfigResponse {
+  system_notification: string | boolean | null;
+}
+
 export function Notification() {
   const [isVisible, setIsVisible] = useState(true);
 
-  const { data, isLoading, error } = useSWR<Record<string, any>>(
+  const { data, isLoading, error } = useSWR<NotificationConfigResponse>(
     "/api/configs?key=system_notification",
     fetcher,
     { dedupingInterval: 30000 },
@@ -22,7 +26,10 @@ export function Notification() {
     setIsVisible(false);
   };
 
-  if (error || isLoading || !data || !data.system_notification) return null;
+  const notification =
+    typeof data?.system_notification === "string" ? data.system_notification : "";
+
+  if (error || isLoading || !notification) return null;
 
   return (
     <AnimatePresence>
@@ -39,7 +46,7 @@ export function Notification() {
         >
           <div
             className="flex-1 px-8 py-2.5 text-center"
-            dangerouslySetInnerHTML={{ __html: data.system_notification }}
+            dangerouslySetInnerHTML={{ __html: notification }}
           />
 
           <Button

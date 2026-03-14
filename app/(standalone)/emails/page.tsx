@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import type { AppSessionUser } from "@/lib/auth/server";
 import { getCurrentUser } from "@/lib/session";
 import { constructMetadata } from "@/lib/utils";
 
@@ -15,5 +16,5 @@ export default async function EmailPage() {
 
   if (!user?.id) redirect("/login");
 
-  return <EmailDashboard user={user as any} />;
+  return <EmailDashboard user={user as AppSessionUser} />;
 }

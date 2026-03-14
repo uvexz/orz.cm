@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { User } from "@/lib/db/types";
+import type { AppSessionUser } from "@/lib/auth/server";
 
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import EmailList from "@/components/email/EmailList";
 import EmailSidebar from "@/components/email/EmailSidebar";
 
-export function EmailDashboard({ user }: { user: User }) {
+export function EmailDashboard({ user }: { user: AppSessionUser }) {
   const [selectedEmailAddress, setSelectedEmailAddress] = useState<
     string | null
   >(null);

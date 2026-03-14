@@ -1,16 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-import { getUserFiles, softDeleteUserFiles } from "@/lib/dto/files";
-import { getMultipleConfigs } from "@/lib/dto/system-config";
-import { checkUserStatus } from "@/lib/dto/user";
+import { badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import {
+  assertS3BucketExists,
+  getS3ConfigListOrThrow,
+  getS3ProviderConfigOrThrow,
+} from "@/lib/api/storage";
+import { getUserFiles, softDeleteUserFiles } from "@/lib/files/services";
 import { createS3Client, deleteFile, getSignedUrlForDownload } from "@/lib/s3";
-import { getCurrentUser } from "@/lib/session";
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const GET = createAuthedApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const url = new URL(req.url);
     const page = url.searchParams.get("page");
     const pageSize = url.searchParams.get("pageSize");
@@ -19,36 +24,18 @@ export async function GET(req: NextRequest) {
     const name = url.searchParams.get("name") || "";
     const fileSize = url.searchParams.get("fileSize") || "";
     const mimeType = url.searchParams.get("mimeType") || "";
+    const status = url.searchParams.get("status") || "";
 
-    const configs = await getMultipleConfigs(["s3_config_list"]);
-    if (!configs || !configs.s3_config_list) {
-      return NextResponse.json("Invalid S3 configs", {
-        status: 400,
-      });
-    }
-
-    const providerChannel = configs.s3_config_list.find(
-      (c) => c.provider_name === provider,
-    );
-    if (!providerChannel) {
-      return NextResponse.json("Provider does not exist", {
-        status: 400,
-      });
-    }
-
-    const buckets = providerChannel.buckets || [];
-    if (!buckets.find((b) => b.bucket === bucket)) {
-      return NextResponse.json("Bucket does not exist", {
-        status: 400,
-      });
-    }
+    const configList = await getS3ConfigListOrThrow();
+    const providerChannel = getS3ProviderConfigOrThrow(configList, provider);
+    assertS3BucketExists(providerChannel, bucket);
 
     const res = await getUserFiles({
       page: Number(page) || 1,
       limit: Number(pageSize) || 20,
       bucket,
-      userId: user.id,
-      status: 1,
+      userId: user.role === "ADMIN" ? undefined : user.id,
+      status: user.role === "ADMIN" ? Number(status === "0" ? 0 : 1) : 1,
       channel: providerChannel.channel,
       platform: providerChannel.platform,
       providerName: providerChannel.provider_name,
@@ -57,47 +44,24 @@ export async function GET(req: NextRequest) {
       mimeType,
     });
 
-    return NextResponse.json(res);
-  } catch (error) {
-    console.error("Error listing files:", error);
-    return NextResponse.json({ error: "Error listing files" }, { status: 500 });
-  }
-}
+    return apiOk(res);
+  },
+  {
+    fallbackBody: { error: "Error listing files" },
+    logMessage: "Error listing files:",
+  },
+);
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const POST = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext) => {
     const { key, bucket, provider } = await request.json();
     if (!key || !bucket || !provider) {
-      return NextResponse.json("key and bucket is required", {
-        status: 400,
-      });
+      throw badRequest("key and bucket is required");
     }
 
-    const configs = await getMultipleConfigs(["s3_config_list"]);
-    if (!configs || !configs.s3_config_list) {
-      return NextResponse.json("Invalid S3 configs", {
-        status: 400,
-      });
-    }
-
-    const providerChannel = configs.s3_config_list.find(
-      (c) => c.provider_name === provider,
-    );
-    if (!providerChannel) {
-      return NextResponse.json("Provider does not exist", {
-        status: 400,
-      });
-    }
-
-    const buckets = providerChannel.buckets || [];
-    if (!buckets.find((b) => b.bucket === bucket)) {
-      return NextResponse.json("Bucket does not exist", {
-        status: 400,
-      });
-    }
+    const configList = await getS3ConfigListOrThrow();
+    const providerChannel = getS3ProviderConfigOrThrow(configList, provider);
+    assertS3BucketExists(providerChannel, bucket);
 
     const signedUrl = await getSignedUrlForDownload(
       key,
@@ -108,47 +72,24 @@ export async function POST(request: NextRequest) {
       ),
       bucket,
     );
-    return NextResponse.json({ signedUrl });
-  } catch (error) {
-    return NextResponse.json("Error generating download URL", { status: 500 });
-  }
-}
+    return apiOk({ signedUrl });
+  },
+  {
+    fallbackBody: "Error generating download URL",
+  },
+);
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const DELETE = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext) => {
     const { keys, ids, bucket, provider } = await request.json();
 
     if (!keys || !ids || !bucket || !provider) {
-      return NextResponse.json("key and bucket is required", {
-        status: 400,
-      });
+      throw badRequest("key and bucket is required");
     }
 
-    const configs = await getMultipleConfigs(["s3_config_list"]);
-    if (!configs || !configs.s3_config_list) {
-      return NextResponse.json("Invalid S3 configs", {
-        status: 400,
-      });
-    }
-
-    const providerChannel = configs.s3_config_list.find(
-      (c) => c.provider_name === provider,
-    );
-    if (!providerChannel) {
-      return NextResponse.json("Provider does not exist", {
-        status: 400,
-      });
-    }
-
-    const buckets = providerChannel.buckets || [];
-    if (!buckets.find((b) => b.bucket === bucket)) {
-      return NextResponse.json("Bucket does not exist", {
-        status: 400,
-      });
-    }
+    const configList = await getS3ConfigListOrThrow();
+    const providerChannel = getS3ProviderConfigOrThrow(configList, provider);
+    assertS3BucketExists(providerChannel, bucket);
 
     const R2 = createS3Client(
       providerChannel.endpoint,
@@ -160,9 +101,10 @@ export async function DELETE(request: NextRequest) {
       await deleteFile(key, R2, bucket);
     }
     await softDeleteUserFiles(ids);
-    return NextResponse.json({ message: "File deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting file:", error);
-    return NextResponse.json("Error deleting file", { status: 500 });
-  }
-}
+    return apiOk({ message: "File deleted successfully" });
+  },
+  {
+    fallbackBody: "Error deleting file",
+    logMessage: "Error deleting file:",
+  },
+);

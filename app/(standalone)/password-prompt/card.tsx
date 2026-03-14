@@ -13,27 +13,37 @@ import { Input } from "@/components/ui/input";
 import { Spotlight } from "@/components/ui/spotlight";
 import { Icons } from "@/components/shared/icons";
 
+const PASSWORD_LENGTH = 6;
+
 export default function PasswordPrompt() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const slug = searchParams.get("slug");
   const initialPassword = searchParams.get("password") || "";
   const isError = searchParams.get("error") === "1";
-  const [password, setPassword] = useState(["", "", "", "", "", ""]);
+  const [password, setPassword] = useState<string[]>(
+    Array(PASSWORD_LENGTH).fill(""),
+  );
   const [isHidden, setIsHidden] = useState(true);
   const [isPending, startTransition] = useTransition();
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
 
   const t = useTranslations("Components");
 
+  const submitPassword = (fullPassword: string) => {
+    if (slug && !isPending && fullPassword.length === PASSWORD_LENGTH) {
+      router.push(`/${slug}?password=${encodeURIComponent(fullPassword)}`);
+    }
+  };
+
   useEffect(() => {
     if (initialPassword) {
       const paddedPassword = initialPassword
-        .padEnd(6, "")
+        .padEnd(PASSWORD_LENGTH, "")
         .split("")
-        .slice(0, 6);
+        .slice(0, PASSWORD_LENGTH);
       setPassword(paddedPassword);
-      handleSubmit(new Event("submit") as any);
+      submitPassword(paddedPassword.join(""));
     }
   }, [initialPassword]);
 
@@ -43,26 +53,27 @@ export default function PasswordPrompt() {
     newPassword[index] = value;
     setPassword(newPassword);
 
-    if (value && index < 5) {
+    if (value && index < PASSWORD_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
     if (e.key === "Backspace" && !password[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     } else if (e.key === "Enter") {
-      handleSubmit(e as any);
+      e.preventDefault();
+      submitPassword(password.join(""));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     startTransition(async () => {
       e.preventDefault();
-      const fullPassword = password.join("");
-      if (slug && !isPending && fullPassword.length === 6) {
-        router.push(`/${slug}?password=${encodeURIComponent(fullPassword)}`);
-      }
+      submitPassword(password.join(""));
     });
   };
 
@@ -116,7 +127,9 @@ export default function PasswordPrompt() {
                   value={char}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  ref={(el) => (inputRefs.current[index] = el as any)}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
                   maxLength={1}
                   autoFocus={index === 0}
                   className="h-12 w-12 rounded-md border border-gray-300 text-center text-lg font-medium text-neutral-100 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -148,7 +161,7 @@ export default function PasswordPrompt() {
                 variant={"default"}
                 className="flex items-center gap-2 bg-neutral-300 text-neutral-800 hover:bg-neutral-400"
                 disabled={
-                  !(slug && !isPending && password.join("").length === 6)
+                  !(slug && !isPending && password.join("").length === PASSWORD_LENGTH)
                 }
               >
                 {isPending ? (

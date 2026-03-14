@@ -59,6 +59,10 @@ const chartConfig = {
   },
 };
 
+type WorldMapTooltipDatum = {
+  id: string;
+};
+
 function processUrlMeta(urlMetaArray: UrlMeta[]) {
   const dailyData: { [key: string]: { clicks: number; ips: Set<string> } } = {};
 
@@ -222,18 +226,16 @@ export function DailyPVUVChart({
     }
   });
 
-  const areaData = Object.entries(countryClicks).map(
-    ([country, clicks], index) => ({
-      id: country,
-      // color: getColorByClicks(clicks, index, countryClicks),
-    }),
-  );
+  const areaData = Object.entries(countryClicks).map(([country]) => ({
+    id: country,
+    // color: getColorByClicks(clicks, index, countryClicks),
+  }));
 
   const triggers = {
-    [TopoJSONMap.selectors.feature]: (d: any) =>
-      `${getCountryName(d.id)} · ${countryClicks[d.id] || 0}`,
+    [TopoJSONMap.selectors.feature]: (datum: WorldMapTooltipDatum) =>
+      `${getCountryName(datum.id)} · ${countryClicks[datum.id] || 0}`,
     // [TopoJSONMap.selectors.point]: (d) => decodeURIComponent(d.city),
-  };
+  } satisfies Record<string, (datum: WorldMapTooltipDatum) => string>;
 
   const refererStats = generateStatsList(data, "referer");
   const cityStats = generateStatsList(data, "city");
@@ -417,12 +419,12 @@ export function DailyPVUVChart({
             </TabsList>
             <TabsContent className="h-[calc(100%-40px)]" value="referrer">
               {refererStats.length > 0 && (
-                <StatsList data={refererStats} title="Referrers" />
+                <StatsList data={refererStats} />
               )}
             </TabsContent>
             <TabsContent className="h-[calc(100%-40px)]" value="isBot">
               {isBotStats.length > 0 && (
-                <StatsList data={isBotStats} title="Is Bot" />
+                <StatsList data={isBotStats} />
               )}
             </TabsContent>
           </Tabs>
@@ -434,12 +436,12 @@ export function DailyPVUVChart({
             </TabsList>
             <TabsContent className="h-[calc(100%-40px)]" value="country">
               {countryStats.length > 0 && (
-                <StatsList data={countryStats} title="Countries" />
+                <StatsList data={countryStats} />
               )}
             </TabsContent>
             <TabsContent className="h-[calc(100%-40px)]" value="city">
               {cityStats.length > 0 && (
-                <StatsList data={cityStats} title="Cities" />
+                <StatsList data={cityStats} />
               )}
             </TabsContent>
           </Tabs>
@@ -451,12 +453,12 @@ export function DailyPVUVChart({
             </TabsList>
             <TabsContent className="h-[calc(100%-40px)]" value="browser">
               {browserStats.length > 0 && (
-                <StatsList data={browserStats} title="Browsers" />
+                <StatsList data={browserStats} />
               )}
             </TabsContent>
             <TabsContent className="h-[calc(100%-40px)]" value="engine">
               {engineStats.length > 0 && (
-                <StatsList data={engineStats} title="Engines" />
+                <StatsList data={engineStats} />
               )}
             </TabsContent>
           </Tabs>
@@ -469,12 +471,12 @@ export function DailyPVUVChart({
             </TabsList>
             <TabsContent className="h-[calc(100%-40px)]" value="language">
               {languageStats.length > 0 && (
-                <StatsList data={languageStats} title="Languages" />
+                <StatsList data={languageStats} />
               )}
             </TabsContent>
             <TabsContent className="h-[calc(100%-40px)]" value="region">
               {regionStats.length > 0 && (
-                <StatsList data={regionStats} title="Regions" />
+                <StatsList data={regionStats} />
               )}
             </TabsContent>
           </Tabs>
@@ -487,14 +489,14 @@ export function DailyPVUVChart({
             </TabsList>
             <TabsContent className="h-[calc(100%-40px)]" value="device">
               {deviceStats.length > 0 && (
-                <StatsList data={deviceStats} title="Devices" />
+                <StatsList data={deviceStats} />
               )}
             </TabsContent>
             <TabsContent className="h-[calc(100%-40px)]" value="os">
-              {osStats.length > 0 && <StatsList data={osStats} title="OS" />}
+              {osStats.length > 0 && <StatsList data={osStats} />}
             </TabsContent>
             <TabsContent className="h-[calc(100%-40px)]" value="cpu">
-              {cpuStats.length > 0 && <StatsList data={cpuStats} title="CPU" />}
+              {cpuStats.length > 0 && <StatsList data={cpuStats} />}
             </TabsContent>
           </Tabs>
         </div>
@@ -503,7 +505,7 @@ export function DailyPVUVChart({
   );
 }
 
-export function StatsList({ data, title }: { data: Stat[]; title: string }) {
+export function StatsList({ data }: { data: Stat[] }) {
   const [showAll, setShowAll] = useState(false);
   const displayedData = showAll ? data.slice(0, 50) : data.slice(0, 8);
   const t = useTranslations("Components");

@@ -32,7 +32,7 @@ export default async function DashboardPage() {
           role: user.role,
           team: user.team,
         }}
-        action="/api/storage/admin"
+        action="/api/storage"
       />
     </>
   );

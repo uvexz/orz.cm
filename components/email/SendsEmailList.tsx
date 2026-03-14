@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type { User, UserSendEmail } from "@/lib/db/types";
+import type { AppSessionUser } from "@/lib/auth/server";
+import type { UserSendEmail } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import useSWR from "swr";
 
@@ -18,7 +19,7 @@ import {
 } from "../ui/collapsible";
 import { Switch } from "../ui/switch";
 
-export default function SendsEmailList({ user }: { user: User }) {
+export default function SendsEmailList({ user }: { user: AppSessionUser }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [isAdminModel, setAdminModel] = useState(false);
@@ -139,7 +140,7 @@ export default function SendsEmailList({ user }: { user: User }) {
                       {email.from}
                     </span>
                     <span className="text-xs text-neutral-800 dark:text-neutral-300">
-                      {formatDate(email.createdAt as any)}
+                      {formatDate(new Date(email.createdAt).getTime())}
                     </span>
                   </div>
                   <div className="grid w-full grid-cols-1 gap-3 p-2 sm:grid-cols-2">

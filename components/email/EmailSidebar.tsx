@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import type { User } from "@/lib/db/types";
+import type { AppSessionUser } from "@/lib/auth/server";
 import randomName from "@scaleway/random-name";
 import {
   PanelLeftClose,
@@ -47,7 +47,7 @@ import {
 import { SendEmailModal } from "./SendEmailModal";
 
 interface EmailSidebarProps {
-  user: User;
+  user: AppSessionUser;
   onSelectEmail: (emailAddress: string | null) => void;
   selectedEmailAddress: string | null;
   className?: string;
@@ -82,7 +82,7 @@ export default function EmailSidebar({
   const [currentPage, setCurrentPage] = useState(1);
   const [onlyUnread, setOnlyUnread] = useState(false);
 
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize] = useState(15);
 
   const { data, isLoading, error, mutate } = useSWR<{
     list: UserEmailList[];
@@ -571,7 +571,13 @@ export default function EmailSidebar({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                const emailAddress = (e.target as any).emailAddress.value;
+                const emailAddressInput = e.currentTarget.elements.namedItem(
+                  "emailAddress",
+                );
+                const emailAddress =
+                  emailAddressInput instanceof HTMLInputElement
+                    ? emailAddressInput.value
+                    : "";
                 handleSubmitEmail(emailAddress);
               }}
             >

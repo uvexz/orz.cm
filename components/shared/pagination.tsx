@@ -67,7 +67,7 @@ export function PaginationWrapper({
     }
   };
 
-  const pages: any = [];
+  const pages: React.ReactNode[] = [];
   let prevPage: number | null = null;
 
   for (let page = 1; page <= totalPages; page++) {

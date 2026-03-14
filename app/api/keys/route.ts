@@ -1,18 +1,21 @@
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
 import { generateApiKey } from "@/lib/dto/api-key";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
 
-export async function POST(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+export const POST = createAuthedApiRoute(
+  async (_request: Request, _context: AppRouteHandlerContext, { user }) => {
+    const result = await generateApiKey(user.id);
 
-    const res = await generateApiKey(user.id);
-    if (res) {
-      return Response.json(res.apiKey);
+    if (!result) {
+      return apiOk({ statusText: "Server error" }, 501);
     }
-    return Response.json({ statusText: "Server error" }, { status: 501 });
-  } catch (error) {
-    return Response.json({ statusText: "Server error" }, { status: 500 });
-  }
-}
+
+    return apiOk(result.apiKey);
+  },
+  {
+    fallbackBody: { statusText: "Server error" },
+  },
+);

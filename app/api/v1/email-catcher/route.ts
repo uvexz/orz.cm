@@ -1,10 +1,24 @@
 import { getConfiguredEmailDomains } from "@/lib/dto/domains";
-import { OriginalEmail, saveForwardEmail } from "@/lib/dto/email";
 import { getMultipleConfigs } from "@/lib/dto/system-config";
 import { db } from "@/lib/db";
 import { userEmails, users } from "@/lib/db/schema";
 import { brevoSendEmail } from "@/lib/email/brevo";
+import { saveForwardEmail } from "@/lib/email/services";
+import type { OriginalEmail } from "@/lib/email/types";
 import { eq } from "drizzle-orm";
+
+type EmailCatcherConfigs = {
+  enable_email_catch_all: boolean;
+  catch_all_emails: string;
+  enable_tg_email_push: boolean;
+  tg_email_bot_token: string;
+  tg_email_chat_id: string;
+  tg_email_template: string;
+  tg_email_target_white_list: string;
+  enable_email_forward: boolean;
+  email_forward_targets: string;
+  email_forward_white_list: string;
+};
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +27,7 @@ export async function POST(req: Request) {
       return Response.json("No email data received", { status: 400 });
     }
 
-    const configs = await getMultipleConfigs([
+    const configs = await getMultipleConfigs<EmailCatcherConfigs>([
       "enable_email_catch_all",
       "catch_all_emails",
       "enable_tg_email_push",
@@ -51,7 +65,10 @@ export async function POST(req: Request) {
   }
 }
 
-async function handleEmailForwarding(data: OriginalEmail, configs: any) {
+async function handleEmailForwarding(
+  data: OriginalEmail,
+  configs: EmailCatcherConfigs,
+) {
   const actions = determineEmailActions(data, configs);
 
   const promises: Promise<void>[] = [];
@@ -80,7 +97,10 @@ async function handleEmailForwarding(data: OriginalEmail, configs: any) {
   }
 }
 
-function determineEmailActions(data: OriginalEmail, configs: any): string[] {
+function determineEmailActions(
+  data: OriginalEmail,
+  configs: EmailCatcherConfigs,
+): string[] {
   const actions: string[] = [];
 
   // 检查转发白名单
@@ -126,7 +146,10 @@ function checkForwardWhiteList(
   return whiteList.includes(toEmail);
 }
 
-async function handleCatchAllEmail(data: OriginalEmail, configs: any) {
+async function handleCatchAllEmail(
+  data: OriginalEmail,
+  configs: Pick<EmailCatcherConfigs, "catch_all_emails">,
+) {
   const validEmails = parseAndValidateEmails(configs.catch_all_emails);
 
   if (validEmails.length === 0) {
@@ -141,7 +164,10 @@ async function handleCatchAllEmail(data: OriginalEmail, configs: any) {
   await Promise.all(forwardPromises);
 }
 
-async function handleExternalForward(data: OriginalEmail, configs: any) {
+async function handleExternalForward(
+  data: OriginalEmail,
+  configs: Pick<EmailCatcherConfigs, "email_forward_targets">,
+) {
   const validEmails = parseAndValidateEmails(configs.email_forward_targets);
 
   if (validEmails.length === 0) {
@@ -211,7 +237,13 @@ function shouldPushToTelegram(
   return whiteListArray.includes(email.to);
 }
 
-async function sendToTelegram(email: OriginalEmail, configs: any) {
+async function sendToTelegram(
+  email: OriginalEmail,
+  configs: Pick<
+    EmailCatcherConfigs,
+    "tg_email_bot_token" | "tg_email_chat_id" | "tg_email_template"
+  >,
+) {
   const { tg_email_bot_token, tg_email_chat_id, tg_email_template } = configs;
 
   if (!tg_email_bot_token || !tg_email_chat_id) {

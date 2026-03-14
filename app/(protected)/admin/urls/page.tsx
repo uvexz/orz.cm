@@ -1,9 +1,7 @@
-import { redirect } from "next/navigation";
-
-import { getCurrentUser } from "@/lib/session";
 import { constructMetadata } from "@/lib/utils";
 
 import UserUrlsList from "../../dashboard/urls/url-list";
+import { loadUrlListPageData } from "../../dashboard/urls/url-list-page-data";
 
 export const metadata = constructMetadata({
   title: "Links",
@@ -11,22 +9,7 @@ export const metadata = constructMetadata({
 });
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
+  const data = await loadUrlListPageData();
 
-  if (!user?.id) redirect("/login");
-
-  return (
-    <>
-      <UserUrlsList
-        user={{
-          id: user.id,
-          name: user.name || "",
-          apiKey: user.apiKey || "",
-          role: user.role,
-          team: user.team,
-        }}
-        action="/api/url/admin"
-      />
-    </>
-  );
+  return <UserUrlsList {...data} />;
 }

@@ -1,99 +1,87 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
+import { badRequest, forbidden, getErrorMessage, hasErrorMessage } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
 import {
   markAllEmailsAsRead,
   markEmailAsRead,
   markEmailsAsRead,
-} from "@/lib/dto/email";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+} from "@/lib/email/services";
 
-// 处理单封邮件标记为已读 (POST)
-export async function POST(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+function mapReadError(error: unknown) {
+  if (
+    hasErrorMessage(
+      error,
+      "There are no valid emails to mark as read or you do not have permission",
+    ) ||
+    hasErrorMessage(
+      error,
+      "There are no valid emails or you do not have permission",
+    )
+  ) {
+    return forbidden({
+      success: false,
+      error: getErrorMessage(error),
+    });
+  }
 
+  return null;
+}
+
+export const POST = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const body = await request.json();
     const { emailId } = body;
 
     if (!emailId) {
-      return NextResponse.json(
-        { error: "缺少必要的参数: emailId" },
-        { status: 400 },
-      );
+      throw badRequest({ error: "缺少必要的参数: emailId" });
     }
 
     await markEmailAsRead(emailId, user.id);
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "服务器错误",
-      },
-      { status: 500 },
-    );
-  }
-}
+    return apiOk({ success: true });
+  },
+  {
+    fallbackBody: { success: false, error: "服务器错误" },
+    mapError: mapReadError,
+  },
+);
 
-// 处理批量标记为已读 (PUT)
-export async function PUT(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const PUT = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const body = await request.json();
     const { emailIds } = body;
 
     if (!emailIds || !Array.isArray(emailIds)) {
-      return NextResponse.json(
-        { error: "缺少必要的参数: emailIds 必须是数组" },
-        { status: 400 },
-      );
+      throw badRequest({ error: "缺少必要的参数: emailIds 必须是数组" });
     }
 
     await markEmailsAsRead(emailIds, user.id);
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "服务器错误",
-      },
-      { status: 500 },
-    );
-  }
-}
+    return apiOk({ success: true });
+  },
+  {
+    fallbackBody: { success: false, error: "服务器错误" },
+    mapError: mapReadError,
+  },
+);
 
-// 处理将所有邮件标记为已读 (PATCH)
-export async function PATCH(request: NextRequest) {
-  try {
+export const PATCH = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const body = await request.json();
-    const { userEmailId, userId } = body;
+    const { userEmailId } = body;
 
-    if (!userEmailId || !userId) {
-      return NextResponse.json(
-        { error: "缺少必要的参数: userEmailId 和 userId" },
-        { status: 400 },
-      );
+    if (!userEmailId) {
+      throw badRequest({ error: "缺少必要的参数: userEmailId" });
     }
 
-    await markAllEmailsAsRead(userEmailId, userId);
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "服务器错误",
-      },
-      { status: 500 },
-    );
-  }
-}
+    await markAllEmailsAsRead(userEmailId, user.id);
+    return apiOk({ success: true });
+  },
+  {
+    fallbackBody: { success: false, error: "服务器错误" },
+    mapError: mapReadError,
+  },
+);

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import type { AppSessionUser } from "@/lib/auth/server";
 import { getCurrentUser } from "@/lib/session";
 import { constructMetadata } from "@/lib/utils";
 import SendsEmailList from "@/components/email/SendsEmailList";
@@ -14,5 +15,5 @@ export default async function SentEmailPage() {
 
   if (!user?.id) redirect("/login");
 
-  return <SendsEmailList user={user as any} />;
+  return <SendsEmailList user={user as AppSessionUser} />;
 }

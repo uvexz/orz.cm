@@ -1,20 +1,24 @@
 import { NextRequest } from "next/server";
 import { Resend } from "resend";
 
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import { badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const GET = createAuthedApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const url = new URL(req.url);
     const api_key = url.searchParams.get("api_key") || "";
     const domain = url.searchParams.get("domain") || "";
 
     if (!api_key || !domain) {
-      return Response.json(400, { status: 400 });
+      throw badRequest("api_key and domain are required");
+    }
+    if (!user.email) {
+      throw badRequest("Missing account email");
     }
 
     const resend = new Resend(api_key);
@@ -27,13 +31,12 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.log("Resend error:", error);
-      return Response.json(`${error.message}`, {
-        status: 400,
-      });
+      throw badRequest(error.message);
     }
 
-    return Response.json(200, { status: 200 });
-  } catch (error) {
-    return Response.json(500, { status: 500 });
-  }
-}
+    return apiOk(200);
+  },
+  {
+    fallbackBody: 500,
+  },
+);

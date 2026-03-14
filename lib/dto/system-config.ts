@@ -5,24 +5,32 @@ import { systemConfigs } from "../db/schema";
 
 export type ConfigType = "BOOLEAN" | "STRING" | "NUMBER" | "OBJECT";
 
-export interface SystemConfigData {
+export type SystemConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | SystemConfigValue[]
+  | { [key: string]: SystemConfigValue };
+
+export interface SystemConfigData<TValue = SystemConfigValue> {
   key: string;
-  value: any; // 解析后的实际值
+  value: TValue; // 解析后的实际值
   type: ConfigType;
   description?: string;
   version?: string;
 }
 
-export interface CreateSystemConfigData {
+export interface CreateSystemConfigData<TValue = SystemConfigValue> {
   key: string;
-  value: any;
+  value: TValue;
   type: ConfigType;
   description?: string;
   version?: string;
 }
 
-export interface UpdateSystemConfigData {
-  value?: any;
+export interface UpdateSystemConfigData<TValue = SystemConfigValue> {
+  value?: TValue;
   type?: ConfigType;
   description?: string;
   version?: string;
@@ -61,7 +69,7 @@ function getDefaultConfigValue(key: string) {
 }
 
 // 解析配置值
-function parseConfigValue(value: string, type: ConfigType): any {
+function parseConfigValue(value: string, type: ConfigType): SystemConfigValue {
   switch (type) {
     case "BOOLEAN":
       return value === "true";
@@ -85,7 +93,7 @@ function parseConfigValue(value: string, type: ConfigType): any {
 }
 
 // 序列化配置值
-function serializeConfigValue(value: any, type: ConfigType): string {
+function serializeConfigValue(value: unknown, type: ConfigType): string {
   switch (type) {
     case "BOOLEAN":
       return String(Boolean(value));
@@ -127,10 +135,12 @@ export async function getSystemConfig(
 }
 
 // 获取配置值（简化版本，直接返回解析后的值）
-export async function getConfigValue<T = any>(key: string): Promise<T | null> {
+export async function getConfigValue<T = SystemConfigValue>(
+  key: string,
+): Promise<T | null> {
   const config = await getSystemConfig(key);
   if (config) {
-    return config.value;
+    return config.value as T;
   }
 
   const defaultValue = getDefaultConfigValue(key);
@@ -216,7 +226,7 @@ export async function updateSystemConfig(
 // 设置配置值（upsert操作）
 export async function setSystemConfig(
   key: string,
-  value: any,
+  value: SystemConfigValue,
   type: ConfigType,
   description?: string,
 ) {
@@ -266,11 +276,16 @@ export async function deleteSystemConfig(key: string) {
 }
 
 // 批量获取配置
-export async function getMultipleConfigs(
+export async function getMultipleConfigs<
+  TConfigs extends Record<string, SystemConfigValue> = Record<
+    string,
+    SystemConfigValue
+  >,
+>(
   keys: string[],
-): Promise<Record<string, any>> {
+): Promise<TConfigs> {
   if (keys.length === 0) {
-    return {};
+    return {} as TConfigs;
   }
 
   const configs = await db
@@ -278,7 +293,7 @@ export async function getMultipleConfigs(
     .from(systemConfigs)
     .where(inArray(systemConfigs.key, keys));
 
-  const result: Record<string, any> = {};
+  const result: Record<string, SystemConfigValue> = {};
   configs.forEach((config) => {
     result[config.key] = parseConfigValue(
       config.value,
@@ -295,7 +310,7 @@ export async function getMultipleConfigs(
     }
   }
 
-  return result;
+  return result as TConfigs;
 }
 
 // 按类型获取配置

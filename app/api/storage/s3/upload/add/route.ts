@@ -1,20 +1,20 @@
 // app/api/user-files/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-import { createUserFile } from "@/lib/dto/files";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import { badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import { createUserFile } from "@/lib/files/services";
 import { bytesToStorageValue } from "@/lib/utils";
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const POST = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const body = await request.json();
 
     const requiredFields = [
-      "userId",
       "name",
       "originalName",
       "mimeType",
@@ -25,17 +25,14 @@ export async function POST(request: NextRequest) {
     const missingFields = requiredFields.filter((field) => !body[field]);
 
     if (missingFields.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Missing required fields: ${missingFields.join(", ")}`,
-        },
-        { status: 400 },
-      );
+      throw badRequest({
+        success: false,
+        error: `Missing required fields: ${missingFields.join(", ")}`,
+      });
     }
 
     const userFile = await createUserFile({
-      userId: body.userId,
+      userId: user.id,
       name: body.name,
       originalName: body.originalName,
       mimeType: body.mimeType,
@@ -52,49 +49,45 @@ export async function POST(request: NextRequest) {
         : new Date(),
     });
 
-    return NextResponse.json({
+    return apiOk({
       success: true,
       data: userFile,
       message: "success",
     });
-  } catch (error: any) {
-    console.error("Error creating user file:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Error creating user file",
-      },
-      { status: 500 },
-    );
-  }
-}
+  },
+  {
+    fallbackBody: {
+      success: false,
+      error: "Error creating user file",
+    },
+    logMessage: "Error creating user file:",
+  },
+);
 
-// 批量创建用户文件数据
-export async function PUT(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const PUT = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const { files } = await request.json();
 
     if (!Array.isArray(files)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "File list must be an array",
-        },
-        { status: 400 },
-      );
+      throw badRequest({
+        success: false,
+        error: "File list must be an array",
+      });
     }
 
     const results = await Promise.allSettled(
-      files.map((file) => createUserFile(file)),
+      files.map((file) =>
+        createUserFile({
+          ...file,
+          userId: user.id,
+        }),
+      ),
     );
 
     const successful = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.filter((r) => r.status === "rejected").length;
 
-    return NextResponse.json({
+    return apiOk({
       success: true,
       data: {
         total: files.length,
@@ -109,14 +102,12 @@ export async function PUT(request: NextRequest) {
       },
       message: `Complete: ${successful} success, ${failed} failed`,
     });
-  } catch (error: any) {
-    console.error("Create user files failed:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Create user files failed",
-      },
-      { status: 500 },
-    );
-  }
-}
+  },
+  {
+    fallbackBody: {
+      success: false,
+      error: "Create user files failed",
+    },
+    logMessage: "Create user files failed:",
+  },
+);

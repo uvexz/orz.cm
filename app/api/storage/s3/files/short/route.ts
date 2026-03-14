@@ -1,21 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-import { updateUserFile } from "@/lib/dto/files";
-import { getUserShortLinksByIds } from "@/lib/dto/short-urls";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import { badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import { updateUserFile } from "@/lib/files/services";
+import { getUserShortLinksByIds } from "@/lib/short-urls/services";
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const POST = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const { ids } = await request.json();
     if (!ids) {
-      return NextResponse.json({ error: "Ids are required" }, { status: 400 });
+      throw badRequest({ error: "Ids are required" });
     }
 
-    const data = await getUserShortLinksByIds(ids, user.id);
+    const data = await getUserShortLinksByIds(
+      ids,
+      user.role === "ADMIN" ? undefined : user.id,
+    );
 
     const dataMap = new Map(data.map((item) => [item.id, item]));
 
@@ -24,41 +28,34 @@ export async function POST(request: NextRequest) {
       return item ? `${item.prefix}/${item.url}` : "";
     });
 
-    return NextResponse.json({
+    return apiOk({
       urls: orderedResults,
     });
-  } catch (error) {
-    return NextResponse.json("Error generating download URL", { status: 500 });
-  }
-}
+  },
+  {
+    fallbackBody: "Error generating download URL",
+  },
+);
 
-export async function PUT(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const PUT = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext) => {
     const { urlId, fileId } = await request.json();
 
     if (!urlId || !fileId) {
-      return NextResponse.json(
-        { error: "Slug and fileId are required" },
-        { status: 400 },
-      );
+      throw badRequest({ error: "Slug and fileId are required" });
     }
 
     const res = await updateUserFile(fileId, {
       shortUrlId: urlId,
     });
 
-    if (res.success) {
-      return NextResponse.json({ success: true });
-    } else {
-      return NextResponse.json({ error: res.error }, { status: 400 });
+    if (!res.success) {
+      throw badRequest({ error: res.error });
     }
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Error generating download URL" },
-      { status: 500 },
-    );
-  }
-}
+
+    return apiOk({ success: true });
+  },
+  {
+    fallbackBody: { error: "Error generating download URL" },
+  },
+);

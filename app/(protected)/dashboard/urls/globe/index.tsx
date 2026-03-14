@@ -21,9 +21,15 @@ import RealtimeLogs from "./realtime-logs";
 
 const RealtimeGlobe = dynamic(() => import("./realtime-globe"), { ssr: false });
 
+declare global {
+  interface Window {
+    restoreTimeRange?: () => void;
+  }
+}
+
 export interface Location {
-  latitude: number;
-  longitude: number;
+  lat: number;
+  lng: number;
   count: number;
   city?: string;
   country?: string;
@@ -70,6 +76,8 @@ interface LocationApiResponse {
   timestamp: string;
 }
 
+type RealtimeFilters = Record<string, string>;
+
 function date2unix(date: Date): number {
   return Math.floor(date.getTime() / 1000);
 }
@@ -87,7 +95,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
       endAt: date2unix(now),
     };
   });
-  const [filters, setFilters] = useState<Record<string, any>>({});
+  const [filters] = useState<RealtimeFilters>({});
   const [locations, setLocations] = useState<Location[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [stats, setStats] = useState({
@@ -107,7 +115,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
 
     // 如果数据量很少，直接按原始时间点展示
     if (validLocations.length <= 10) {
-      return validLocations.map((loc, index) => ({
+      return validLocations.map((loc) => ({
         time: format(new Date(loc.createdAt!), "HH:mm:ss"),
         count: loc.count,
       }));
@@ -233,7 +241,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
       const {
         locations: processedLocations,
         chartData,
-        totalNewClicks,
+        totalNewClicks: _totalNewClicks,
         totalCount,
       } = appendLocationData(rawData, isInitialLoad);
 
@@ -372,7 +380,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
       });
     };
 
-    (window as any).restoreTimeRange = restoreTimeRange;
+    window.restoreTimeRange = restoreTimeRange;
 
     const interval = setInterval(
       () => {
@@ -385,7 +393,7 @@ export default function Realtime({ isAdmin = false }: { isAdmin?: boolean }) {
 
     return () => {
       clearInterval(interval);
-      delete (window as any).restoreTimeRange;
+      delete window.restoreTimeRange;
     };
   }, []);
 

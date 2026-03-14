@@ -1,89 +1,88 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
+import { badRequest, conflict, hasErrorCode, hasErrorMessage, notFound } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
 import {
   deleteUserEmail,
   getUserEmailById,
   updateUserEmail,
-} from "@/lib/dto/email";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+} from "@/lib/email/services";
 
-// 查询单个 UserEmail
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const user = checkUserStatus(await getCurrentUser());
-  if (user instanceof Response) return user;
+function mapUserEmailMutationError(error: unknown) {
+  if (hasErrorMessage(error, "User email not found or already deleted")) {
+    return notFound("User email not found or already deleted");
+  }
 
-  const { id } = await params;
+  if (hasErrorMessage(error, "Invalid email address")) {
+    return badRequest("Invalid email address");
+  }
 
-  try {
+  if (hasErrorCode(error, "UNIQUE_CONSTRAINT")) {
+    return conflict("Email address already exists");
+  }
+
+  return null;
+}
+
+export const GET = createAuthedApiRoute<{ id: string }>(
+  async (
+    _req: NextRequest,
+    { params }: AppRouteHandlerContext<{ id: string }>,
+    _api,
+  ) => {
+    const { id } = await params;
     const userEmail = await getUserEmailById(id);
+
     if (!userEmail) {
-      return NextResponse.json(
-        { error: "User email not found or deleted" },
-        { status: 404 },
-      );
+      throw notFound({ error: "User email not found or deleted" });
     }
-    return NextResponse.json(userEmail, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching user email:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-}
 
-// 更新 UserEmail 的 emailAddress
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const user = checkUserStatus(await getCurrentUser());
-  if (user instanceof Response) return user;
+    return apiOk(userEmail);
+  },
+  {
+    fallbackBody: { error: "Internal Server Error" },
+    logMessage: "Error fetching user email:",
+  },
+);
 
-  const { id } = await params;
-  const { emailAddress } = await req.json();
+export const PUT = createAuthedApiRoute<{ id: string }>(
+  async (
+    req: NextRequest,
+    { params }: AppRouteHandlerContext<{ id: string }>,
+    _api,
+  ) => {
+    const { id } = await params;
+    const { emailAddress } = await req.json();
 
-  if (!emailAddress) {
-    return NextResponse.json("Missing emailAddress", { status: 400 });
-  }
+    if (!emailAddress) {
+      throw badRequest("Missing emailAddress");
+    }
 
-  try {
     const userEmail = await updateUserEmail(id, emailAddress);
-    return NextResponse.json(userEmail, { status: 200 });
-  } catch (error) {
-    console.error("Error updating user email:", error);
-    if (error.message === "User email not found or already deleted") {
-      return NextResponse.json(error.message, { status: 404 });
-    }
-    if (error.code === "UNIQUE_CONSTRAINT") {
-      return NextResponse.json("Email address already exists", { status: 409 });
-    }
-    return NextResponse.json("Internal Server Error", { status: 500 });
-  }
-}
+    return apiOk(userEmail);
+  },
+  {
+    logMessage: "Error updating user email:",
+    mapError: mapUserEmailMutationError,
+  },
+);
 
-// 删除 UserEmail
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const user = checkUserStatus(await getCurrentUser());
-  if (user instanceof Response) return user;
-
-  const { id } = await params;
-
-  try {
+export const DELETE = createAuthedApiRoute<{ id: string }>(
+  async (
+    _req: NextRequest,
+    { params }: AppRouteHandlerContext<{ id: string }>,
+    _api,
+  ) => {
+    const { id } = await params;
     await deleteUserEmail(id);
-    return NextResponse.json({ message: "success" }, { status: 200 });
-  } catch (error) {
-    console.error("Error deleting user email:", error);
-    if (error.message === "User email not found or already deleted") {
-      return NextResponse.json(error.message, { status: 404 });
-    }
-    return NextResponse.json("Internal Server Error", { status: 500 });
-  }
-}
+    return apiOk({ message: "success" });
+  },
+  {
+    logMessage: "Error deleting user email:",
+    mapError: mapUserEmailMutationError,
+  },
+);

@@ -11,7 +11,7 @@ import * as z from "zod";
 
 import { authClient } from "@/lib/auth-client";
 import { cn, fetcher } from "@/lib/utils";
-import { userAuthSchema, userPasswordAuthSchema } from "@/lib/validations/auth";
+import { userPasswordAuthSchema } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,12 +19,20 @@ import { Icons } from "@/components/shared/icons";
 
 import { Skeleton } from "../ui/skeleton";
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
-  type?: string;
-}
+interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-type FormData = z.infer<typeof userAuthSchema>;
 type FormData2 = z.infer<typeof userPasswordAuthSchema>;
+
+interface AuthFeatureFlags {
+  google: boolean;
+  github: boolean;
+  linuxdo: boolean;
+  resend: boolean;
+  credentials: boolean;
+  registration: boolean;
+  enableSuffixLimit: boolean;
+  suffixWhiteList: string;
+}
 
 function getAuthErrorCode(error: unknown) {
   if (typeof error === "object" && error && "code" in error) {
@@ -38,14 +46,7 @@ function getAuthErrorCode(error: unknown) {
   return "Unknown";
 }
 
-export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(userAuthSchema),
-  });
+export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const {
     register: register2,
     handleSubmit: handleSubmit2,
@@ -64,19 +65,20 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
   const t = useTranslations("Auth");
   const callbackURL = searchParams?.get("from") || "/dashboard";
 
-  const { data: loginMethod, isLoading: isLoadingMethod } = useSWR<
-    Record<string, any>
-  >("/api/feature", fetcher, {
+  const { data: loginMethod, isLoading: isLoadingMethod } = useSWR<AuthFeatureFlags>(
+    "/api/feature",
+    fetcher,
+    {
     revalidateOnFocus: false,
   });
 
   React.useEffect(() => {
     if (
       loginMethod &&
-      !!loginMethod["enableSuffixLimit"] &&
-      loginMethod["suffixWhiteList"].length > 0
+      loginMethod.enableSuffixLimit &&
+      loginMethod.suffixWhiteList.length > 0
     ) {
-      setSuffixWhiteList(loginMethod["suffixWhiteList"].split(","));
+      setSuffixWhiteList(loginMethod.suffixWhiteList.split(","));
     }
   }, [loginMethod]);
 
@@ -95,27 +97,6 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
     }
     return true;
   };
-
-  async function onSubmit(data: FormData) {
-    if (!checkEmailSuffix(data.email)) return;
-    startTransition(async () => {
-      const { error } = await authClient.signIn.magicLink({
-        email: data.email.toLowerCase(),
-        callbackURL,
-      });
-
-      if (error) {
-        toast.error(t("Something went wrong"), {
-          description: "Your sign in request failed. Please try again.",
-        });
-        return;
-      }
-
-      toast.success(t("Check your email"), {
-        description: `${t("We sent you a login link")}. ${t("Be sure to check your spam too")}.`,
-      });
-    });
-  }
 
   async function onSubmitPwd(data: FormData2) {
     if (!checkEmailSuffix(data.email)) return;
@@ -210,52 +191,8 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
     );
   }
 
-  const rendeResend = () =>
-    loginMethod["resend"] && (
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid gap-2">
-          <div className="grid gap-1">
-            <Label className="sr-only" htmlFor="email">
-              Email
-            </Label>
-            <Input
-              id="email"
-              placeholder="name@example.com"
-              type="email"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect="off"
-              disabled={isLoading || isGoogleLoading}
-              {...register("email")}
-            />
-            {errors?.email && (
-              <p className="px-1 text-xs text-red-600">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-          <Button
-            className="my-2"
-            disabled={
-              !loginMethod.registration ||
-              isLoading ||
-              isGoogleLoading ||
-              isGithubLoading
-            }
-          >
-            {isLoading && (
-              <Icons.spinner className="mr-2 size-4 animate-spin" />
-            )}
-            {type === "register"
-              ? t("Sign Up with Email")
-              : t("Sign In with Email")}
-          </Button>
-        </div>
-      </form>
-    );
-
   const rendeCredentials = () =>
-    loginMethod["credentials"] && (
+    loginMethod.credentials && (
       <form onSubmit={handleSubmit2(onSubmitPwd)}>
         <div className="grid gap-3">
           <div className="grid gap-1">
@@ -324,15 +261,15 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
         </p>
       )}
 
-      {loginMethod["credentials"] && <>{rendeCredentials()}</>}
+      {loginMethod.credentials && <>{rendeCredentials()}</>}
 
-      {(loginMethod["google"] ||
-        loginMethod["github"] ||
-        loginMethod["linuxdo"]) &&
-        (loginMethod["resend"] || loginMethod["credentials"]) &&
+      {(loginMethod.google ||
+        loginMethod.github ||
+        loginMethod.linuxdo) &&
+        (loginMethod.resend || loginMethod.credentials) &&
         rendeSeparator()}
 
-      {loginMethod["google"] && (
+      {loginMethod.google && (
         <Button
           variant="outline"
           type="button"
@@ -366,7 +303,7 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
           Google
         </Button>
       )}
-      {loginMethod["github"] && (
+      {loginMethod.github && (
         <Button
           type="button"
           variant="outline"
@@ -400,7 +337,7 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
           Github
         </Button>
       )}
-      {loginMethod["linuxdo"] && (
+      {loginMethod.linuxdo && (
         <Button
           type="button"
           variant="outline"

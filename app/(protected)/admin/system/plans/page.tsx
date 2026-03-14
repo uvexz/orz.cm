@@ -26,7 +26,7 @@ export default async function DashboardPage() {
           role: user.role,
           team: user.team,
         }}
-        action="/api/admin/plan"
+        action="/api/plan"
       />
     </>
   );

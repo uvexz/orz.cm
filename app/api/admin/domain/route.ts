@@ -1,24 +1,23 @@
 import { NextRequest } from "next/server";
 
+import { badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAdminApiRoute,
+} from "@/lib/api/route";
 import {
   createDomain,
   deleteDomain,
   getAllDomains,
   updateDomain,
 } from "@/lib/dto/domains";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
 
 // Get domains list
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user.role !== "ADMIN") {
-      return Response.json("Unauthorized", { status: 401 });
-    }
-
+export const GET = createAdminApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext) => {
     const url = new URL(req.url);
     const page = url.searchParams.get("page");
     const size = url.searchParams.get("size");
@@ -30,26 +29,20 @@ export async function GET(req: NextRequest) {
       target,
     );
 
-    return Response.json(data, { status: 200 });
-  } catch (error) {
-    if (error instanceof Response) return error;
-    console.error("[Error]", error);
-    return Response.json(error.message || "Server error", { status: 500 });
-  }
-}
+    return apiOk(data);
+  },
+  {
+    fallbackBody: "Server error",
+    logMessage: "[Error]",
+  },
+);
 
 // Create domain
-export async function POST(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-    if (user.role !== "ADMIN") {
-      return Response.json("Unauthorized", { status: 401 });
-    }
-
+export const POST = createAdminApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext) => {
     const { data } = await req.json();
     if (!data || !data.domain_name) {
-      return Response.json("domain_name is required", { status: 400 });
+      throw badRequest("domain_name is required");
     }
 
     const newDomain = await createDomain({
@@ -74,23 +67,17 @@ export async function POST(req: NextRequest) {
       active: true,
     });
 
-    return Response.json(newDomain, { status: 200 });
-  } catch (error) {
-    if (error instanceof Response) return error;
-    console.error("[Error]", error);
-    return Response.json(error.message || "Server error", { status: 500 });
-  }
-}
+    return apiOk(newDomain);
+  },
+  {
+    fallbackBody: "Server error",
+    logMessage: "[Error]",
+  },
+);
 
 // Update domain
-export async function PUT(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-    if (user.role !== "ADMIN") {
-      return Response.json("Unauthorized", { status: 401 });
-    }
-
+export const PUT = createAdminApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext) => {
     const {
       domain_name,
       enable_short_link,
@@ -113,7 +100,7 @@ export async function PUT(req: NextRequest) {
       id,
     } = await req.json();
     if (!id) {
-      return Response.json("domain id is required", { status: 400 });
+      throw badRequest("domain id is required");
     }
 
     const updatedDomain = await updateDomain(id, {
@@ -138,32 +125,28 @@ export async function PUT(req: NextRequest) {
       max_dns_records,
     });
 
-    return Response.json(updatedDomain, { status: 200 });
-  } catch (error) {
-    console.error("[Error]", error);
-    return Response.json(error.message || "Server error", { status: 500 });
-  }
-}
+    return apiOk(updatedDomain);
+  },
+  {
+    fallbackBody: "Server error",
+    logMessage: "[Error]",
+  },
+);
 
 // Delete domain
-export async function DELETE(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-    if (user.role !== "ADMIN") {
-      return Response.json("Unauthorized", { status: 401 });
-    }
-
+export const DELETE = createAdminApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext) => {
     const { domain_name } = await req.json();
     if (!domain_name) {
-      return Response.json("domain_name is required", { status: 400 });
+      throw badRequest("domain_name is required");
     }
 
     const deletedDomain = await deleteDomain(domain_name);
 
-    return Response.json(deletedDomain, { status: 200 });
-  } catch (error) {
-    console.error("[Error]", error);
-    return Response.json(error.message || "Server error", { status: 500 });
-  }
-}
+    return apiOk(deletedDomain);
+  },
+  {
+    fallbackBody: "Server error",
+    logMessage: "[Error]",
+  },
+);

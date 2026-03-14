@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { MDXContentProps } from "mdx-bundler/client";
 import Link from "next/link";
 import { useMDXComponent } from "next-contentlayer2/hooks";
 
@@ -9,7 +10,6 @@ import { Callout } from "@/components/shared/callout";
 import { CopyButton } from "@/components/shared/copy-button";
 
 import { DocsLang } from "../shared/docs-lang";
-import { Separator } from "../ui/separator";
 
 const components = {
   h1: ({ className, ...props }) => (
@@ -207,13 +207,17 @@ interface MdxProps {
   images?: { alt: string; src: string; blurDataURL: string }[];
 }
 
+type MdxImageProps = Omit<React.ComponentProps<typeof BlurImage>, "blurDataURL">;
+type MdxComponentMap = NonNullable<MDXContentProps["components"]>;
+
 export function Mdx({ code, images }: MdxProps) {
   const Component = useMDXComponent(code);
 
-  const MDXImage = (props: any) => {
+  const MDXImage = (props: MdxImageProps) => {
     if (!images) return null;
+    const src = typeof props.src === "string" ? props.src : "";
     const blurDataURL = images.find(
-      (image) => image.src === props.src,
+      (image) => image.src === src,
     )?.blurDataURL;
 
     return (
@@ -227,16 +231,14 @@ export function Mdx({ code, images }: MdxProps) {
     );
   };
 
+  const mdxComponents = {
+    ...components,
+    Image: MDXImage,
+  } as MdxComponentMap;
+
   return (
     <div className="mdx">
-      <Component
-        components={
-          {
-            ...components,
-            Image: MDXImage,
-          } as any
-        }
-      />
+      <Component components={mdxComponents} />
     </div>
   );
 }

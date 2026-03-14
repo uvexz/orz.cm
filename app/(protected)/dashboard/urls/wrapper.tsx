@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { User } from "@/lib/db/types";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApiReference from "@/components/shared/api-reference";
@@ -9,11 +8,12 @@ import ApiReference from "@/components/shared/api-reference";
 import Globe from "./globe";
 import LiveLog from "./live-logs";
 import UserUrlsList from "./url-list";
+import type { UrlListViewer } from "./url-list.types";
 
 export function Wrapper({
   user,
 }: {
-  user: Pick<User, "id" | "name" | "apiKey" | "role" | "team">;
+  user: UrlListViewer;
 }) {
   const [tab, setTab] = useState("Links");
   return (
@@ -30,7 +30,6 @@ export function Wrapper({
           Realtime
         </TabsTrigger>
       </TabsList>
-      )
       <TabsContent className="space-y-3" value="Links">
         <UserUrlsList
           user={{
@@ -38,7 +37,7 @@ export function Wrapper({
             name: user.name || "",
             apiKey: user.apiKey || "",
             role: user.role,
-            team: user.team,
+            team: user.team || "",
           }}
           action="/api/url"
         />

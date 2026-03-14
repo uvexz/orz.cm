@@ -1,5 +1,10 @@
 import { and, gte, lt } from "drizzle-orm";
 
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAdminApiRoute,
+} from "@/lib/api/route";
 import { db } from "@/lib/db";
 import {
   forwardEmails,
@@ -9,16 +14,28 @@ import {
   users,
   userUrls,
 } from "@/lib/db/schema";
-import { checkUserStatus } from "@/lib/dto/user";
 import { TIME_RANGES } from "@/lib/enums";
-import { getCurrentUser } from "@/lib/session";
 import { getStartDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+type DatedTable =
+  | typeof users
+  | typeof userUrls
+  | typeof userEmails
+  | typeof forwardEmails
+  | typeof userSendEmails;
+
+type DatedColumn =
+  | typeof users.createdAt
+  | typeof userUrls.createdAt
+  | typeof userEmails.createdAt
+  | typeof forwardEmails.createdAt
+  | typeof userSendEmails.createdAt;
+
 async function getDateRows(
-  table: any,
-  column: any,
+  table: DatedTable,
+  column: DatedColumn,
   startDate: Date,
   endDate?: Date,
 ) {
@@ -29,23 +46,14 @@ async function getDateRows(
   return db.select({ createdAt: column }).from(table).where(conditions);
 }
 
-export async function GET(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-    if (user.role !== "ADMIN") {
-      return Response.json("Unauthorized", {
-        status: 401,
-        statusText: "Unauthorized",
-      });
-    }
-
+export const GET = createAdminApiRoute(
+  async (req: Request, _context: AppRouteHandlerContext) => {
     const url = new URL(req.url);
     const range = url.searchParams.get("range") || "7d";
 
     const startDate = getStartDate(range);
     if (!startDate) {
-      return Response.json({ statusText: "Invalid range" }, { status: 400 });
+      return apiOk({ statusText: "Invalid range" }, 400);
     }
 
     // Calculate previous period start and end dates
@@ -202,12 +210,13 @@ export async function GET(req: Request) {
           : ((total.sends - prevTotal.sends) / prevTotal.sends) * 100,
     };
 
-    return Response.json({
+    return apiOk({
       list: combinedData.reverse(),
       total,
       growthRates,
     });
-  } catch (error) {
-    return Response.json({ statusText: "Server error" }, { status: 500 });
-  }
-}
+  },
+  {
+    fallbackBody: { statusText: "Server error" },
+  },
+);

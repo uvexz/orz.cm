@@ -1,7 +1,7 @@
 import { checkApiKey } from "@/lib/dto/api-key";
 import { getDomainsByFeature } from "@/lib/dto/domains";
 import { getPlanQuota } from "@/lib/dto/plan";
-import { createUserShortUrl } from "@/lib/dto/short-urls";
+import { createUserShortUrl } from "@/lib/short-urls/services";
 import { restrictByTimeRange } from "@/lib/team";
 import { createUrlSchema } from "@/lib/validations/url";
 

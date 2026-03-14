@@ -40,7 +40,7 @@ export type FormType = "add" | "edit";
 export type FormData = ShortUrlFormData;
 
 export interface RecordFormProps {
-  user: Pick<User, "id" | "name">;
+  user: Pick<User, "id" | "name" | "role">;
   isShowForm: boolean;
   setShowForm: Dispatch<SetStateAction<boolean>>;
   type: FormType;
@@ -50,6 +50,7 @@ export interface RecordFormProps {
 }
 
 export function UrlForm({
+  user,
   setShowForm,
   type,
   initData,
@@ -61,7 +62,7 @@ export function UrlForm({
   const [currentPrefix, setCurrentPrefix] = useState(initData?.prefix || "");
   const [limitLen, setLimitLen] = useState(3);
   const t = useTranslations("List");
-  const isAdmin = action.indexOf("admin") > -1;
+  const isAdmin = user.role === "ADMIN";
   const [email, setEmail] = useState(initData?.user?.email);
 
   const {

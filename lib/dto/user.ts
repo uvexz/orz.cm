@@ -2,6 +2,8 @@ import { and, desc, eq, isNotNull, isNull, like, ne, sql, type SQL } from "drizz
 
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import type { AppSessionUser } from "@/lib/auth/server";
+import { forbidden, unauthorized } from "@/lib/api/errors";
 
 import { hashPassword, verifyPassword } from "../password";
 
@@ -311,18 +313,12 @@ export const updateUserTelegramBinding = async (
   return user ?? null;
 };
 
-export function checkUserStatus(user: any) {
+export function checkUserStatus(user: AppSessionUser | null | undefined) {
   if (!user?.id) {
-    throw new Response("Unauthorized", {
-      status: 401,
-      statusText: "Unauthorized",
-    });
+    throw unauthorized("Unauthorized");
   }
   if (user.active === 0) {
-    throw new Response("Forbidden", {
-      status: 403,
-      statusText: "Forbidden",
-    });
+    throw forbidden("Forbidden");
   }
   return user;
 }

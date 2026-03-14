@@ -17,6 +17,8 @@ import { sendAuthMagicLink } from "@/lib/auth/email";
 import {
   buildAppSession,
   deactivateAppUserFromAuthUser,
+  isAppSession,
+  isBetterAuthSessionPayload,
   syncAppUserFromAuthUser,
   type AppSession,
 } from "@/lib/auth/server";
@@ -148,9 +150,13 @@ export async function auth(): Promise<AppSession | null> {
     return null;
   }
 
-  if ("role" in (session.user || {})) {
-    return session as AppSession;
+  if (isAppSession(session)) {
+    return session;
   }
 
-  return buildAppSession(session as any);
+  if (!isBetterAuthSessionPayload(session)) {
+    return null;
+  }
+
+  return buildAppSession(session);
 }

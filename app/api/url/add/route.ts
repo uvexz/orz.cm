@@ -1,40 +1,42 @@
+import { ApiError, badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  assertNoQuota,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
 import { getDomainsByFeature } from "@/lib/dto/domains";
 import { getPlanQuota } from "@/lib/dto/plan";
-import { createUserShortUrl } from "@/lib/dto/short-urls";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import { createUserShortUrl } from "@/lib/short-urls/services";
 import { restrictByTimeRange } from "@/lib/team";
 import { createUrlSchema } from "@/lib/validations/url";
 
-export async function POST(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const POST = createAuthedApiRoute(
+  async (req: Request, _context: AppRouteHandlerContext, { user }) => {
     const plan = await getPlanQuota(user.team);
-    // check limit
     const limit = await restrictByTimeRange({
       model: "userUrl",
       userId: user.id,
       limit: plan.slNewLinks,
       rangeType: "month",
     });
-    if (limit) return Response.json(limit.statusText, { status: limit.status });
+    assertNoQuota(limit);
 
     const { data } = await req.json();
+    const parsed = createUrlSchema.safeParse(data);
+    if (!parsed.success) {
+      throw badRequest(parsed.error.flatten());
+    }
 
     const { target, url, prefix, visible, active, expiration, password } =
-      createUrlSchema.parse(data);
+      parsed.data;
 
     const zones = await getDomainsByFeature("enable_short_link");
     if (
       !zones.length ||
       !zones.map((zone) => zone.domain_name).includes(prefix)
     ) {
-      return Response.json("Invalid domain", {
-        status: 400,
-        statusText: "Invalid domain",
-      });
+      throw badRequest("Invalid domain");
     }
 
     const res = await createUserShortUrl({
@@ -49,14 +51,11 @@ export async function POST(req: Request) {
       password,
     });
     if (res.status !== "success") {
-      return Response.json(res.status, {
-        status: 502,
-      });
+      throw new ApiError(502, res.status);
     }
-    return Response.json(res.data);
-  } catch (error) {
-    return Response.json(error?.statusText || error, {
-      status: error.status || 500,
-    });
-  }
-}
+    return apiOk(res.data);
+  },
+  {
+    fallbackBody: "Internal Server Error",
+  },
+);

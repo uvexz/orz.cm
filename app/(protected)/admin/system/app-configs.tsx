@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import useSWR from "swr";
 
 import { siteConfig } from "@/config/site";
+import type { ConfigType } from "@/lib/dto/system-config";
 import { fetcher } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/shared/icons";
 import VersionNotifier from "@/components/shared/version-notifier";
 
-export default function AppConfigs({}: {}) {
+type AppConfigsData = {
+  enable_user_registration: boolean;
+  enable_subdomain_apply: boolean;
+  system_notification: string;
+  enable_github_oauth: boolean;
+  enable_google_oauth: boolean;
+  enable_liunxdo_oauth: boolean;
+  enable_resend_email_login: boolean;
+  enable_email_password_login: boolean;
+  enable_email_catch_all: boolean;
+  catch_all_emails: string;
+  enable_tg_email_push: boolean;
+  tg_email_bot_token: string;
+  tg_email_chat_id: string;
+  tg_email_template: string;
+  tg_email_target_white_list: string;
+  enable_email_registration_suffix_limit: boolean;
+  email_registration_suffix_limit_white_list: string;
+  enable_subdomain_status_email_pusher: boolean;
+  enable_email_forward: boolean;
+  email_forward_targets: string;
+  email_forward_white_list: string;
+};
+
+type EditableConfigValue = string | boolean;
+type EditableConfigType = Extract<ConfigType, "BOOLEAN" | "STRING">;
+
+export default function AppConfigs() {
   const [isPending, startTransition] = useTransition();
   const [loginMethodCount, setLoginMethodCount] = useState(0);
 
@@ -32,7 +60,7 @@ export default function AppConfigs({}: {}) {
     data: configs,
     isLoading,
     mutate,
-  } = useSWR<Record<string, any>>("/api/admin/configs", fetcher);
+  } = useSWR<AppConfigsData>("/api/admin/configs", fetcher);
   const [notification, setNotification] = useState("");
   const [catchAllEmails, setCatchAllEmails] = useState("");
   const [forwardEmailTargets, setForwardEmailTargets] = useState("");
@@ -69,7 +97,11 @@ export default function AppConfigs({}: {}) {
     }
   }, [configs, isLoading]);
 
-  const handleChange = (value: any, key: string, type: string) => {
+  const handleChange = (
+    value: EditableConfigValue,
+    key: keyof AppConfigsData,
+    type: EditableConfigType,
+  ) => {
     startTransition(async () => {
       const res = await fetch("/api/admin/configs", {
         method: "POST",

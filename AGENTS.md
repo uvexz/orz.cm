@@ -24,10 +24,11 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ### Testing and validation
 
-- There is currently no `test` script and no Jest/Vitest/Playwright/Cypress config in the repository.
-- There is currently no single-test command available.
+- Run the regression suite with `bun run test`.
+- For a targeted run, use `bun test <path-to-test-file>`.
+- The current tests use Bun's built-in runner and focus on mock-driven policy/service/API regression coverage for `email`, `short-urls`, and `files`.
 - There is a dedicated `typecheck` script: `bun run typecheck`.
-- In practice, `bun run lint` and `bun run build` are still the main regression checks.
+- The standard validation set is `bun run test`, `bun run lint`, `bun run typecheck`, and `bun run build`.
 - There is no repo `format` script; pre-commit formatting is handled by Husky with `npx pretty-quick --staged`.
 - Commit messages are checked by Husky + Commitlint and should follow conventional commit style.
 
@@ -46,14 +47,14 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Routing and domain behavior
 
-- `middleware.ts` is one of the most important files in the repo. It is not only auth middleware.
+- `proxy.ts` is one of the most important files in the repo. It is not only auth middleware.
 - It handles:
   - short-link resolution for non-system routes
   - legacy `/s/:slug` redirects
   - portal-domain vs business/custom-domain behavior
   - redirecting business-domain root requests back to the portal with `?redirect=...`
   - collecting IP, geo, language, and user-agent data before posting to `/api/s`
-- If a change touches routing, domains, or short-link behavior, inspect `middleware.ts` first.
+- If a change touches routing, domains, or short-link behavior, inspect `proxy.ts` first.
 
 ## Auth and access control
 
@@ -76,7 +77,12 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - Persistence is Drizzle ORM + PostgreSQL.
 - Shared database client: `lib/db.ts`
 - Schema: `lib/db/schema.ts`
-- The main domain boundary is the DTO/service layer in `lib/dto/*`. Route handlers and pages usually call these modules rather than embedding raw Prisma logic everywhere.
+- Shared route auth/error handling lives in `lib/api/route.ts` and `lib/api/errors.ts`.
+- The refactored domain boundaries for the highest-churn modules now live in:
+  - `lib/email/{types,queries,services,policies}.ts`
+  - `lib/short-urls/{types,queries,services,policies}.ts`
+  - `lib/files/{types,queries,services,policies}.ts`
+- `lib/dto/*` still exists for modules that have not been migrated yet and as compatibility exports for older call sites.
 - Important schema areas:
   - auth/users: `User`, `Account`, `Session`, `VerificationToken`
   - short links + analytics: `UserUrl`, `UrlMeta`
@@ -91,6 +97,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 ## API surface and product modules
 
 - The API surface under `app/api` mirrors the product areas. Major route families include `auth`, `url`, `record`, `email`, `storage`, `admin`, `plan`, `configs`, `setup`, and public `v1/*` endpoints.
+- New authenticated/admin route handlers should prefer the shared wrappers in `lib/api/route.ts` instead of hand-rolling session and error handling.
 - Public scraping/open API endpoints live under `app/api/v1/*` and usage is tracked in `ScrapeMeta`.
 - File storage integrations are centralized in `lib/s3.ts`; storage route handlers call into that shared S3-compatible helper layer.
 
@@ -109,6 +116,12 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 ## UI, config, and localization structure
 
 - Shared UI is organized by shell/feature under `components/`, especially `layout`, `shared`, `docs`, `dashboard`, `email`, `file`, `charts`, and `chat`.
+- Protected dashboard/admin pages are gradually moving to a `server loader + presentational component` split. Recent examples live under:
+  - `app/(protected)/admin/admin-page-data.ts`
+  - `app/(protected)/admin/admin-overview.tsx`
+  - `app/(protected)/dashboard/dashboard-page-data.ts`
+  - `app/(protected)/dashboard/dashboard-overview.tsx`
+  - `app/(protected)/dashboard/urls/url-list*.tsx`
 - Navigation and other cross-app structure are centralized in `config/`, especially:
   - `config/dashboard.ts`
   - `config/docs.ts`
@@ -126,9 +139,11 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Working notes for future agents
 
-- If a change affects routing or custom domains, start with `middleware.ts`.
-- If a change affects business rules, validation, quotas, or persistence, inspect the relevant `lib/dto/*` module before editing route handlers.
+- If a change affects routing or custom domains, start with `proxy.ts`.
+- If a change affects business rules for email, short URLs, or file storage, inspect the corresponding `lib/email/*`, `lib/short-urls/*`, or `lib/files/*` module before falling back to `lib/dto/*`.
 - If auth/session fields seem wrong, trace the `auth.ts` callbacks before changing UI code.
+- If a change affects protected dashboard/admin pages, look for an existing loader/presentational split before adding more data orchestration to the page file itself.
 - If a change affects docs navigation or docs rendering, check both `content/` and `config/docs.ts`.
 - If a change affects file uploads, signed URLs, or storage backends, inspect `lib/s3.ts` and the related `app/api/storage/**` handlers together.
 - If a feature appears env-sensitive, confirm the required variables in `env.mjs` and the deployment expectations in `docker-compose.yml`, `docker-compose-localdb.yml`, and `vercel.json`.
+- `SLIM_DOWN_PLAN.md` only covers the main app in this repository and explicitly does not include `.tgbot`.

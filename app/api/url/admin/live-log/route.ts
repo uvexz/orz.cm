@@ -1,33 +1,28 @@
-import { getUrlMetaLiveLog } from "@/lib/dto/short-urls";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import { unauthorized } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import { getUrlMetaLiveLog } from "@/lib/short-urls/services";
 
-export async function GET(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const GET = createAuthedApiRoute(
+  async (req: Request, _context: AppRouteHandlerContext, { user }) => {
     const url = new URL(req.url);
     const isAdmin = url.searchParams.get("admin");
 
     if (isAdmin === "true") {
       if (user.role !== "ADMIN") {
-        return Response.json("Unauthorized", {
-          status: 401,
-          statusText: "Unauthorized",
-        });
+        throw unauthorized("Unauthorized");
       }
     }
 
     const logs = await getUrlMetaLiveLog(
       isAdmin === "true" ? undefined : user.id,
     );
-
-    return Response.json(logs);
-  } catch (error) {
-    return Response.json(error?.statusText || error, {
-      status: error.status || 500,
-      statusText: error.statusText || "Server error",
-    });
-  }
-}
+    return apiOk(logs);
+  },
+  {
+    fallbackBody: "Server error",
+  },
+);

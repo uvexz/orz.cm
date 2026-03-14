@@ -1,143 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  badRequest,
+  conflict,
+  getErrorMessage,
+  hasErrorCode,
+  hasErrorMessage,
+  notFound,
+  unauthorized,
+} from "@/lib/api/errors";
+import { apiCreated, createApiRoute } from "@/lib/api/route";
 import { checkApiKey } from "@/lib/dto/api-key";
-import { getDomainsByFeature } from "@/lib/dto/domains";
-import { createUserEmail, deleteUserEmailByAddress } from "@/lib/dto/email";
-import { getPlanQuota } from "@/lib/dto/plan";
-import { reservedAddressSuffix } from "@/lib/enums";
-import { restrictByTimeRange } from "@/lib/team";
+import {
+  createApiUserEmail,
+  deleteUserEmailByAddress,
+} from "@/lib/email/services";
 
-// 创建新 UserEmail
-export async function POST(req: NextRequest) {
-  try {
-    const custom_api_key = req.headers.get("wrdo-api-key");
-    if (!custom_api_key) {
-      return Response.json("Unauthorized", {
-        status: 401,
-      });
-    }
-
-    // Check if the API key is valid
-    const user = await checkApiKey(custom_api_key);
-    if (!user?.id) {
-      return Response.json(
-        "Invalid API key. You can get your API key from https://wr.do/dashboard/settings.",
-        { status: 401 },
-      );
-    }
-    if (user.active === 0) {
-      return Response.json("Forbidden", {
-        status: 403,
-        statusText: "Forbidden",
-      });
-    }
-
-    const plan = await getPlanQuota(user.team!);
-
-    // check limit
-    const limit = await restrictByTimeRange({
-      model: "userEmail",
-      userId: user.id,
-      limit: plan.emEmailAddresses,
-      rangeType: "month",
-    });
-    if (limit)
-      return NextResponse.json(limit.statusText, { status: limit.status });
-
-    const { emailAddress } = await req.json();
-
-    if (!emailAddress) {
-      return NextResponse.json("Missing emailAddress", {
-        status: 400,
-      });
-    }
-
-    const [prefix, suffix] = emailAddress.split("@");
-    const zones = await getDomainsByFeature("enable_email", true);
-    if (
-      !zones.length ||
-      !zones.map((zone) => zone.domain_name).includes(suffix)
-    ) {
-      return NextResponse.json("Invalid email suffix address", { status: 400 });
-    }
-
-    const limit_len =
-      zones.find((zone) => zone.domain_name === suffix)?.min_email_length ?? 3;
-    if (!prefix || prefix.length < limit_len) {
-      return NextResponse.json(
-        `Email address length must be at least ${limit_len}`,
-        {
-          status: 400,
-        },
-      );
-    }
-
-    if (reservedAddressSuffix.includes(prefix)) {
-      return NextResponse.json("Invalid email address", { status: 400 });
-    }
-
-    const userEmail = await createUserEmail(user.id, emailAddress);
-    return NextResponse.json(userEmail, { status: 201 });
-  } catch (error) {
-    console.error("Error creating user email (v1):", error);
-    if (error instanceof Response) return error;
-
-    if (error.message === "Invalid userId") {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    if (error.code === "UNIQUE_CONSTRAINT") {
-      return NextResponse.json("Email address already exists", {
-        status: 409,
-      });
-    }
-    return NextResponse.json(error.statusText || error.message || "Internal Server Error", {
-      status: error.status || 500,
-    });
+async function requireApiUser(req: NextRequest) {
+  const customApiKey = req.headers.get("wrdo-api-key");
+  if (!customApiKey) {
+    throw unauthorized("Unauthorized");
   }
+
+  const user = await checkApiKey(customApiKey);
+  if (!user?.id) {
+    throw unauthorized(
+      "Invalid API key. You can get your API key from https://wr.do/dashboard/settings.",
+    );
+  }
+
+  return user;
 }
 
-export async function DELETE(req: NextRequest) {
-  try {
-    const custom_api_key = req.headers.get("wrdo-api-key");
-    if (!custom_api_key) {
-      return Response.json("Unauthorized", {
-        status: 401,
-      });
+function mapEmailApiError(error: unknown) {
+  if (hasErrorMessage(error, "Invalid userId")) {
+    return badRequest({ error: getErrorMessage(error) });
+  }
+
+  if (
+    hasErrorCode(error, "INVALID_EMAIL_ADDRESS") ||
+    hasErrorCode(error, "INVALID_EMAIL_SUFFIX") ||
+    hasErrorCode(error, "EMAIL_PREFIX_TOO_SHORT")
+  ) {
+    return badRequest(getErrorMessage(error));
+  }
+
+  if (hasErrorCode(error, "UNIQUE_CONSTRAINT")) {
+    return conflict("Email address already exists");
+  }
+
+  if (hasErrorMessage(error, "User email not found or already deleted")) {
+    return notFound(getErrorMessage(error));
+  }
+
+  return undefined;
+}
+
+// 创建新 UserEmail
+export const POST = createApiRoute(
+  async (req: NextRequest) => {
+    const user = await requireApiUser(req);
+    const { emailAddress } = await req.json();
+
+    if (!emailAddress) {
+      throw badRequest("Missing emailAddress");
     }
 
-    // Check if the API key is valid
-    const user = await checkApiKey(custom_api_key);
-    if (!user?.id) {
-      return Response.json(
-        "Invalid API key. You can get your API key from https://wr.do/dashboard/settings.",
-        { status: 401 },
-      );
-    }
-    if (user.active === 0) {
-      return Response.json("Forbidden", {
-        status: 403,
-        statusText: "Forbidden",
-      });
-    }
+    const userEmail = await createApiUserEmail(user, emailAddress);
+    return apiCreated(userEmail);
+  },
+  {
+    fallbackBody: "Internal Server Error",
+    logMessage: "Error creating user email (v1):",
+    mapError: mapEmailApiError,
+  },
+);
+
+export const DELETE = createApiRoute(
+  async (req: NextRequest) => {
+    await requireApiUser(req);
 
     const { emailAddress } = await req.json();
     if (!emailAddress) {
-      return NextResponse.json("Missing email address parameter", {
-        status: 400,
-      });
+      throw badRequest("Missing email address parameter");
     }
 
     await deleteUserEmailByAddress(emailAddress);
     return NextResponse.json("success", { status: 201 });
-  } catch (error) {
-    console.error("Error deleting user email (v1):", error);
-    if (error instanceof Response) return error;
-
-    if (error.message === "User email not found or already deleted") {
-      return NextResponse.json(error.message, { status: 404 });
-    }
-    return NextResponse.json(error.statusText || error.message || "Internal Server Error", {
-      status: error.status || 500,
-    });
-  }
-}
+  },
+  {
+    fallbackBody: "Internal Server Error",
+    logMessage: "Error deleting user email (v1):",
+    mapError: mapEmailApiError,
+  },
+);

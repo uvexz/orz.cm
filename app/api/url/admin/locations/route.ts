@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, gt, gte, isNotNull, lte } from "drizzle-orm";
 
+import { ApiError, getErrorMessage, isApiError, unauthorized } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
 import { db } from "@/lib/db";
 import { urlMetas, userUrls } from "@/lib/db/schema";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -42,19 +45,28 @@ function mapLocationRow(
   };
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+function mapLocationError(
+  error: unknown,
+  body: Omit<Record<string, unknown>, "error" | "timestamp">,
+) {
+  if (isApiError(error)) {
+    return null;
+  }
 
+  return new ApiError(500, {
+    ...body,
+    error: getErrorMessage(error) || "Failed to fetch location data",
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export const GET = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const searchParams = request.nextUrl.searchParams;
     const isAdmin = searchParams.get("isAdmin");
     if (isAdmin === "true") {
       if (user.role !== "ADMIN") {
-        return Response.json("Unauthorized", {
-          status: 401,
-          statusText: "Unauthorized",
-        });
+        throw unauthorized("Unauthorized");
       }
     }
 
@@ -190,40 +202,27 @@ export async function GET(request: NextRequest) {
       },
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error("Error fetching location data:", error);
-    return NextResponse.json(
-      {
+  },
+  {
+    logMessage: "Error fetching location data:",
+    mapError: (error) =>
+      mapLocationError(error, {
         data: [],
         total: 0,
         totalClicks: 0,
         rawRecords: 0,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch location data",
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 },
-    );
-  }
-}
+      }),
+  },
+);
 
-// POST endpoint remains the same
-export async function POST(request: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const POST = createAuthedApiRoute(
+  async (request: NextRequest, _context: AppRouteHandlerContext, { user }) => {
     const body = await request.json();
     const { lastUpdate, isAdmin } = body;
 
     if (isAdmin) {
       if (user.role !== "ADMIN") {
-        return Response.json("Unauthorized", {
-          status: 401,
-          statusText: "Unauthorized",
-        });
+        throw unauthorized("Unauthorized");
       }
     }
 
@@ -274,19 +273,13 @@ export async function POST(request: NextRequest) {
       count: newData.length,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error("Error fetching realtime updates:", error);
-    return NextResponse.json(
-      {
+  },
+  {
+    logMessage: "Error fetching realtime updates:",
+    mapError: (error) =>
+      mapLocationError(error, {
         data: [],
         count: 0,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch realtime updates",
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 },
-    );
-  }
-}
+      }),
+  },
+);

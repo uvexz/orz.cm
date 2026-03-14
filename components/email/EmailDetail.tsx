@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   FileText,
   FileVideo,
+  type LucideIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -61,7 +62,7 @@ const fileTypeMap: { [key: string]: string } = {
   default: "unknown",
 };
 
-const fileTypeIcons: { [key: string]: React.ComponentType<any> } = {
+const fileTypeIcons: Record<string, LucideIcon> = {
   "application/pdf": FileText, // PDF 文件
   "image/jpeg": FileImage, // JPEG 图片
   "image/png": FileImage, // PNG 图片
@@ -84,12 +85,12 @@ export default function EmailDetail({
   email,
   selectedEmailId,
   onClose,
-  onMarkAsRead,
+  onMarkAsRead: _onMarkAsRead,
 }: EmailDetailProps) {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const t = useTranslations("Email");
 
-  function getFileIcon(type: string): React.ComponentType<any> {
+  function getFileIcon(type: string): LucideIcon {
     const icon = Object.keys(fileTypeIcons).find((key) =>
       type.toLowerCase().startsWith(key),
     );
@@ -198,7 +199,8 @@ export default function EmailDetail({
             </p>
           )}
           <p className="text-xs">
-            <strong>{t("Date")}:</strong> {formatDate(email.date as any)}
+            <strong>{t("Date")}:</strong>{" "}
+            {formatDate(email.date ?? new Date(email.createdAt).getTime())}
           </p>
           {attachments.length > 0 && (
             <p className="text-xs">

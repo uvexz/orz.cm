@@ -23,8 +23,8 @@ export interface SendEmailOptions {
 
 export interface EmailResponse {
   success: boolean;
-  data?: any;
-  error?: any;
+  data?: unknown;
+  error?: unknown;
 }
 
 // 初始化 API 实例

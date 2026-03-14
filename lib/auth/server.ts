@@ -10,18 +10,26 @@ type AuthIdentity = {
   name?: string | null;
   email?: string | null;
   image?: string | null;
-  emailVerified?: boolean | null;
+  emailVerified?: boolean | Date | null;
+};
+
+type SessionRecord = Record<string, unknown>;
+
+type BetterAuthSessionUser = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  emailVerified?: boolean | Date | null;
+  role?: UserRole;
+  team?: string;
+  active?: number;
+  apiKey?: string;
 };
 
 type BetterAuthSessionPayload = {
-  session: Record<string, any>;
-  user: {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    emailVerified?: boolean | null;
-  };
+  session: SessionRecord;
+  user: BetterAuthSessionUser;
 };
 
 type AppUserRecord = typeof users.$inferSelect;
@@ -40,12 +48,79 @@ export type AppSessionUser = {
 };
 
 export type AppSession = {
-  session: Record<string, any>;
+  session: SessionRecord;
   user: AppSessionUser;
 };
 
 function normalizeEmail(email?: string | null) {
   return email?.trim().toLowerCase() || null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isOptionalNullableString(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || typeof value === "string";
+}
+
+function isOptionalBooleanOrDate(
+  value: unknown,
+): value is boolean | Date | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    typeof value === "boolean" ||
+    value instanceof Date
+  );
+}
+
+function isOptionalDate(value: unknown): value is Date | null | undefined {
+  return value === undefined || value === null || value instanceof Date;
+}
+
+function isUserRole(value: unknown): value is UserRole {
+  return value === "ADMIN" || value === "USER";
+}
+
+export function isBetterAuthSessionPayload(
+  value: unknown,
+): value is BetterAuthSessionPayload {
+  if (!isRecord(value) || !isRecord(value.session) || !isRecord(value.user)) {
+    return false;
+  }
+
+  return (
+    typeof value.user.id === "string" &&
+    isOptionalNullableString(value.user.name) &&
+    isOptionalNullableString(value.user.email) &&
+    isOptionalNullableString(value.user.image) &&
+    isOptionalBooleanOrDate(value.user.emailVerified)
+  );
+}
+
+export function isAppSession(value: unknown): value is AppSession {
+  if (!isBetterAuthSessionPayload(value)) {
+    return false;
+  }
+
+  return (
+    isUserRole(value.user.role) &&
+    typeof value.user.team === "string" &&
+    typeof value.user.active === "number" &&
+    typeof value.user.apiKey === "string" &&
+    isOptionalDate(value.user.emailVerified)
+  );
+}
+
+function normalizeEmailVerified(
+  value: BetterAuthSessionUser["emailVerified"],
+): Date | null {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  return value ? new Date() : null;
 }
 
 async function findAppUserByIdentity(identity: AuthIdentity) {
@@ -118,9 +193,7 @@ function getSessionUser(
     team: appUser?.team || "free",
     active: appUser?.active ?? 1,
     apiKey: appUser?.apiKey || "",
-    emailVerified:
-      appUser?.emailVerified ??
-      (session.user.emailVerified ? new Date() : null),
+    emailVerified: appUser?.emailVerified ?? normalizeEmailVerified(session.user.emailVerified),
   };
 }
 
@@ -131,7 +204,13 @@ export async function buildAppSession(
     return null;
   }
 
-  const appUser = await findAppUserByIdentity(session.user);
+  const appUser = await findAppUserByIdentity({
+    id: session.user.id,
+    name: session.user.name,
+    email: session.user.email,
+    image: session.user.image,
+    emailVerified: session.user.emailVerified,
+  });
 
   return {
     session: session.session,
@@ -146,7 +225,7 @@ export async function syncAppUserFromAuthUser(identity: AuthIdentity) {
 
   const existingAppUser = await findAppUserByIdentity(identity);
   const normalizedEmail = normalizeEmail(identity.email);
-  const emailVerifiedAt = identity.emailVerified ? new Date() : null;
+  const emailVerifiedAt = normalizeEmailVerified(identity.emailVerified);
 
   if (existingAppUser) {
     await db

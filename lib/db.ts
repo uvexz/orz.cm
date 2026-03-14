@@ -17,14 +17,16 @@ declare global {
 
 const isBuild = process.env.NEXT_PHASE === "phase-production-build";
 
-function createRecursiveProxy(): any {
-  return new Proxy(() => {}, {
+function createRecursiveProxy(): DrizzleDb {
+  const proxyTarget = (() => undefined) as (...args: unknown[]) => unknown;
+
+  return new Proxy(proxyTarget, {
     get: (_target, prop) => {
       if (prop === "then") return undefined;
       return createRecursiveProxy();
     },
     apply: () => createRecursiveProxy(),
-  });
+  }) as unknown as DrizzleDb;
 }
 
 function ensureDatabaseUrl() {

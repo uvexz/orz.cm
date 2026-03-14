@@ -10,12 +10,23 @@ import { useTheme } from "next-themes";
 
 import { Location } from "./index";
 
+type RealtimeFilters = Record<string, string>;
+type GlobeHexDatum = { sumWeight?: number };
+type GlobeCountryCollection = {
+  type: "FeatureCollection";
+  features: Record<string, unknown>[];
+};
+type CurrentLocation = {
+  latitude: number;
+  longitude: number;
+};
+
 interface GlobeProps {
   time: {
     startAt: number;
     endAt: number;
   };
-  filters: Record<string, any>;
+  filters: RealtimeFilters;
   locations: Location[];
   stats: {
     totalClicks: number;
@@ -29,21 +40,25 @@ interface GlobeProps {
 }
 
 export default function RealtimeGlobe({
-  time,
-  filters,
+  time: _time,
+  filters: _filters,
   locations,
-  stats,
+  stats: _stats,
 }: GlobeProps) {
   const { theme } = useTheme();
   const globeRef = useRef<HTMLDivElement>(null);
-  const globeInstanceRef = useRef<any>(null);
+  const globeInstanceRef = useRef<GlobeInstance | null>(null);
   const mountedRef = useRef(true);
-  let globe: GlobeInstance;
-  const [countries, setCountries] = useState<any>({});
-  const [currentLocation, setCurrentLocation] = useState<any>({});
+  const [countries, setCountries] = useState<GlobeCountryCollection>({
+    type: "FeatureCollection",
+    features: [],
+  });
+  const [currentLocation, setCurrentLocation] = useState<CurrentLocation>({
+    latitude: 0,
+    longitude: 0,
+  });
   const [hexAltitude, setHexAltitude] = useState(0.001);
   const { ref: wrapperRef, width: wrapperWidth } = useElementSize();
-  const [isLoaded, setIsLoaded] = useState(false);
 
   const highest =
     locations.reduce((acc, curr) => Math.max(acc, curr.count), 0) || 1;
@@ -58,7 +73,7 @@ export default function RealtimeGlobe({
       const Globe = GlobeModule.default;
       const { MeshPhongMaterial } = await import("three");
       return { Globe, MeshPhongMaterial };
-    } catch (err) {
+    } catch (_err) {
       // console.error("Failed to load Globe.gl:", err);
       return null;
     }
@@ -122,19 +137,21 @@ export default function RealtimeGlobe({
         return;
       }
 
-      globe = new Globe(container)
+      const globe = new Globe(container) as GlobeInstance;
+      type GlobeMaterialInput = Parameters<GlobeInstance["globeMaterial"]>[0];
+      const globeMaterial = new MeshPhongMaterial({
+        color: theme === "dark" ? "rgb(65, 65, 65)" : "rgb(228, 228, 231)",
+        transparent: false,
+        opacity: 1,
+      }) as GlobeMaterialInput;
+
+      globe
         .width(wrapperWidth)
         .height(wrapperWidth > 728 ? wrapperWidth * 0.9 : wrapperWidth)
         .globeOffset([0, -80])
         .atmosphereColor("rgba(170, 170, 200, 0.7)")
         .backgroundColor("rgba(0,0,0,0)")
-        .globeMaterial(
-          new MeshPhongMaterial({
-            color: theme === "dark" ? "rgb(65, 65, 65)" : "rgb(228, 228, 231)",
-            transparent: false,
-            opacity: 1,
-          }) as any,
-        );
+        .globeMaterial(globeMaterial);
 
       if (countries.features && countries.features.length > 0) {
         globe
@@ -152,15 +169,15 @@ export default function RealtimeGlobe({
         .hexBinPointsData(locations)
         .hexBinMerge(true)
         .hexBinPointWeight("count")
-        .hexTopColor((d: any) => {
+        .hexTopColor((d: GlobeHexDatum) => {
           const intensity = d.sumWeight || 0;
           return weightColor(intensity);
         })
-        .hexSideColor((d: any) => {
+        .hexSideColor((d: GlobeHexDatum) => {
           const intensity = d.sumWeight || 0;
           return weightColor(intensity * 0.8);
         })
-        .hexAltitude((d: any) => {
+        .hexAltitude((d: GlobeHexDatum) => {
           const intensity = d.sumWeight || 0;
           return Math.max(0.01, intensity * 0.8);
         });
@@ -183,8 +200,6 @@ export default function RealtimeGlobe({
           globe.controls().enableDamping = true;
           globe.controls().dampingFactor = 0.1;
         }
-
-        setIsLoaded(true);
       });
 
       if (globe.controls()) {
@@ -202,15 +217,15 @@ export default function RealtimeGlobe({
               if (nextAlt !== hexAltitude) {
                 setHexAltitude(nextAlt);
               }
-            } catch (err) {
-              console.warn("Error in controls event:", err);
+            } catch (_err) {
+              // Ignore transient control errors while the globe is reconfiguring.
             }
           }, 200),
         );
       }
 
       globeInstanceRef.current = globe;
-    } catch (err) { }
+    } catch (_err) {}
   }, [
     countries,
     locations,
@@ -235,8 +250,6 @@ export default function RealtimeGlobe({
       }
       globeInstanceRef.current = null;
     }
-
-    setIsLoaded(false);
   }, []);
 
   // useEffect(() => {

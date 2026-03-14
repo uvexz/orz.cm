@@ -8,6 +8,10 @@ import { siteConfig } from "@/config/site";
 
 import { TIME_RANGES } from "./enums";
 
+type JsonErrorResponse = {
+  error?: string;
+};
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -128,14 +132,14 @@ export const expirationTime = (
   return `${remainingTimeString}`;
 };
 
-export async function fetcher<JSON = any>(
+export async function fetcher<JSON = unknown>(
   input: RequestInfo,
   init?: RequestInit,
 ): Promise<JSON> {
   const res = await fetch(input, init);
 
   if (!res.ok) {
-    const json = await res.json();
+    const json = (await res.json()) as JsonErrorResponse;
     if (json.error) {
       const error = new Error(json.error) as Error & {
         status: number;
@@ -147,7 +151,7 @@ export async function fetcher<JSON = any>(
     }
   }
 
-  return res.json();
+  return (await res.json()) as JSON;
 }
 
 export const isValidEmail = (email: string) =>
@@ -251,7 +255,7 @@ export const getBlurDataURL = async (url: string | null) => {
     const base64 = Buffer.from(buffer).toString("base64");
 
     return `data:image/png;base64,${base64}`;
-  } catch (error) {
+  } catch (_error) {
     return "data:image/webp;base64,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   }
 };
@@ -284,7 +288,7 @@ export function generateUrlSuffix(length: number = 6): string {
 
 export function isLink(str: string): boolean {
   try {
-    const url = new URL(str);
+    new URL(str);
     return true;
   } catch (_) {
     return false;
@@ -302,7 +306,7 @@ export function extractHostname(url: string): string {
   try {
     const urlObject = new URL(url);
     return urlObject.hostname;
-  } catch (error) {
+  } catch (_error) {
     return "";
   }
 }
@@ -436,7 +440,7 @@ export const isValidUrl = (url: string) => {
   try {
     new URL(url);
     return true;
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 };

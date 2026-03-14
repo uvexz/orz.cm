@@ -3,10 +3,16 @@ const UMAMI_CONFIG = {
   endpoint: "https://umami.oiov.dev/api/send",
 };
 
+type UmamiEventData = {
+  referer?: string;
+  language?: string;
+  [key: string]: unknown;
+};
+
 export async function trackUmamiEvent(
   req: Request,
   eventName: string,
-  eventData: any,
+  eventData: UmamiEventData,
 ) {
   try {
     const ua = req.headers.get("user-agent") || "";
@@ -25,7 +31,7 @@ export async function trackUmamiEvent(
           website: UMAMI_CONFIG.websiteId,
           url: new URL(req.url).pathname,
           data: eventData,
-          referrer: `${eventData.referer}?tracker=umami`,
+          referrer: `${eventData.referer ?? ""}?tracker=umami`,
           hostname: new URL(req.url).hostname,
           language: eventData.language,
           screen: "1000x1000",

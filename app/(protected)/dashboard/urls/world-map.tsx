@@ -1,14 +1,24 @@
 import { VisSingleContainer, VisTooltip, VisTopoJSONMap } from "@unovis/react";
 import { WorldMapTopoJSON } from "@unovis/ts/maps";
 
+type WorldMapArea = {
+  id: string;
+};
+
+type WorldMapTriggerDatum = {
+  id: string;
+};
+
+type WorldMapTriggers = Record<string, (datum: WorldMapTriggerDatum) => string>;
+
 export default function WorldMap({
   areaData,
   wrapperWidth,
   triggers,
 }: {
-  areaData: any;
+  areaData: WorldMapArea[];
   wrapperWidth: number;
-  triggers: any;
+  triggers: WorldMapTriggers;
 }) {
   return (
     <VisSingleContainer

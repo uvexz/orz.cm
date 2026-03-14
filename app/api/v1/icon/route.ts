@@ -3,6 +3,8 @@ import * as Icon from "lucide-static";
 
 import { toCamelCase } from "@/lib/utils";
 
+const ICON_MAP = Icon as Record<string, string>;
+
 export async function GET(req: Request) {
   try {
     const { searchParams: sp } = new URL(req.url);
@@ -39,9 +41,7 @@ export async function GET(req: Request) {
     let svgString = "";
     let svgClipString = "";
     if (iconInfo.type === "svg") {
-      const iconD = (Icon as { [key: string]: any })[
-        toCamelCase(iconInfo.value)
-      ];
+      const iconD = ICON_MAP[toCamelCase(iconInfo.value)] ?? ICON_MAP.sparkles;
 
       const regex = /<svg.*?>(.*?)<\/svg>/;
       const match = iconD.match(regex);
@@ -265,7 +265,7 @@ export async function GET(req: Request) {
         },
       },
     );
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ message: "Something error" }, { status: 500 });
   }
 }

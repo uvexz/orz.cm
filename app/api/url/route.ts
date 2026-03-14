@@ -1,14 +1,14 @@
-import { getUrlClicksByIds, getUserShortUrls } from "@/lib/dto/short-urls";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
+import { getUrlClicksByIds, getUserShortUrls } from "@/lib/short-urls/services";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const GET = createAuthedApiRoute(
+  async (req: Request, _context: AppRouteHandlerContext, { user }) => {
     const url = new URL(req.url);
     const page = url.searchParams.get("page");
     const size = url.searchParams.get("size");
@@ -20,31 +20,26 @@ export async function GET(req: Request) {
       1,
       Number(page || "1"),
       Number(size || "10"),
-      "USER",
+      user.role,
       userName,
       slug,
       target,
     );
 
-    return Response.json(data);
-  } catch (error) {
-    return Response.json(error?.statusText || error, {
-      status: error.status || 500,
-    });
-  }
-}
+    return apiOk(data);
+  },
+  {
+    fallbackBody: "Internal Server Error",
+  },
+);
 
-export async function POST(req: Request) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
-
+export const POST = createAuthedApiRoute(
+  async (req: Request, _context: AppRouteHandlerContext, { user }) => {
     const { ids } = await req.json();
-    const data = await getUrlClicksByIds(ids, user.id, "USER");
-    return Response.json(data);
-  } catch (error) {
-    return Response.json(error?.statusText || error, {
-      status: error.status || 500,
-    });
-  }
-}
+    const data = await getUrlClicksByIds(ids, user.id, user.role);
+    return apiOk(data);
+  },
+  {
+    fallbackBody: "Internal Server Error",
+  },
+);

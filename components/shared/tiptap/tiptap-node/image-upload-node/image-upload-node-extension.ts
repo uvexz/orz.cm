@@ -9,6 +9,18 @@ export type UploadFunction = (
   abortSignal?: AbortSignal,
 ) => Promise<string>;
 
+type ImageUploadHtmlAttributeValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined;
+
+type ImageUploadHtmlAttributes = Record<
+  string,
+  ImageUploadHtmlAttributeValue
+>;
+
 export interface ImageUploadNodeOptions {
   /**
    * The type of the node.
@@ -47,7 +59,7 @@ export interface ImageUploadNodeOptions {
    * @default {}
    * @example { class: 'foo' }
    */
-  HTMLAttributes: Record<string, any>;
+  HTMLAttributes: ImageUploadHtmlAttributes;
 }
 
 declare module "@tiptap/react" {

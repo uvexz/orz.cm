@@ -20,6 +20,19 @@ interface ExportConfig {
   format?: "pretty" | "compact";
 }
 
+function pickShortUrlFields<Field extends keyof ShortUrlFormData>(
+  item: ShortUrlFormData,
+  fields: readonly Field[],
+): Pick<ShortUrlFormData, Field> {
+  const filteredItem = {} as Pick<ShortUrlFormData, Field>;
+
+  fields.forEach((field) => {
+    filteredItem[field] = item[field];
+  });
+
+  return filteredItem;
+}
+
 export const exportToJsonAdvanced = (
   data: ShortUrlFormData[],
   config: ExportConfig = {},
@@ -45,20 +58,14 @@ export const exportToJsonAdvanced = (
       processedData = processedData.sort(sort);
     }
 
-    // 选择特定字段
-    if (fields) {
-      processedData = processedData.map((item) => {
-        const filteredItem: Partial<ShortUrlFormData> = {};
-        fields.forEach((field) => {
-          filteredItem[field] = item[field] as any;
-        });
-        return filteredItem as ShortUrlFormData;
-      });
-    }
+    const exportData = fields
+      ? processedData.map((item) => pickShortUrlFields(item, fields))
+      : processedData;
 
+    // 选择特定字段
     // 格式化 JSON
     const indent = format === "pretty" ? 2 : 0;
-    const jsonString = JSON.stringify(processedData, null, indent);
+    const jsonString = JSON.stringify(exportData, null, indent);
 
     // 创建并下载文件
     const blob = new Blob([jsonString], { type: "application/json" });
@@ -74,7 +81,7 @@ export const exportToJsonAdvanced = (
 
     return {
       success: true,
-      exportedCount: processedData.length,
+      exportedCount: exportData.length,
       totalCount: data.length,
     };
   } catch (error) {

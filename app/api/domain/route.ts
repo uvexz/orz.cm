@@ -1,34 +1,37 @@
 import { NextRequest } from "next/server";
 
+import { badRequest } from "@/lib/api/errors";
+import {
+  type AppRouteHandlerContext,
+  apiOk,
+  createAuthedApiRoute,
+} from "@/lib/api/route";
 import { FeatureMap, getDomainsByFeatureClient } from "@/lib/dto/domains";
-import { checkUserStatus } from "@/lib/dto/user";
-import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-// Get domains by feature for frontend
-export async function GET(req: NextRequest) {
-  try {
-    const user = checkUserStatus(await getCurrentUser());
-    if (user instanceof Response) return user;
+function isFeatureKey(feature: string): feature is keyof typeof FeatureMap {
+  return feature in FeatureMap;
+}
 
+// Get domains by feature for frontend
+export const GET = createAuthedApiRoute(
+  async (req: NextRequest, _context: AppRouteHandlerContext) => {
     const url = new URL(req.url);
     const feature = url.searchParams.get("feature") || "";
 
-    if (!Object.keys(FeatureMap).includes(feature)) {
-      return Response.json(
+    if (!isFeatureKey(feature)) {
+      throw badRequest(
         "Invalid feature parameter. Use 'short', 'email', or 'record'.",
-        {
-          status: 400,
-        },
       );
     }
 
     const domainList = await getDomainsByFeatureClient(FeatureMap[feature]);
 
-    return Response.json(domainList, { status: 200 });
-  } catch (error) {
-    console.error("[Error]", error);
-    return Response.json(error.message || "Server error", { status: 500 });
-  }
-}
+    return apiOk(domainList);
+  },
+  {
+    fallbackBody: "Server error",
+    logMessage: "[Error]",
+  },
+);
