@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 
+import { siteConfig } from "@/config/site";
 import { Icons } from "../shared/icons";
 
 export default function EmailManagerInnovate() {
   const [viewMode, setViewMode] = useState("inbox"); // Toggle between inbox and sent
+  const exampleMailbox = siteConfig.mailSupport.replace(/^[^@]+@/, "app@");
 
   return (
     <main className="mx-auto my-8 hidden w-full max-w-[561.5px] scale-[0.8] flex-col items-center justify-center rounded-2xl border border-neutral-800/[0.08] bg-gradient-to-br from-white to-blue-50/30 p-6 shadow-lg backdrop-blur-lg dark:border-neutral-700/50 dark:bg-gradient-to-br dark:from-gray-800 dark:to-black dark:shadow-xl md:flex">
@@ -99,7 +101,7 @@ export default function EmailManagerInnovate() {
             <div>
               <div className="flex items-center gap-2">
                 <p className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                  {viewMode === "inbox" ? "example@gmail.com" : "app@wr.do"}
+                  {viewMode === "inbox" ? "example@gmail.com" : exampleMailbox}
                 </p>
                 <div className="flex gap-1">
                   <button className="rounded-full border border-gray-200 p-1.5 text-gray-500 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700">
@@ -112,7 +114,7 @@ export default function EmailManagerInnovate() {
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
                 <Icons.forwardArrow className="h-4 w-4 shrink-0 text-gray-400" />
-                {viewMode === "inbox" ? "app@wr.do" : "example@gmail.com"}
+                {viewMode === "inbox" ? exampleMailbox : "example@gmail.com"}
               </div>
             </div>
           </div>

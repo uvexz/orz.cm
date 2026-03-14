@@ -39,14 +39,6 @@ export function getUserAgent(req: NextRequest) {
   }
 }
 
-export async function getClientGeolocation(ip): Promise<GeoLocation | null> {
-  // const new_headers = new Headers();
-  // new_headers.set("X-Forwarded-For", ip);
-  // new_headers.set("User-Agent", req.headers.get("user-agent") || "");
-  const response = await fetch(`https://ip.wr.do/api?ip=${ip}`);
-  if (!response.ok) return null;
-  return await response.json();
-}
 export async function getClientGeolocationWithIpApi(ip: string) {
   const response = await fetch(`http://ip-api.com/json/${ip}`);
   if (!response.ok) return null;

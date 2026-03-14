@@ -13,8 +13,9 @@ import { debounce } from "lodash-es";
 import { useTranslations } from "next-intl";
 import { HexColorPicker } from "react-colorful";
 
+import { siteConfig } from "@/config/site";
 import { getQRAsCanvas, getQRAsSVGDataUri, getQRData } from "@/lib/qr";
-import { WRDO_QR_LOGO } from "@/lib/qr/constants";
+import { DEFAULT_QR_LOGO } from "@/lib/qr/constants";
 import { extractHost } from "@/lib/utils";
 
 import { Badge } from "../ui/badge";
@@ -222,7 +223,7 @@ export default function QRCodeEditor({
             ref={anchorRef}
           />
 
-          <CopyButton value={`https://wr.do${qrCodeUrl}`}></CopyButton>
+          <CopyButton value={`${siteConfig.url}${qrCodeUrl}`}></CopyButton>
         </div>
         <div className="relative mt-2 flex h-40 items-center justify-center overflow-hidden rounded-md border border-gray-300">
           <div className="absolute inset-0 h-full w-full bg-neutral-50/60 bg-[radial-gradient(#d7d9dd_1px,transparent_1px)] [background-size:8px_9px]"></div>
@@ -309,7 +310,7 @@ export default function QRCodeEditor({
             type="text"
             placeholder="https://example.com/logo.png"
             disabled={params.hideLogo}
-            defaultValue={params.logo || WRDO_QR_LOGO}
+            defaultValue={params.logo || DEFAULT_QR_LOGO}
             onChange={(e) => handleChangeLogo(e.target.value)}
           />
         </details>

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import qrcodegen from "./codegen";
+
+import { DEFAULT_QR_LOGO } from "./constants";
 import {
   DEFAULT_BGCOLOR,
   DEFAULT_FGCOLOR,
@@ -8,7 +10,6 @@ import {
   DEFAULT_MARGIN,
   DEFAULT_SIZE,
   ERROR_LEVEL_MAP,
-  WRDO_QR_LOGO,
 } from "./constants";
 import { QRProps, QRPropsCanvas } from "./types";
 import {
@@ -364,7 +365,7 @@ export function getQRData({
     margin,
     ...(!hideLogo && {
       imageSettings: {
-        src: logo || WRDO_QR_LOGO,
+        src: logo || DEFAULT_QR_LOGO,
         height: size / 4,
         width: size / 4,
         excavate: true,

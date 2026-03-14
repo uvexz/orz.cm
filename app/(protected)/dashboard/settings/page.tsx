@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { siteConfig } from "@/config/site";
 import { getCurrentUser } from "@/lib/session";
 import { constructMetadata } from "@/lib/utils";
 import { DeleteAccountSection } from "@/components/dashboard/delete-account";
@@ -11,7 +12,7 @@ import { UserPasswordForm } from "@/components/forms/user-password-form";
 import { UserRoleForm } from "@/components/forms/user-role-form";
 
 export const metadata = constructMetadata({
-  title: "Settings – WR.DO",
+  title: `Settings – ${siteConfig.name}`,
   description: "Configure your account and website settings.",
 });
 

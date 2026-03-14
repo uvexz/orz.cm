@@ -448,7 +448,7 @@ export default function AppConfigs() {
                     <div className="flex w-full items-start gap-2">
                       <Textarea
                         className="h-16 max-h-32 min-h-9 resize-y bg-white dark:bg-neutral-700"
-                        placeholder="example1@wr.do,example2@wr.do"
+                        placeholder="example1@orz.cm,example2@orz.cm"
                         rows={5}
                         value={forwardEmailWhiteList}
                         onChange={(e) =>
@@ -490,7 +490,7 @@ export default function AppConfigs() {
                     <div className="flex w-full items-start gap-2">
                       <Textarea
                         className="h-16 max-h-32 min-h-9 resize-y bg-white dark:bg-neutral-700"
-                        placeholder="example1@wr.do,example2@wr.do"
+                        placeholder="example1@orz.cm,example2@orz.cm"
                         rows={5}
                         value={catchAllEmails}
                         disabled={!configs.enable_email_catch_all}
@@ -567,7 +567,7 @@ export default function AppConfigs() {
                     <div className="flex w-full items-start gap-2">
                       <Textarea
                         className="h-16 max-h-32 min-h-9 resize-y bg-white dark:bg-neutral-700"
-                        placeholder="example1@wr.do,example2@wr.do"
+                        placeholder="example1@orz.cm,example2@orz.cm"
                         rows={5}
                         value={forwardEmailWhiteList}
                         onChange={(e) =>
@@ -607,7 +607,7 @@ export default function AppConfigs() {
                     <div className="flex w-full items-start gap-2">
                       <Textarea
                         className="h-16 max-h-32 min-h-9 resize-y bg-white dark:bg-neutral-700"
-                        placeholder="example1@wr.do,example2@wr.do"
+                        placeholder="example1@orz.cm,example2@orz.cm"
                         rows={5}
                         value={forwardEmailTargets}
                         disabled={!configs.enable_email_forward}

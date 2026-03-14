@@ -1,5 +1,7 @@
 import * as brevo from "@getbrevo/brevo";
 
+import { siteConfig } from "@/config/site";
+
 export interface EmailRecipient {
   email: string;
   name?: string;
@@ -81,8 +83,11 @@ export async function brevoSendEmail(
     from,
     fromName,
     sender = {
-      email: from || process.env.EMAIL_FROM || "service@wr.do",
-      name: fromName || process.env.EMAIL_FROM_NAME || "WRDO",
+      email:
+        from ||
+        process.env.EMAIL_FROM ||
+        siteConfig.mailSupport.replace(/^[^@]+@/, "service@"),
+      name: fromName || process.env.EMAIL_FROM_NAME || siteConfig.name,
     },
     textContent,
     key,

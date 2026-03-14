@@ -65,11 +65,9 @@ export function UserAccountNav() {
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <p className="font-medium">{user.name || "Anonymous"}</p>
-                  <Link href={"/pricing"} target="_blank">
-                    <Badge className="text-xs font-semibold" variant="default">
-                      {user.team}
-                    </Badge>
-                  </Link>
+                  <Badge className="text-xs font-semibold" variant="default">
+                    {user.team}
+                  </Badge>
                 </div>
 
                 {user.email && (
@@ -155,11 +153,9 @@ export function UserAccountNav() {
           <div className="flex flex-col space-y-1 leading-none">
             <div className="flex items-center justify-between">
               <p className="font-medium">{user.name || "Anonymous"}</p>
-              <Link href={"/pricing"} target="_blank">
-                <Badge className="text-xs font-semibold" variant="default">
-                  {user.team}
-                </Badge>
-              </Link>
+              <Badge className="text-xs font-semibold" variant="default">
+                {user.team}
+              </Badge>
             </div>
             {user.email && (
               <p className="w-[200px] truncate text-sm text-muted-foreground">

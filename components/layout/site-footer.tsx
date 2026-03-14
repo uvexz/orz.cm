@@ -2,12 +2,10 @@ import * as React from "react";
 import Link from "next/link";
 import pkg from "package.json";
 
-import { footerLinks, siteConfig } from "@/config/site";
+import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/layout/mode-toggle";
 
-// import { NewsletterForm } from "../forms/newsletter-form";
-import GitHubStarsWithSuspense from "../shared/github-star-wrapper";
 import { Icons } from "../shared/icons";
 
 export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {

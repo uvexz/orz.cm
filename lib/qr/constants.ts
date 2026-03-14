@@ -1,5 +1,7 @@
 import qrcodegen from "./codegen";
 
+import { siteConfig } from "@/config/site";
+
 export const ERROR_LEVEL_MAP: { [index: string]: qrcodegen.QrCode.Ecc } = {
   L: qrcodegen.QrCode.Ecc.LOW,
   M: qrcodegen.QrCode.Ecc.MEDIUM,
@@ -21,4 +23,4 @@ export const QR_LEVELS = ["L", "M", "Q", "H"] as const;
 // get an explicit height or width, I'd rather default to something than throw.
 export const DEFAULT_IMG_SCALE = 0.1;
 
-export const WRDO_QR_LOGO = "https://wr.do/logo.png";
+export const DEFAULT_QR_LOGO = `${siteConfig.url}/logo.png`;

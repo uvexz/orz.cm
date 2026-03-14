@@ -1,6 +1,7 @@
 // components/GitHubStarsWrapper.tsx
 import { Suspense } from "react";
 
+import { siteConfig } from "@/config/site";
 import { Skeleton } from "../ui/skeleton";
 import { ErrorBoundary } from "./error-boundary";
 import GitHubStarsButton from "./github-star-button";
@@ -11,7 +12,7 @@ interface GitHubResponse {
 
 async function getGitHubStars(owner: string, repo: string) {
   const res = await fetch(
-    `https://wr.do/api/github?owner=${owner}&repo=${repo}`,
+    `${siteConfig.url}/api/github?owner=${owner}&repo=${repo}`,
     {
       next: { revalidate: 3600 },
     },

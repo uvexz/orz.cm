@@ -44,23 +44,6 @@ export default function LoginPage() {
           <UserAuthForm />
         </Suspense>
 
-        <p className="px-2 text-center text-sm text-muted-foreground">
-          {t("By clicking continue, you agree to our")}{" "}
-          <Link
-            href="/terms"
-            className="hover:text-brand underline underline-offset-4"
-          >
-            {t("Terms of Service")}
-          </Link>{" "}
-          {t("and")}{" "}
-          <Link
-            href="/privacy"
-            className="hover:text-brand underline underline-offset-4"
-          >
-            {t("Privacy Policy")}
-          </Link>
-          .
-        </p>
       </div>
     </div>
   );

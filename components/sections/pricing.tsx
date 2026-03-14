@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import useSWR from "swr";
 
+import { siteConfig } from "@/config/site";
 import { PlanQuotaFormData } from "@/lib/dto/plan";
 import { cn, fetcher, nFormatter } from "@/lib/utils";
 
@@ -112,7 +113,7 @@ export const PricingSection = () => {
               price={t("enterprisePrice")}
               bestFor={t("enterpriseBestFor")}
               CTA={
-                <Link href={"mailto:support@wr.do"}>
+                <Link href={`mailto:${siteConfig.mailSupport}`}>
                   <Button className="w-full" variant="outline">
                     {t("contactUs")}
                   </Button>

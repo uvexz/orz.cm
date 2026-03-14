@@ -1,4 +1,3 @@
-import { withContentlayer } from "next-contentlayer2";
 import createNextIntlPlugin from "next-intl/plugin";
 
 
@@ -38,16 +37,8 @@ const nextConfig = {
         hostname: "randomuser.me",
       },
       {
-        protocol: "https",
-        hostname: "email-attachment.wr.do",
-      },
-      {
         protocol: "http",
         hostname: "localhost",
-      },
-      {
-        protocol: "https",
-        hostname: "wr.do",
       },
       {
         protocol: "https",
@@ -89,7 +80,12 @@ const nextConfig = {
       },
       {
         source: "/x",
-        destination: "https://wr.do/s/x",
+        destination: "/s/x",
+        permanent: true,
+      },
+      {
+        source: "/manifest.json",
+        destination: "/manifest.webmanifest",
         permanent: true,
       },
     ];
@@ -101,4 +97,4 @@ const nextConfig = {
 
 
 
-export default withContentlayer(withNextIntl(nextConfig));
+export default withNextIntl(nextConfig);

@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import useSWR from "swr";
 
+import { siteConfig } from "@/config/site";
 import { UserEmailList } from "@/lib/dto/email";
 import { reservedAddressSuffix } from "@/lib/enums";
 import { cn, fetcher, nFormatter } from "@/lib/utils";
@@ -608,7 +609,12 @@ export default function EmailSidebar({
                         setDomainSuffix(value);
                       }}
                       name="suffix"
-                      defaultValue={domainSuffix || "wr.do"}
+                      defaultValue={
+                        domainSuffix ||
+                        emailDomains?.[0]?.domain_name ||
+                        siteConfig.mailSupport.split("@")[1] ||
+                        "orz.cm"
+                      }
                       disabled={isEdit}
                     >
                       <SelectTrigger className="w-1/3 rounded-none border-x-0 shadow-inner">

@@ -1,8 +1,12 @@
 import Link from "next/link";
 
+import { siteConfig } from "@/config/site";
+import { extractHost } from "@/lib/utils";
 import { Icons } from "../shared/icons";
 
 export default function UrlShotenerExp() {
+  const appHost = extractHost(siteConfig.url);
+
   return (
     <main className="mx-auto mt-10 flex w-full max-w-[561.5px] scale-[0.8] flex-col items-center justify-center rounded-xl border border-neutral-900/[0.05] bg-neutral-500/5 px-4 py-5 backdrop-blur dark:border-neutral-700/50">
       <div className="absolute left-1/2 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-neutral-300 bg-[#eff9fa] px-2 py-0.5 text-xs text-neutral-600 dark:border-neutral-700/50 dark:bg-neutral-900 dark:text-neutral-300">
@@ -66,7 +70,7 @@ export default function UrlShotenerExp() {
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-base font-bold text-gray-700 dark:text-gray-50">
-                      wr.do/try
+                      {appHost}/try
                     </p>
                     <div className="flex gap-1">
                       <button className="rounded-full border p-1.5 transition-colors hover:bg-gray-100 dark:bg-gray-600/50">
@@ -79,7 +83,7 @@ export default function UrlShotenerExp() {
                   </div>
                   <div className="flex items-center gap-1 text-sm font-semibold text-gray-400">
                     <Icons.forwardArrow className="h-4 w-4 shrink-0 text-gray-400" />
-                    wr.do/dashboard
+                    {appHost}/dashboard
                   </div>
                 </div>
               </div>

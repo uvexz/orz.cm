@@ -3,7 +3,7 @@ import { ImageResponse } from "@vercel/og";
 import { checkApiKey } from "@/lib/dto/api-key";
 import { createScrapeMeta } from "@/lib/dto/scrape";
 import { getIpInfo } from "@/lib/geo";
-import { WRDO_QR_LOGO } from "@/lib/qr/constants";
+import { DEFAULT_QR_LOGO } from "@/lib/qr/constants";
 import { QRCodeSVG } from "@/lib/qr/utils";
 import { getSearchParams } from "@/lib/utils";
 import { getQRCodeQuerySchema } from "@/lib/validations/qr";
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
         margin,
         ...(!hideLogo && {
           imageSettings: {
-            src: logo || WRDO_QR_LOGO,
+            src: logo || DEFAULT_QR_LOGO,
             height: size / 4,
             width: size / 4,
             excavate: true,

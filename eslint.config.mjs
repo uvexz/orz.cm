@@ -31,7 +31,6 @@ const tightenedTypeCheckFiles = [
   "app/(protected)/dashboard/urls/world-map.tsx",
   "app/(standalone)/password-prompt/card.tsx",
   "app/(standalone)/emails/**/*.tsx",
-  "components/content/mdx-components.tsx",
   "components/email/**/*.tsx",
   "components/forms/user-auth-form.tsx",
   "components/layout/notification.tsx",

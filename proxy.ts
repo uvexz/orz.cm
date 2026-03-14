@@ -41,6 +41,7 @@ const systemRoutes = [
   "/password-prompt",
   "/chat",
   "/manifest.json",
+  "/manifest.webmanifest",
   "/robots.txt",
   "/opengraph-image.jpg",
   "/favicon.ico",

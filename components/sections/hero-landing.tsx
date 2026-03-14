@@ -71,11 +71,6 @@ export default function HeroLanding({
         </p>
 
         <div className="mb-10 flex items-center justify-center gap-4">
-          {/* <GitHubStarsWithSuspense
-            owner="oiov"
-            repo="wr.do"
-            className="shadow-sm"
-          /> */}
           <Link
             href={siteConfig.links.github}
             target="_blank"
@@ -118,7 +113,7 @@ export default function HeroLanding({
                         className="text-lg"
                         style={{ fontFamily: "Bahamas Bold" }}
                       >
-                        wr.do
+                        {siteConfig.name}
                       </span>
                     ))
                   : shortDomains?.map((domain) => (
@@ -756,7 +751,10 @@ export function DynamicData() {
             {t("STATS")}
           </h2>
           <div className="text-balance text-2xl text-foreground">
-            <span style={{ fontFamily: "Bahamas Bold" }}>WR.DO Cloud</span> in
+            <span style={{ fontFamily: "Bahamas Bold" }}>
+              {siteConfig.name} Cloud
+            </span>{" "}
+            in
             numbers
           </div>
         </div>

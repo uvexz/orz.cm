@@ -1,17 +1,17 @@
-import { SidebarNavItem, SiteConfig } from "types";
+import { SiteConfig } from "types";
 import { env } from "@/env.mjs";
 
-const site_url = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-const email_r2_domain = env.NEXT_PUBLIC_EMAIL_R2_DOMAIN || "";
-const support_email = env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@orz.cm";
-const app_name = env.NEXT_PUBLIC_APP_NAME || "Orz";
+const siteUrl = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const emailR2Domain = env.NEXT_PUBLIC_EMAIL_R2_DOMAIN || "";
+const supportEmail = env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@orz.cm";
+const appName = env.NEXT_PUBLIC_APP_NAME || "Orz";
 
 export const siteConfig: SiteConfig = {
-  name: app_name,
+  name: appName,
   description:
     "All-in-one domain platform with short links, temp email, file storage, and open APIs.",
-  url: site_url,
-  ogImage: `${site_url}/_static/og.jpg`,
+  url: siteUrl,
+  ogImage: `${siteUrl}/_static/og.jpg`,
   links: {
     twitter: "https://twitter.com/yesmoree",
     github: "https://github.com/oiov/wr.do",
@@ -19,38 +19,6 @@ export const siteConfig: SiteConfig = {
     discord: "https://discord.gg/AHPQYuZu3m",
     oichat: "https://oi.wr.do",
   },
-  mailSupport: support_email,
-  emailR2Domain: email_r2_domain,
+  mailSupport: supportEmail,
+  emailR2Domain,
 };
-
-export const footerLinks: SidebarNavItem[] = [
-  {
-    title: "Company",
-    items: [
-      { title: "About", href: "/" },
-      { title: "Terms", href: "/terms" },
-      { title: "Privacy", href: "/privacy" },
-      { title: "Blog", href: "https://www.oiov.dev" },
-      { title: "Feedback", href: siteConfig.links.feedback },
-    ],
-  },
-  {
-    title: "Products",
-    items: [
-      { title: "LikeDo", href: "https://like.do" },
-      { title: "Vmail", href: "https://vmail.dev" },
-      { title: "Moise", href: "https://moise.oiov.dev" },
-      { title: "Iconce", href: "https://iconce.com" },
-      { title: "OiChat", href: siteConfig.links.oichat },
-    ],
-  },
-  {
-    title: "Resources",
-    items: [
-      { title: "Home", href: "/" },
-      { title: "Dashboard", href: "/dashboard" },
-      { title: "Feedback", href: "/feedback" },
-      { title: "Contact", href: `mailto:${siteConfig.mailSupport}` },
-    ],
-  },
-];

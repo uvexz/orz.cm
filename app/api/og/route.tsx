@@ -1,5 +1,6 @@
 import { ImageResponse } from "@vercel/og";
 
+import { siteConfig } from "@/config/site";
 import { ogImageSchema } from "@/lib/validations/og";
 
 export const runtime = "edge";
@@ -29,7 +30,11 @@ export async function GET(req: Request) {
 
     const fontSize = heading.length > 80 ? "60px" : "80px";
 
-    const githubName = "oiov";
+    const githubPath = new URL(siteConfig.links.github).pathname.replace(
+      /^\//,
+      "",
+    );
+    const githubName = githubPath.split("/")[0] || "oiov";
 
     return new ImageResponse(
       (
@@ -54,7 +59,7 @@ export async function GET(req: Request) {
               color: "transparent",
             }}
           >
-            WR.DO
+            {siteConfig.name}
           </div>
 
           <div tw="flex flex-col flex-1 py-16">
@@ -122,7 +127,7 @@ export async function GET(req: Request) {
                 />
               </svg>
               <div tw="flex ml-2">
-                github.com/mickasmt/next-auth-roles-template
+                github.com/{githubPath}
               </div>
             </div>
           </div>

@@ -20,7 +20,7 @@
 - [Emails](https://orz.cm/emails): Access temporary email inboxes.
 
 ## Optional
-- [Manifest](https://orz.cm/manifest.json)
+- [Manifest](https://orz.cm/manifest.webmanifest)
 - [Robots](https://orz.cm/robots.txt)
 - [Open Graph Image](https://orz.cm/opengraph-image.jpg)
 - [Password Prompt](https://orz.cm/password-prompt): Password-protected short link flow.

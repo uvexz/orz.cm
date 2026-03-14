@@ -5,6 +5,7 @@ import { Download, RefreshCw, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import pkg from "package.json";
 
+import { siteConfig } from "@/config/site";
 import { Button } from "../ui/button";
 
 interface VersionNotifierProps {
@@ -15,7 +16,7 @@ interface VersionNotifierProps {
 
 const VersionNotifier: React.FC<VersionNotifierProps> = ({
   currentVersion = pkg.version,
-  githubRepo = "oiov/wr.do",
+  githubRepo = new URL(siteConfig.links.github).pathname.replace(/^\//, ""),
   className = "",
 }) => {
   const [latestVersion, setLatestVersion] = useState<string>("");

@@ -1,14 +1,9 @@
 import { MetadataRoute } from "next";
-import { allPages } from "contentlayer/generated";
 
-async function getStaticPageSlugs() {
-  return allPages.map((page) => ({
-    slug: page.slugAsParams,
-  }));
-}
+import { siteConfig } from "@/config/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wr.do";
+  const baseUrl = siteConfig.url;
   const currentDate = new Date();
 
   // static
@@ -33,17 +28,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // (marketing)/[slug]
-  const marketingPageSlugs = await getStaticPageSlugs();
-  const marketingPages: MetadataRoute.Sitemap = marketingPageSlugs.map(
-    (slug) => ({
-      url: `${baseUrl}/${slug.slug}`,
-      lastModified: currentDate,
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    }),
-  );
-
   const protectedPages: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/dashboard`,
@@ -55,7 +39,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticPages,
-    ...marketingPages,
     ...protectedPages,
   ];
 }
