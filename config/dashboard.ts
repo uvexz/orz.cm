@@ -180,11 +180,6 @@ export const sidebarLinks: SidebarNavItem[] = [
     items: [
       { href: "/dashboard/settings", icon: "userSettings", title: "Settings" },
       {
-        href: "/feedback",
-        icon: "messageQuoted",
-        title: "Feedback",
-      },
-      {
         href: "mailto:" + siteConfig.mailSupport,
         icon: "mail",
         title: "Support",

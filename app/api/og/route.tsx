@@ -1,115 +1,117 @@
-import { ImageResponse } from "@vercel/og";
-
-import { siteConfig } from "@/config/site";
-import { ogImageSchema } from "@/lib/validations/og";
+import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-const interRegular = fetch(
-  new URL("../../../assets/fonts/Inter-Regular.ttf", import.meta.url),
-).then((res) => res.arrayBuffer());
+const SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Orz";
+const GITHUB_URL = "https://github.com/oiov/wr.do";
 
-const interBold = fetch(
-  new URL("../../../assets/fonts/CalSans-SemiBold.ttf", import.meta.url),
-).then((res) => res.arrayBuffer());
+function getMode(searchParams: URLSearchParams) {
+  return searchParams.get("mode") === "light" ? "light" : "dark";
+}
+
+function getHeading(searchParams: URLSearchParams) {
+  const heading = searchParams.get("heading") || SITE_NAME;
+  return heading.length > 100 ? `${heading.slice(0, 100)}...` : heading;
+}
+
+function getType(searchParams: URLSearchParams) {
+  return searchParams.get("type") || "Open Graph";
+}
 
 export async function GET(req: Request) {
   try {
-    const fontRegular = await interRegular;
-    const fontBold = await interBold;
-
     const url = new URL(req.url);
-    const values = ogImageSchema.parse(Object.fromEntries(url.searchParams));
-    const heading =
-      values.heading.length > 80
-        ? `${values.heading.substring(0, 100)}...`
-        : values.heading;
-
-    const { mode } = values;
+    const heading = getHeading(url.searchParams);
+    const type = getType(url.searchParams);
+    const mode = getMode(url.searchParams);
     const paint = mode === "dark" ? "#fff" : "#000";
-
-    const fontSize = heading.length > 80 ? "60px" : "80px";
-
-    const githubPath = new URL(siteConfig.links.github).pathname.replace(
-      /^\//,
-      "",
-    );
+    const background =
+      mode === "dark"
+        ? "linear-gradient(135deg, #020617 0%, #111827 55%, #1e293b 100%)"
+        : "linear-gradient(135deg, #ffffff 0%, #eef2ff 100%)";
+    const fontSize = heading.length > 80 ? 60 : 80;
+    const githubPath = new URL(GITHUB_URL).pathname.replace(/^\//, "");
     const githubName = githubPath.split("/")[0] || "oiov";
 
     return new ImageResponse(
       (
         <div
-          tw="flex relative flex-col p-12 w-full h-full items-start"
           style={{
+            display: "flex",
+            height: "100%",
+            width: "100%",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            padding: "48px",
             color: paint,
-            background:
-              mode === "dark"
-                ? "linear-gradient(90deg, #000 0%, #111 100%)"
-                : "white",
+            background,
           }}
         >
           <div
-            tw="text-5xl"
             style={{
-              fontFamily: "Cal Sans",
-              fontWeight: "normal",
-              position: "relative",
-              background: "linear-gradient(90deg, #6366f1, #a855f7 80%)",
-              backgroundClip: "text",
-              color: "transparent",
+              display: "flex",
+              fontSize: 42,
+              fontWeight: 700,
+              letterSpacing: -1.5,
+              color: "#4f46e5",
             }}
           >
-            {siteConfig.name}
+            {SITE_NAME}
           </div>
 
-          <div tw="flex flex-col flex-1 py-16">
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <div
-              tw="flex text-xl uppercase font-bold tracking-tight"
-              style={{ fontFamily: "Inter", fontWeight: "normal" }}
-            >
-              {values.type}
-            </div>
-            {/* Title */}
-            <div
-              tw="flex leading-[1.15] text-[80px] font-bold"
               style={{
-                fontFamily: "Cal Sans",
-                fontWeight: "bold",
-                marginLeft: "-3px",
+                display: "flex",
+                fontSize: 22,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                opacity: 0.72,
+              }}
+            >
+              {type}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                maxWidth: "92%",
                 fontSize,
+                fontWeight: 800,
+                lineHeight: 1.08,
+                letterSpacing: -3,
               }}
             >
               {heading}
             </div>
           </div>
 
-          <div tw="flex items-center w-full justify-between">
-            <div
-              tw="flex items-center text-xl"
-              style={{ fontFamily: "Inter", fontWeight: "normal" }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: 22,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <img
                 alt="avatar"
-                width="65"
+                width="64"
+                height="64"
                 src={`https://github.com/${githubName}.png`}
-                style={{
-                  borderRadius: 128,
-                }}
+                style={{ borderRadius: 9999 }}
               />
-
-              <div tw="flex flex-col" style={{ marginLeft: "15px" }}>
-                <div tw="text-[22px]" style={{ fontFamily: "Cal Sans" }}>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", fontSize: 24, fontWeight: 700 }}>
                   {githubName}
                 </div>
-                <div>Open Source Designer</div>
+                <div style={{ display: "flex", opacity: 0.72 }}>
+                  Open Source Designer
+                </div>
               </div>
             </div>
 
-            <div
-              tw="flex items-center text-xl"
-              style={{ fontFamily: "Inter", fontWeight: "normal" }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
                 <path
                   d="M30 44v-8a9.6 9.6 0 0 0-2-7c6 0 12-4 12-11 .16-2.5-.54-4.96-2-7 .56-2.3.56-4.7 0-7 0 0-2 0-6 3-5.28-1-10.72-1-16 0-4-3-6-3-6-3-.6 2.3-.6 4.7 0 7a10.806 10.806 0 0 0-2 7c0 7 6 11 12 11a9.43 9.43 0 0 0-1.7 3.3c-.34 1.2-.44 2.46-.3 3.7v8"
@@ -126,7 +128,7 @@ export async function GET(req: Request) {
                   strokeLinejoin="round"
                 />
               </svg>
-              <div tw="flex ml-2">
+              <div style={{ display: "flex", opacity: 0.72 }}>
                 github.com/{githubPath}
               </div>
             </div>
@@ -136,24 +138,10 @@ export async function GET(req: Request) {
       {
         width: 1200,
         height: 630,
-        fonts: [
-          {
-            name: "Inter",
-            data: fontRegular,
-            weight: 400,
-            style: "normal",
-          },
-          {
-            name: "Cal Sans",
-            data: fontBold,
-            weight: 700,
-            style: "normal",
-          },
-        ],
       },
     );
-  } catch (error) {
-    return new Response(`Failed to generate image`, {
+  } catch {
+    return new Response("Failed to generate image", {
       status: 500,
     });
   }

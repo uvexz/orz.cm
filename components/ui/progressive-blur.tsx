@@ -4,8 +4,6 @@ import { HTMLMotionProps, motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 
-// import { type HTMLMotionProps, motion } from "motion/react"
-
 export const GRADIENT_ANGLES = {
   top: 0,
   right: 90,

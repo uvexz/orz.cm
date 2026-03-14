@@ -15,7 +15,6 @@ export const siteConfig: SiteConfig = {
   links: {
     twitter: "https://twitter.com/yesmoree",
     github: "https://github.com/oiov/wr.do",
-    feedback: "https://github.com/oiov/wr.do/issues",
     discord: "https://discord.gg/AHPQYuZu3m",
     oichat: "https://oi.wr.do",
   },
