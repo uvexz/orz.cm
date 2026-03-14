@@ -65,6 +65,8 @@ type ShortLinkListResponse = {
 };
 
 type CallbackAction =
+  | "email:delete"
+  | "email:read"
   | "short:create"
   | "short:cancel"
   | "short:set_domain"
@@ -334,6 +336,11 @@ async function handleCallbackQuery(
     return;
   }
 
+  if (query.data?.startsWith("email:")) {
+    await handleEmailMessageAction(c, query, chatId);
+    return;
+  }
+
   const session = await getSession(c.env, chatId);
   if (!session || session.type !== "short_create") {
     await answerCallbackQuery(
@@ -435,6 +442,76 @@ async function handleCallbackQuery(
       return;
     default:
       await answerCallbackQuery(c.env.TELEGRAM_BOT_TOKEN, query.id, "未知操作。");
+  }
+}
+
+async function handleEmailMessageAction(
+  c: { env: Bindings },
+  query: TelegramCallbackQuery,
+  chatId: number,
+) {
+  const token = c.env.TELEGRAM_BOT_TOKEN;
+  const [, action, emailId] = query.data?.split(":") || [];
+
+  if (!emailId || (action !== "read" && action !== "delete")) {
+    await answerCallbackQuery(token, query.id, "邮件操作参数无效。");
+    return;
+  }
+
+  const apiKey = await c.env.TGBOT_KV.get(getApiKeyStorageKey(chatId));
+  if (!apiKey) {
+    await answerCallbackQuery(token, query.id, "请先重新绑定 API Key。");
+    await sendMessage(
+      token,
+      chatId,
+      "当前会话缺少 API Key 绑定，请重新使用 <code>/setkey &lt;your_api_key&gt;</code>。",
+    );
+    return;
+  }
+
+  try {
+    const response = await fetch(`${c.env.API_BASE_URL}/email/message`, {
+      method: action === "read" ? "POST" : "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "wrdo-api-key": apiKey,
+      },
+      body: JSON.stringify({ emailId }),
+    });
+
+    if (!response.ok) {
+      await answerCallbackQuery(
+        token,
+        query.id,
+        `操作失败：${truncate(await readApiError(response), 50)}`,
+      );
+      return;
+    }
+
+    if (query.message?.message_id) {
+      if (action === "read") {
+        await editMessageReplyMarkup(token, chatId, query.message.message_id, {
+          inline_keyboard: [[
+            { text: "删除", callback_data: `email:delete:${emailId}` },
+          ]],
+        });
+        await answerCallbackQuery(token, query.id, "已标记为已读。");
+        return;
+      }
+
+      await editMessageReplyMarkup(token, chatId, query.message.message_id, {
+        inline_keyboard: [],
+      });
+    }
+
+    await answerCallbackQuery(
+      token,
+      query.id,
+      action === "read" ? "已标记为已读。" : "已从收件箱删除。",
+    );
+  } catch (error) {
+    console.error("Failed to handle email message action:", error);
+    await answerCallbackQuery(token, query.id, "网络异常，请稍后再试。");
   }
 }
 
@@ -917,6 +994,19 @@ async function editMessage(
     parse_mode: "HTML",
     reply_markup: options.replyMarkup,
     text,
+  });
+}
+
+async function editMessageReplyMarkup(
+  token: string,
+  chatId: number,
+  messageId: number,
+  replyMarkup: Record<string, unknown>,
+) {
+  return callTelegramApi<TelegramMessage>(token, "editMessageReplyMarkup", {
+    chat_id: chatId,
+    message_id: messageId,
+    reply_markup: replyMarkup,
   });
 }
 

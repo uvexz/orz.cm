@@ -50,6 +50,8 @@ const READ_PERMISSION_ERROR =
   "There are no valid emails to mark as read or you do not have permission";
 const READ_ALL_PERMISSION_ERROR =
   "There are no valid emails or you do not have permission";
+const DELETE_PERMISSION_ERROR =
+  "There are no valid emails to delete or you do not have permission";
 
 function createUniqueConstraintError() {
   const error = new Error("Unique constraint failed") as Error & { code?: string };
@@ -266,6 +268,15 @@ export async function deleteEmailsByIds(ids: string[]) {
   }
 
   return deleteForwardEmailsByIds(ids);
+}
+
+export async function deleteOwnedEmailsByIds(ids: string[], userId: string) {
+  assertAccessibleEmailIds(ids, DELETE_PERMISSION_ERROR);
+
+  const validEmailIds = await findReadableEmailIds(ids, userId);
+  assertAccessibleEmailIds(validEmailIds, DELETE_PERMISSION_ERROR);
+
+  return deleteForwardEmailsByIds(validEmailIds);
 }
 
 export async function saveUserSendEmail(

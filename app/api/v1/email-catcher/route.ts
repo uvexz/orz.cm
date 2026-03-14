@@ -3,6 +3,7 @@ import { getMultipleConfigs } from "@/lib/dto/system-config";
 import { db } from "@/lib/db";
 import { userEmails, users } from "@/lib/db/schema";
 import { brevoSendEmail } from "@/lib/email/brevo";
+import { normalizeEmailAddress } from "@/lib/email/policies";
 import { saveForwardEmail } from "@/lib/email/services";
 import type { OriginalEmail } from "@/lib/email/types";
 import { eq } from "drizzle-orm";
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     ]);
 
     // 处理邮件转发和保存
-    await handleEmailForwarding(data, configs);
+    const savedEmailId = await handleEmailForwarding(data, configs);
 
     // Telegram
     // 先检查是否全局配置了推送
@@ -56,7 +57,12 @@ export async function POST(req: Request) {
     }
 
     // 尝试向个人绑定的 Telegram 发送
-    await sendToPersonalTelegram(data, configs.tg_email_bot_token, configs.tg_email_template);
+    await sendToPersonalTelegram(
+      data,
+      configs.tg_email_bot_token,
+      configs.tg_email_template,
+      savedEmailId,
+    );
 
     return Response.json({ status: 200 });
   } catch (error) {
@@ -70,23 +76,23 @@ async function handleEmailForwarding(
   configs: EmailCatcherConfigs,
 ) {
   const actions = determineEmailActions(data, configs);
-
-  const promises: Promise<void>[] = [];
+  const sideEffectPromises: Promise<void>[] = [];
+  const savePromise = actions.includes("NORMAL_SAVE")
+    ? handleNormalEmail(data)
+    : Promise.resolve<string | null>(null);
 
   if (actions.includes("CATCH_ALL")) {
-    promises.push(handleCatchAllEmail(data, configs));
+    sideEffectPromises.push(handleCatchAllEmail(data, configs));
   }
 
   if (actions.includes("EXTERNAL_FORWARD")) {
-    promises.push(handleExternalForward(data, configs));
+    sideEffectPromises.push(handleExternalForward(data, configs));
   }
 
-  if (actions.includes("NORMAL_SAVE")) {
-    promises.push(handleNormalEmail(data));
-  }
-
-  // 并行执行所有操作
-  const results = await Promise.allSettled(promises);
+  const [savedEmailId, results] = await Promise.all([
+    savePromise,
+    Promise.allSettled(sideEffectPromises),
+  ]);
 
   // 检查是否有失败的操作
   const failures = results.filter((result) => result.status === "rejected");
@@ -95,6 +101,8 @@ async function handleEmailForwarding(
     const firstFailure = failures[0] as PromiseRejectedResult;
     throw new Error(`Email operation failed: ${firstFailure.reason}`);
   }
+
+  return savedEmailId;
 }
 
 function determineEmailActions(
@@ -137,13 +145,15 @@ function checkForwardWhiteList(
   toEmail: string,
   whiteListString: string,
 ): boolean {
+  const normalizedToEmail = normalizeEmailAddress(toEmail);
+
   // 如果没有配置白名单，则允许所有邮箱（保持向后兼容）
   if (!whiteListString || whiteListString.trim() === "") {
     return true;
   }
 
   const whiteList = parseAndValidateEmails(whiteListString);
-  return whiteList.includes(toEmail);
+  return whiteList.includes(normalizedToEmail);
 }
 
 async function handleCatchAllEmail(
@@ -190,7 +200,7 @@ async function handleExternalForward(
 }
 
 async function handleNormalEmail(data: OriginalEmail) {
-  await saveForwardEmail(data);
+  return saveForwardEmail(data);
 }
 
 function isValidEmail(email: string): boolean {
@@ -205,7 +215,7 @@ function parseAndValidateEmails(emailsString: string): string[] {
 
   const emails = emailsString
     .split(",")
-    .map((email) => email.trim())
+    .map((email) => email.trim().toLowerCase())
     .filter((email) => email.length > 0);
 
   const validEmails = emails.filter((email) => isValidEmail(email));
@@ -225,16 +235,18 @@ function shouldPushToTelegram(
   email: OriginalEmail,
   whiteList: string,
 ): boolean {
+  const normalizedTo = normalizeEmailAddress(email.to);
+
   if (!whiteList || whiteList.trim() === "") {
     return true;
   }
 
   const whiteListArray = whiteList
     .split(",")
-    .map((email) => email.trim())
+    .map((email) => email.trim().toLowerCase())
     .filter((email) => email.length > 0);
 
-  return whiteListArray.includes(email.to);
+  return whiteListArray.includes(normalizedTo);
 }
 
 async function sendToTelegram(
@@ -313,10 +325,20 @@ async function sendToTelegram(
   }
 }
 
-async function sendToPersonalTelegram(email: OriginalEmail, botToken: string, template?: string) {
-  if (!botToken) return;
+async function sendToPersonalTelegram(
+  email: OriginalEmail,
+  botToken: string,
+  template?: string,
+  savedEmailId?: string | null,
+) {
+  if (!botToken) {
+    console.warn("Telegram personal push skipped: tg_email_bot_token is not configured");
+    return;
+  }
 
   try {
+    const normalizedTo = normalizeEmailAddress(email.to);
+
     // 查找该邮箱所属的用户
     const [userEmail] = await db
       .select({
@@ -324,10 +346,13 @@ async function sendToPersonalTelegram(email: OriginalEmail, botToken: string, te
       })
       .from(userEmails)
       .innerJoin(users, eq(userEmails.userId, users.id))
-      .where(eq(userEmails.emailAddress, email.to))
+      .where(eq(userEmails.emailAddress, normalizedTo))
       .limit(1);
 
     if (!userEmail?.tgChatId) {
+      console.warn(
+        `Telegram personal push skipped: no tgChatId binding found for ${normalizedTo}`,
+      );
       return; // 找不到用户，或者用户没绑定 tgChatId
     }
 
@@ -346,6 +371,14 @@ async function sendToPersonalTelegram(email: OriginalEmail, botToken: string, te
           text: message,
           parse_mode: "HTML",
           disable_web_page_preview: true,
+          reply_markup: savedEmailId
+            ? {
+                inline_keyboard: [[
+                  { text: "已读", callback_data: `email:read:${savedEmailId}` },
+                  { text: "删除", callback_data: `email:delete:${savedEmailId}` },
+                ]],
+              }
+            : undefined,
         }),
       },
     );
