@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const user = await checkApiKey(custom_api_key);
     if (!user?.id) {
       return NextResponse.json(
-        "Invalid API key. You can get your API key from https://wr.do/dashboard/settings.",
+        "Invalid API key. You can get your API key from https://orz.cm/dashboard/settings.",
         { status: 401 }
       );
     }

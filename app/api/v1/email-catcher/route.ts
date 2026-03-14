@@ -183,7 +183,7 @@ async function handleExternalForward(
     from: `Forwarding@${senders[0].domain_name}`,
     to: validEmails,
     subject: data.subject ?? "No subject",
-    html: `${data.html ?? data.text} <br><hr><p style="font-size: '12px'; color: '#888'; font-family: 'monospace';text-align: 'center'">This email was forwarded from ${data.to}. Powered by <a href="https://wr.do">WR.DO</a>.</p>`,
+    html: `${data.html ?? data.text} <br><hr><p style="font-size: '12px'; color: '#888'; font-family: 'monospace';text-align: 'center'">This email was forwarded from ${data.to}. Powered by <a href="https://orz.cm">Orz.cm</a>.</p>`,
   };
 
   await brevoSendEmail(options);
@@ -277,14 +277,14 @@ async function sendToTelegram(
             body: JSON.stringify({
               chat_id: chatId,
               text: message,
-              parse_mode: "Markdown",
+              parse_mode: "HTML",
               disable_web_page_preview: true,
             }),
           },
         );
 
         if (!response.ok) {
-          const error = await response.json();
+          const error = await readTelegramError(response);
           console.error(
             `Failed to send message to Telegram chat ${chatId}:`,
             error,
@@ -344,14 +344,14 @@ async function sendToPersonalTelegram(email: OriginalEmail, botToken: string, te
         body: JSON.stringify({
           chat_id: chatId,
           text: message,
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           disable_web_page_preview: true,
         }),
       },
     );
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await readTelegramError(response);
       console.error(
         `Failed to send personal message to Telegram chat ${chatId}:`,
         error,
@@ -372,35 +372,82 @@ function formatEmailForTelegram(
   const fromInfo = email.fromName
     ? `${email.fromName} <${email.from}>`
     : email.from;
+  const date = formatTelegramDate(email.date);
+  const subject = escapeTelegramHtml(email.subject || "No Subject");
+  const content = getTelegramSafeContent(email);
+  const escapedFrom = escapeTelegramHtml(fromInfo);
+  const escapedTo = escapeTelegramHtml(email.to);
+  const escapedDate = escapeTelegramHtml(date);
 
   if (template) {
     return template
-      .replace("{{from}}", fromInfo)
-      .replace("{{to}}", email.to)
-      .replace("{{subject}}", email.subject || "No Subject")
-      .replace("{{text}}", email.html || email.text || "No Content")
-      .replace("{{date}}", new Date(email.date || "").toLocaleString() || "--");
+      .replaceAll("{{from}}", escapedFrom)
+      .replaceAll("{{to}}", escapedTo)
+      .replaceAll("{{subject}}", subject)
+      .replaceAll("{{text}}", content)
+      .replaceAll("{{date}}", escapedDate);
   }
 
-  const subject = email.subject || "No Subject";
-  const content =
-    email.text || email.html?.replace(/<[^>]*>/g, "") || "No Content";
+  return [
+    "📮 <b>New Email</b>",
+    "",
+    `<b>From:</b> <code>${escapedFrom}</code>`,
+    `<b>To:</b> <code>${escapedTo}</code>`,
+    `<b>Subject:</b> ${subject}`,
+    `<b>Date:</b> ${escapedDate}`,
+    "<b>Content:</b>",
+    content,
+  ].join("\n");
+}
 
-  const date = new Date(email.date || "").toLocaleString() || "--";
+function getTelegramSafeContent(email: OriginalEmail) {
+  const source = email.text || stripHtml(email.html) || "No Content";
+  const normalized = source.replace(/\r\n/g, "\n").trim();
+  const truncated =
+    normalized.length > 3200
+      ? `${normalized.slice(0, 3197)}...`
+      : normalized;
 
-  // 限制内容长度
-  const maxContentLength = 3800; // Maximum Telegram message length is 4096
-  const truncatedContent =
-    content.length > maxContentLength
-      ? content.substring(0, maxContentLength) + "..."
-      : content;
+  return escapeTelegramHtml(truncated || "No Content");
+}
 
-  let message = `📮 *New Email*\n\n`;
-  message += `*From:* \`${fromInfo}\`\n`;
-  message += `*To:* \`${email.to}\`\n`;
-  message += `*Subject:* ${subject}\n`;
-  message += `*Date:* ${new Date(date).toLocaleString()}\n`;
-  message += `*Content:* \n${truncatedContent}`;
+function stripHtml(value?: string) {
+  if (!value) {
+    return "";
+  }
 
-  return message;
+  return value
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatTelegramDate(value?: string) {
+  if (!value) {
+    return "--";
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "--" : date.toLocaleString();
+}
+
+function escapeTelegramHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+async function readTelegramError(response: Response) {
+  try {
+    return await response.json();
+  } catch (_error) {
+    return await response.text();
+  }
 }

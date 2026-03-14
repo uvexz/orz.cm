@@ -9,11 +9,12 @@ import {
   notFound,
   unauthorized,
 } from "@/lib/api/errors";
-import { apiCreated, createApiRoute } from "@/lib/api/route";
+import { apiCreated, apiOk, createApiRoute } from "@/lib/api/route";
 import { checkApiKey } from "@/lib/dto/api-key";
 import {
   createApiUserEmail,
   deleteUserEmailByAddress,
+  getAllUserEmails,
 } from "@/lib/email/services";
 
 async function requireApiUser(req: NextRequest) {
@@ -25,7 +26,7 @@ async function requireApiUser(req: NextRequest) {
   const user = await checkApiKey(customApiKey);
   if (!user?.id) {
     throw unauthorized(
-      "Invalid API key. You can get your API key from https://wr.do/dashboard/settings.",
+      "Invalid API key. You can get your API key from https://orz.cm/dashboard/settings.",
     );
   }
 
@@ -55,6 +56,33 @@ function mapEmailApiError(error: unknown) {
 
   return undefined;
 }
+
+export const GET = createApiRoute(
+  async (req: NextRequest) => {
+    const user = await requireApiUser(req);
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const size = parseInt(searchParams.get("size") || "10", 10);
+    const search = searchParams.get("search") || "";
+    const unread = searchParams.get("unread") === "true";
+
+    const userEmails = await getAllUserEmails(
+      user.id,
+      page,
+      size,
+      search,
+      false,
+      unread,
+    );
+
+    return apiOk(userEmails);
+  },
+  {
+    fallbackBody: "Internal Server Error",
+    logMessage: "Error fetching user emails (v1):",
+    mapError: mapEmailApiError,
+  },
+);
 
 // 创建新 UserEmail
 export const POST = createApiRoute(

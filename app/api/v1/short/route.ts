@@ -2,9 +2,55 @@ import { checkApiKey } from "@/lib/dto/api-key";
 import { getDomainsByFeature } from "@/lib/dto/domains";
 import { getPlanQuota } from "@/lib/dto/plan";
 import { hasErrorCode } from "@/lib/api/errors";
-import { createUserShortUrl } from "@/lib/short-urls/services";
+import {
+  createUserShortUrl,
+  getUserShortUrls,
+} from "@/lib/short-urls/services";
 import { restrictByTimeRange } from "@/lib/team";
 import { createUrlSchema } from "@/lib/validations/url";
+
+export async function GET(req: Request) {
+  try {
+    const custom_api_key = req.headers.get("wrdo-api-key");
+    if (!custom_api_key) {
+      return Response.json("Unauthorized", {
+        status: 401,
+      });
+    }
+
+    const user = await checkApiKey(custom_api_key);
+    if (!user?.id) {
+      return Response.json(
+        "Invalid API key. You can get your API key from https://orz.cm/dashboard/settings.",
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const size = parseInt(searchParams.get("size") || "10", 10);
+    const slug = searchParams.get("slug") || "";
+    const target = searchParams.get("target") || "";
+
+    const data = await getUserShortUrls(
+      user.id,
+      1,
+      page,
+      size,
+      "USER",
+      "",
+      slug,
+      target,
+    );
+
+    return Response.json(data);
+  } catch (error: unknown) {
+    const responseError = error as { status?: number; statusText?: string };
+    return Response.json(responseError.statusText || error, {
+      status: responseError.status || 500,
+    });
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +65,7 @@ export async function POST(req: Request) {
     const user = await checkApiKey(custom_api_key);
     if (!user?.id) {
       return Response.json(
-        "Invalid API key. You can get your API key from https://wr.do/dashboard/settings.",
+        "Invalid API key. You can get your API key from https://orz.cm/dashboard/settings.",
         { status: 401 },
       );
     }
