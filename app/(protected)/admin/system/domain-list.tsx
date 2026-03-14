@@ -270,7 +270,7 @@ export default function DomainList({ user, action }: DomainListProps) {
                       </TableCell>
                       <TableCell className="col-span-1 hidden items-center gap-1 sm:flex">
                         <Switch
-                          defaultChecked={domain.enable_short_link}
+                          checked={domain.enable_short_link}
                           onCheckedChange={(value) =>
                             handleChangeStatus(
                               value,
@@ -282,7 +282,7 @@ export default function DomainList({ user, action }: DomainListProps) {
                       </TableCell>
                       <TableCell className="col-span-1 hidden items-center gap-1 sm:flex">
                         <Switch
-                          defaultChecked={domain.enable_email}
+                          checked={domain.enable_email}
                           onCheckedChange={(value) =>
                             handleChangeStatus(value, "enable_email", domain)
                           }
@@ -298,7 +298,7 @@ export default function DomainList({ user, action }: DomainListProps) {
                       </TableCell>
                       <TableCell className="col-span-1 hidden items-center gap-1 sm:flex">
                         <Switch
-                          defaultChecked={domain.enable_dns}
+                          checked={domain.enable_dns}
                           onCheckedChange={(value) =>
                             handleChangeStatus(value, "enable_dns", domain)
                           }
@@ -312,7 +312,7 @@ export default function DomainList({ user, action }: DomainListProps) {
                       <TableCell className="col-span-1 flex items-center gap-1">
                         <Switch
                           disabled
-                          defaultChecked={domain.active}
+                          checked={domain.active}
                           onCheckedChange={(value) =>
                             handleChangeStatus(value, "active", domain)
                           }

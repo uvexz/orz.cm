@@ -8,7 +8,7 @@ import {
 } from "@/lib/api/route";
 import {
   getMultipleConfigs,
-  updateSystemConfig,
+  setSystemConfig,
 } from "@/lib/dto/system-config";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +57,7 @@ export const POST = createAdminApiRoute(
     const configs = await getMultipleConfigs([key]);
 
     if (key in configs) {
-      await updateSystemConfig(key, { value, type });
+      await setSystemConfig(key, value, type);
       return apiOk("Success");
     }
     throw badRequest("Invalid key");

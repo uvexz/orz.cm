@@ -262,7 +262,7 @@ export function UrlListResults({
                   </TableCell>
                   <TableCell className="col-span-1 hidden sm:flex">
                     <Switch
-                      defaultChecked={short.active === 1}
+                      checked={short.active === 1}
                       onCheckedChange={(value) =>
                         onToggleStatus(value, short.id || "")
                       }
@@ -445,7 +445,7 @@ export function UrlListResults({
                     <TimeAgoIntl date={short.updatedAt as Date} />
                     <Switch
                       className="scale-[0.6]"
-                      defaultChecked={short.active === 1}
+                      checked={short.active === 1}
                       onCheckedChange={(value) =>
                         onToggleStatus(value, short.id || "")
                       }

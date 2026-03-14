@@ -141,7 +141,7 @@ export default function AppConfigs() {
               </div>
               {configs && (
                 <Switch
-                  defaultChecked={configs.enable_user_registration}
+                  checked={configs.enable_user_registration}
                   onCheckedChange={(v) =>
                     handleChange(v, "enable_user_registration", "BOOLEAN")
                   }
@@ -171,7 +171,7 @@ export default function AppConfigs() {
                         {t("Email Password")}
                       </p>
                       <Switch
-                        defaultChecked={configs.enable_email_password_login}
+                        checked={configs.enable_email_password_login}
                         onCheckedChange={(v) =>
                           handleChange(
                             v,
@@ -186,7 +186,7 @@ export default function AppConfigs() {
                         <Icons.github className="size-4" /> GitHub OAuth
                       </p>
                       <Switch
-                        defaultChecked={configs.enable_github_oauth}
+                        checked={configs.enable_github_oauth}
                         onCheckedChange={(v) =>
                           handleChange(v, "enable_github_oauth", "BOOLEAN")
                         }
@@ -198,7 +198,7 @@ export default function AppConfigs() {
                         Google OAuth
                       </p>
                       <Switch
-                        defaultChecked={configs.enable_google_oauth}
+                        checked={configs.enable_google_oauth}
                         onCheckedChange={(v) =>
                           handleChange(v, "enable_google_oauth", "BOOLEAN")
                         }
@@ -214,7 +214,7 @@ export default function AppConfigs() {
                         LinuxDo OAuth
                       </p>
                       <Switch
-                        defaultChecked={configs.enable_liunxdo_oauth}
+                        checked={configs.enable_liunxdo_oauth}
                         onCheckedChange={(v) =>
                           handleChange(v, "enable_liunxdo_oauth", "BOOLEAN")
                         }
@@ -226,7 +226,7 @@ export default function AppConfigs() {
                         {t("Resend Email")}
                       </p>
                       <Switch
-                        defaultChecked={configs.enable_resend_email_login}
+                        checked={configs.enable_resend_email_login}
                         onCheckedChange={(v) =>
                           handleChange(
                             v,
@@ -266,9 +266,7 @@ export default function AppConfigs() {
                         </Badge>
                       )}
                     <Switch
-                      defaultChecked={
-                        configs.enable_email_registration_suffix_limit
-                      }
+                      checked={configs.enable_email_registration_suffix_limit}
                       onCheckedChange={(v) =>
                         handleChange(
                           v,
@@ -426,7 +424,7 @@ export default function AppConfigs() {
                         </Badge>
                       )}
                     <Switch
-                      defaultChecked={configs.enable_email_catch_all}
+                      checked={configs.enable_email_catch_all}
                       onCheckedChange={(v) =>
                         handleChange(v, "enable_email_catch_all", "BOOLEAN")
                       }
@@ -545,7 +543,7 @@ export default function AppConfigs() {
                         </Badge>
                       )}
                     <Switch
-                      defaultChecked={configs.enable_email_forward}
+                      checked={configs.enable_email_forward}
                       onCheckedChange={(v) =>
                         handleChange(v, "enable_email_forward", "BOOLEAN")
                       }
@@ -669,7 +667,7 @@ export default function AppConfigs() {
                         </Badge>
                       )}
                     <Switch
-                      defaultChecked={configs.enable_tg_email_push}
+                      checked={configs.enable_tg_email_push}
                       onCheckedChange={(v) =>
                         handleChange(v, "enable_tg_email_push", "BOOLEAN")
                       }
@@ -850,7 +848,7 @@ export default function AppConfigs() {
               </div>
               {configs && (
                 <Switch
-                  defaultChecked={configs.enable_subdomain_apply}
+                  checked={configs.enable_subdomain_apply}
                   onCheckedChange={(v) =>
                     handleChange(v, "enable_subdomain_apply", "BOOLEAN")
                   }
@@ -872,7 +870,7 @@ export default function AppConfigs() {
               </div>
               {configs && (
                 <Switch
-                  defaultChecked={configs.enable_subdomain_status_email_pusher}
+                  checked={configs.enable_subdomain_status_email_pusher}
                   onCheckedChange={(v) =>
                     handleChange(
                       v,
