@@ -1,4 +1,4 @@
-import { ApiError, badRequest } from "@/lib/api/errors";
+import { ApiError, badRequest, conflict, hasErrorCode } from "@/lib/api/errors";
 import {
   type AppRouteHandlerContext,
   apiOk,
@@ -51,6 +51,10 @@ export const POST = createAuthedApiRoute(
       password,
     });
     if (res.status !== "success") {
+      if (hasErrorCode(res.status, "UNIQUE_CONSTRAINT")) {
+        throw conflict("Short link already exists");
+      }
+
       throw new ApiError(502, res.status);
     }
     return apiOk(res.data);

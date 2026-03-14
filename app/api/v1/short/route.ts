@@ -1,6 +1,7 @@
 import { checkApiKey } from "@/lib/dto/api-key";
 import { getDomainsByFeature } from "@/lib/dto/domains";
 import { getPlanQuota } from "@/lib/dto/plan";
+import { hasErrorCode } from "@/lib/api/errors";
 import { createUserShortUrl } from "@/lib/short-urls/services";
 import { restrictByTimeRange } from "@/lib/team";
 import { createUrlSchema } from "@/lib/validations/url";
@@ -75,6 +76,12 @@ export async function POST(req: Request) {
       password,
     });
     if (res.status !== "success") {
+      if (hasErrorCode(res.status, "UNIQUE_CONSTRAINT")) {
+        return Response.json("Short link already exists", {
+          status: 409,
+        });
+      }
+
       return Response.json(res.status, {
         status: 502,
       });

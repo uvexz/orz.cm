@@ -1,8 +1,9 @@
-import { calculateUrlStatusStats } from "./policies";
+import { calculateUrlStatusStats, normalizeShortUrlFormData } from "./policies";
 import {
   aggregateUrlClicksByIds,
   countUserShortUrls,
   findShortUrlBySuffix,
+  findShortUrlIdBySuffix,
   findUrlMetaByIp,
   findUserShortLinksByIds,
   incrementUrlMetaClick,
@@ -19,6 +20,19 @@ import {
   updateUserShortUrlByOwner,
 } from "./queries";
 import type { ShortUrlFormData, ShortUrlMetaInput, UrlStatusStats, UserRole } from "./types";
+
+function createUniqueConstraintError() {
+  const error = new Error("Unique constraint failed") as Error & { code?: string };
+  error.code = "UNIQUE_CONSTRAINT";
+  return error;
+}
+
+async function assertShortUrlSlugAvailable(url: string, currentId?: string) {
+  const existingShortUrl = await findShortUrlIdBySuffix(url);
+  if (existingShortUrl && existingShortUrl.id !== currentId) {
+    throw createUniqueConstraintError();
+  }
+}
 
 export async function getUserShortUrls(
   userId: string,
@@ -100,7 +114,9 @@ export async function getUrlStatusOptimized(
 
 export async function createUserShortUrl(data: ShortUrlFormData) {
   try {
-    const shortUrl = await insertUserShortUrl(data);
+    const normalizedData = normalizeShortUrlFormData(data);
+    await assertShortUrlSlugAvailable(normalizedData.url);
+    const shortUrl = await insertUserShortUrl(normalizedData);
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -109,7 +125,9 @@ export async function createUserShortUrl(data: ShortUrlFormData) {
 
 export async function updateUserShortUrl(data: ShortUrlFormData) {
   try {
-    const shortUrl = await updateUserShortUrlByOwner(data);
+    const normalizedData = normalizeShortUrlFormData(data);
+    await assertShortUrlSlugAvailable(normalizedData.url, normalizedData.id);
+    const shortUrl = await updateUserShortUrlByOwner(normalizedData);
     if (!shortUrl) {
       throw new Error("Short URL not found");
     }
@@ -125,7 +143,9 @@ export async function updateUserShortUrlAdmin(
   newUserId: string,
 ) {
   try {
-    const shortUrl = await updateUserShortUrlByAdmin(data, newUserId);
+    const normalizedData = normalizeShortUrlFormData(data);
+    await assertShortUrlSlugAvailable(normalizedData.url, normalizedData.id);
+    const shortUrl = await updateUserShortUrlByAdmin(normalizedData, newUserId);
     if (!shortUrl) {
       throw new Error("Short URL not found");
     }

@@ -20,6 +20,7 @@ const sampleShortUrl: ShortUrlFormData = {
 const queryState: {
   insertResult: unknown;
   insertError: unknown;
+  existingShortUrl: { id: string } | null;
   updateOwnerResult: unknown;
   removeResult: unknown;
   listResult: unknown;
@@ -34,6 +35,7 @@ const queryState: {
 } = {
   insertResult: { id: "url_1" },
   insertError: null,
+  existingShortUrl: null,
   updateOwnerResult: { id: "url_1", target: "https://updated.example.com" },
   removeResult: { success: true },
   listResult: { list: [{ id: "url_1", url: "demo" }], total: 1 },
@@ -78,6 +80,7 @@ mock.module("@/lib/short-urls/queries", () => ({
     return queryState.aggregateClicksResult;
   },
   countUserShortUrls: async () => ({ total: 0, month_total: 0 }),
+  findShortUrlIdBySuffix: async () => queryState.existingShortUrl,
   findShortUrlBySuffix: async () => null,
   findUrlMetaByIp: async () => null,
   findUserShortLinksByIds: async () => [],
@@ -165,6 +168,7 @@ describe("lib/short-urls/services", () => {
     console.error = () => undefined;
     queryState.insertResult = { id: "url_1" };
     queryState.insertError = null;
+    queryState.existingShortUrl = null;
     queryState.updateOwnerResult = {
       id: "url_1",
       target: "https://updated.example.com",
@@ -202,6 +206,18 @@ describe("lib/short-urls/services", () => {
     expect(queryState.lastInsertArg).toEqual(sampleShortUrl);
   });
 
+  it("rejects duplicate short URL slugs before insert", async () => {
+    queryState.existingShortUrl = { id: "url_existing" };
+
+    const result = await createUserShortUrl(sampleShortUrl);
+    const status = result.status as Error & { code?: string };
+
+    expect(status).toBeInstanceOf(Error);
+    expect(status.message).toBe("Unique constraint failed");
+    expect(status.code).toBe("UNIQUE_CONSTRAINT");
+    expect(queryState.lastInsertArg).toBe(null);
+  });
+
   it("updates short URLs and surfaces missing records as errors", async () => {
     const successResult = await updateUserShortUrl(sampleShortUrl);
     expect(successResult).toEqual({
@@ -212,6 +228,18 @@ describe("lib/short-urls/services", () => {
     queryState.updateOwnerResult = null;
     const failedResult = await updateUserShortUrl(sampleShortUrl);
     expect(failedResult.status).toBeInstanceOf(Error);
+  });
+
+  it("allows updating the same short URL without triggering duplicate checks", async () => {
+    queryState.existingShortUrl = { id: "url_1" };
+
+    const result = await updateUserShortUrl(sampleShortUrl);
+
+    expect(result).toEqual({
+      status: "success",
+      data: queryState.updateOwnerResult,
+    });
+    expect(queryState.lastUpdateOwnerArg).toEqual(sampleShortUrl);
   });
 
   it("calculates status aggregates from query records", async () => {

@@ -6,6 +6,21 @@ export function shouldRestrictShortUrlsToUser(role: UserRole) {
   return role === "USER";
 }
 
+export function normalizeShortUrlFormData<T extends {
+  target: string;
+  url: string;
+  prefix: string;
+  password: string;
+}>(data: T): T {
+  return {
+    ...data,
+    target: data.target.trim(),
+    url: data.url.trim(),
+    prefix: data.prefix.trim().toLowerCase(),
+    password: data.password.trim(),
+  };
+}
+
 export function isValidExpirationValue(expiration: string): boolean {
   return EXPIRATION_ENUMS.some((item) => item.value === expiration);
 }

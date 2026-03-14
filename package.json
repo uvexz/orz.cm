@@ -18,7 +18,7 @@
     "preview": "bun run build && next start",
     "typecheck": "bunx tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "db:push": "node scripts/normalize-user-emails.js && drizzle-kit push",
     "email": "email dev --dir emails --port 3333",
     "remove-content": "node ./setup.mjs",
     "check-db": "node scripts/check-db.js"

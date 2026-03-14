@@ -15,11 +15,19 @@ function createPolicyError(message: string, code?: string) {
   return error;
 }
 
+export function normalizeEmailAddress(emailAddress: string) {
+  return emailAddress.trim().toLowerCase();
+}
+
 export function canAccessAllUserEmails(role: UserRole, includeAll: boolean) {
   return role === "ADMIN" && includeAll;
 }
 
 export function assertCreatableEmailAddress(emailAddress: string) {
+  if (!isValidEmail(emailAddress)) {
+    throw createPolicyError("Invalid email address", "INVALID_EMAIL_ADDRESS");
+  }
+
   const prefix = emailAddress.split("@")[0];
   if (reservedAddressSuffix.includes(prefix)) {
     throw createPolicyError("Invalid email address", "INVALID_EMAIL_ADDRESS");

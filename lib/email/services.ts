@@ -13,6 +13,7 @@ import {
   assertAccessibleEmailIds,
   assertConfiguredEmailProvider,
   assertCreatableEmailAddress,
+  normalizeEmailAddress,
   assertEmailDomainAllowed,
   assertEmailPrefixLength,
   assertEmailRecordExists,
@@ -30,7 +31,6 @@ import {
   findReadableEmailIds,
   findUserById,
   findUserEmailById,
-  findUserEmailIdByAddress,
   insertForwardEmail,
   insertUserEmail,
   insertUserSendEmail,
@@ -50,6 +50,22 @@ const READ_PERMISSION_ERROR =
   "There are no valid emails to mark as read or you do not have permission";
 const READ_ALL_PERMISSION_ERROR =
   "There are no valid emails or you do not have permission";
+
+function createUniqueConstraintError() {
+  const error = new Error("Unique constraint failed") as Error & { code?: string };
+  error.code = "UNIQUE_CONSTRAINT";
+  return error;
+}
+
+async function assertEmailAddressAvailable(
+  emailAddress: string,
+  currentEmailId?: string,
+) {
+  const existingEmail = await findActiveUserEmailByAddress(emailAddress);
+  if (existingEmail && existingEmail.id !== currentEmailId) {
+    throw createUniqueConstraintError();
+  }
+}
 
 async function assertEmailQuota(
   userId: string,
@@ -71,12 +87,16 @@ async function assertEmailQuota(
 }
 
 export async function saveForwardEmail(emailData: OriginalEmail) {
-  const userEmail = await findUserEmailIdByAddress(emailData.to);
+  const normalizedEmailAddress = normalizeEmailAddress(emailData.to);
+  const userEmail = await findActiveUserEmailByAddress(normalizedEmailAddress);
   if (!userEmail) {
     return null;
   }
 
-  return insertForwardEmail(emailData);
+  return insertForwardEmail({
+    ...emailData,
+    to: normalizedEmailAddress,
+  });
 }
 
 export async function getAllUserEmails(
@@ -122,14 +142,16 @@ export async function getAllUserInboxEmailsCount() {
 }
 
 export async function createUserEmail(userId: string, emailAddress: string) {
-  assertCreatableEmailAddress(emailAddress);
+  const normalizedEmailAddress = normalizeEmailAddress(emailAddress);
+  assertCreatableEmailAddress(normalizedEmailAddress);
+  await assertEmailAddressAvailable(normalizedEmailAddress);
 
   const user = await findUserById(userId);
   if (!user) {
     throw new Error("Invalid userId");
   }
 
-  return insertUserEmail(userId, emailAddress);
+  return insertUserEmail(userId, normalizedEmailAddress);
 }
 
 export async function createManagedUserEmail(
@@ -144,6 +166,8 @@ export async function createApiUserEmail(
   actor: EmailApiActor,
   emailAddress: string,
 ) {
+  const normalizedEmailAddress = normalizeEmailAddress(emailAddress);
+
   await assertEmailQuota(
     actor.id,
     actor.team ?? "",
@@ -152,10 +176,10 @@ export async function createApiUserEmail(
   );
 
   const domains = await getDomainsByFeature("enable_email", true);
-  assertEmailDomainAllowed(emailAddress, domains);
-  assertEmailPrefixLength(emailAddress, domains);
+  assertEmailDomainAllowed(normalizedEmailAddress, domains);
+  assertEmailPrefixLength(normalizedEmailAddress, domains);
 
-  return createUserEmail(actor.id, emailAddress);
+  return createUserEmail(actor.id, normalizedEmailAddress);
 }
 
 export async function getUserEmailById(id: string) {
@@ -163,9 +187,11 @@ export async function getUserEmailById(id: string) {
 }
 
 export async function updateUserEmail(id: string, emailAddress: string) {
-  assertCreatableEmailAddress(emailAddress);
+  const normalizedEmailAddress = normalizeEmailAddress(emailAddress);
+  assertCreatableEmailAddress(normalizedEmailAddress);
+  await assertEmailAddressAvailable(normalizedEmailAddress, id);
 
-  const userEmail = await updateUserEmailById(id, emailAddress);
+  const userEmail = await updateUserEmailById(id, normalizedEmailAddress);
   assertEmailRecordExists(
     userEmail,
     "User email not found or already deleted",
@@ -178,13 +204,14 @@ export async function deleteUserEmail(id: string) {
 }
 
 export async function deleteUserEmailByAddress(emailAddress: string) {
-  const userEmail = await findActiveUserEmailByAddress(emailAddress);
+  const normalizedEmailAddress = normalizeEmailAddress(emailAddress);
+  const userEmail = await findActiveUserEmailByAddress(normalizedEmailAddress);
   assertEmailRecordExists(
     userEmail,
     "User email not found or already deleted",
   );
 
-  await softDeleteUserEmailByAddress(emailAddress);
+  await softDeleteUserEmailByAddress(normalizedEmailAddress);
 }
 
 export async function getEmailsByEmailAddress(
@@ -192,13 +219,14 @@ export async function getEmailsByEmailAddress(
   page: number,
   pageSize: number,
 ) {
-  const userEmail = await findActiveUserEmailByAddress(emailAddress);
+  const normalizedEmailAddress = normalizeEmailAddress(emailAddress);
+  const userEmail = await findActiveUserEmailByAddress(normalizedEmailAddress);
   assertEmailRecordExists(
     userEmail,
     "Email address not found or has been deleted",
   );
 
-  return listForwardEmailsByAddress(emailAddress, page, pageSize);
+  return listForwardEmailsByAddress(normalizedEmailAddress, page, pageSize);
 }
 
 export async function markEmailAsRead(emailId: string, userId: string) {

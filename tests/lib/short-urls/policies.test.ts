@@ -3,6 +3,7 @@ import { describe, expect, it } from "bun:test";
 import {
   calculateUrlStatusStats,
   isValidExpirationValue,
+  normalizeShortUrlFormData,
   shouldRestrictShortUrlsToUser,
 } from "@/lib/short-urls/policies";
 
@@ -15,6 +16,22 @@ describe("lib/short-urls/policies", () => {
   it("recognizes configured expiration values", () => {
     expect(isValidExpirationValue("3600")).toBe(true);
     expect(isValidExpirationValue("999999")).toBe(false);
+  });
+
+  it("normalizes short url form data before persistence", () => {
+    expect(
+      normalizeShortUrlFormData({
+        target: " https://example.com/page ",
+        url: " demo-link ",
+        prefix: " ORZ.CM ",
+        password: " 123456 ",
+      }),
+    ).toEqual({
+      target: "https://example.com/page",
+      url: "demo-link",
+      prefix: "orz.cm",
+      password: "123456",
+    });
   });
 
   it("calculates URL status buckets from record state", () => {

@@ -4,6 +4,7 @@ import {
   assertCreatableEmailAddress,
   assertEmailDomainAllowed,
   assertEmailPrefixLength,
+  normalizeEmailAddress,
   assertSendEmailPayload,
   canAccessAllUserEmails,
 } from "@/lib/email/policies";
@@ -27,6 +28,13 @@ describe("lib/email/policies", () => {
       "Invalid email address",
     );
     expect(() => assertCreatableEmailAddress("demo@example.com")).not.toThrow();
+  });
+
+  it("normalizes and validates email addresses", () => {
+    expect(normalizeEmailAddress(" Demo@Example.com ")).toBe("demo@example.com");
+    expect(() => assertCreatableEmailAddress("not-an-email")).toThrow(
+      "Invalid email address",
+    );
   });
 
   it("rejects domains outside the configured allow list", () => {

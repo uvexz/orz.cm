@@ -117,16 +117,6 @@ export async function findUserById(userId: string) {
   return user ?? null;
 }
 
-export async function findUserEmailIdByAddress(emailAddress: string) {
-  const [userEmail] = await db
-    .select({ id: userEmails.id })
-    .from(userEmails)
-    .where(eq(userEmails.emailAddress, emailAddress))
-    .limit(1);
-
-  return userEmail ?? null;
-}
-
 export async function insertForwardEmail(emailData: OriginalEmail) {
   const [savedEmail] = await db
     .insert(forwardEmails)

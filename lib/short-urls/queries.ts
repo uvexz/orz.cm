@@ -26,6 +26,21 @@ import type {
 
 const generateId = () => crypto.randomUUID().replace(/-/g, "");
 
+function isUniqueViolation(error: unknown): error is { code: string } {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505",
+  );
+}
+
+function toUniqueConstraintError() {
+  const error = new Error("Unique constraint failed");
+  (error as Error & { code?: string }).code = "UNIQUE_CONSTRAINT";
+  return error;
+}
+
 function buildUserShortUrlWhere(
   userId: string,
   role: UserRole,
@@ -222,65 +237,89 @@ export async function listUrlStatusRecords(
 }
 
 export async function insertUserShortUrl(data: ShortUrlFormData) {
-  const [shortUrl] = await db
-    .insert(userUrls)
-    .values({
-      id: generateId(),
-      userId: data.userId,
-      userName: data.userName || "Anonymous",
-      target: data.target,
-      url: data.url,
-      prefix: data.prefix,
-      visible: data.visible,
-      active: data.active,
-      expiration: data.expiration,
-      password: data.password,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .returning();
+  try {
+    const [shortUrl] = await db
+      .insert(userUrls)
+      .values({
+        id: generateId(),
+        userId: data.userId,
+        userName: data.userName || "Anonymous",
+        target: data.target,
+        url: data.url,
+        prefix: data.prefix,
+        visible: data.visible,
+        active: data.active,
+        expiration: data.expiration,
+        password: data.password,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
 
-  return shortUrl;
+    return shortUrl;
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw toUniqueConstraintError();
+    }
+
+    throw error;
+  }
 }
 
 export async function updateUserShortUrlByOwner(data: ShortUrlFormData) {
-  const [shortUrl] = await db
-    .update(userUrls)
-    .set({
-      target: data.target,
-      url: data.url,
-      visible: data.visible,
-      prefix: data.prefix,
-      expiration: data.expiration,
-      password: data.password,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(userUrls.id, data.id!), eq(userUrls.userId, data.userId)))
-    .returning();
+  try {
+    const [shortUrl] = await db
+      .update(userUrls)
+      .set({
+        target: data.target,
+        url: data.url,
+        visible: data.visible,
+        prefix: data.prefix,
+        expiration: data.expiration,
+        password: data.password,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(userUrls.id, data.id!), eq(userUrls.userId, data.userId)))
+      .returning();
 
-  return shortUrl ?? null;
+    return shortUrl ?? null;
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw toUniqueConstraintError();
+    }
+
+    throw error;
+  }
 }
 
 export async function updateUserShortUrlByAdmin(
   data: ShortUrlFormData,
   newUserId: string,
 ) {
-  const [shortUrl] = await db
-    .update(userUrls)
-    .set({
-      userId: newUserId,
-      target: data.target,
-      url: data.url,
-      visible: data.visible,
-      prefix: data.prefix,
-      expiration: data.expiration,
-      password: data.password,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(userUrls.id, data.id!), eq(userUrls.userId, data.userId)))
-    .returning();
+  try {
+    const [shortUrl] = await db
+      .update(userUrls)
+      .set({
+        userId: newUserId,
+        target: data.target,
+        url: data.url,
+        visible: data.visible,
+        prefix: data.prefix,
+        expiration: data.expiration,
+        password: data.password,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(userUrls.id, data.id!), eq(userUrls.userId, data.userId)))
+      .returning();
 
-  return shortUrl ?? null;
+    return shortUrl ?? null;
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw toUniqueConstraintError();
+    }
+
+    throw error;
+  }
 }
 
 export async function updateShortUrlActiveState(
@@ -353,6 +392,16 @@ export async function findShortUrlBySuffix(suffix: string) {
       password: userUrls.password,
       updatedAt: userUrls.updatedAt,
     })
+    .from(userUrls)
+    .where(eq(userUrls.url, suffix))
+    .limit(1);
+
+  return shortUrl ?? null;
+}
+
+export async function findShortUrlIdBySuffix(suffix: string) {
+  const [shortUrl] = await db
+    .select({ id: userUrls.id })
     .from(userUrls)
     .where(eq(userUrls.url, suffix))
     .limit(1);

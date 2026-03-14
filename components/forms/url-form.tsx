@@ -206,7 +206,7 @@ export function UrlForm({
         {type === "add" ? t("Create short link") : t("Edit short link")}
       </div>
       <form className="p-4" onSubmit={onSubmit}>
-        {isAdmin && (
+        {isAdmin && type === "edit" && (
           <div className="items-center justify-start gap-4 md:flex">
             <FormSectionColumns required title={t("User email")}>
               <div className="flex w-full items-center gap-2">

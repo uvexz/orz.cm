@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
@@ -194,7 +195,9 @@ export const userUrls = pgTable("user_urls", {
   updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => ({
+  urlIdx: uniqueIndex("user_urls_url_unique").on(table.url),
+}));
 
 export const urlMetas = pgTable("url_metas", {
   id: text("id").primaryKey(),
@@ -274,20 +277,28 @@ export const forwardEmails = pgTable("forward_emails", {
     .defaultNow(),
 });
 
-export const userEmails = pgTable("user_emails", {
-  id: text("id").primaryKey(),
-  userId: text("userId")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  emailAddress: text("emailAddress").notNull(),
-  createdAt: timestamp("createdAt", { mode: "date", withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  deletedAt: timestamp("deletedAt", { mode: "date", withTimezone: true }),
-});
+export const userEmails = pgTable(
+  "user_emails",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    emailAddress: text("emailAddress").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deletedAt", { mode: "date", withTimezone: true }),
+  },
+  (table) => ({
+    emailAddressActiveIdx: uniqueIndex("user_emails_email_address_active_unique")
+      .on(table.emailAddress)
+      .where(sql`${table.deletedAt} is null`),
+  }),
+);
 
 export const userSendEmails = pgTable("user_send_emails", {
   id: text("id").primaryKey(),
