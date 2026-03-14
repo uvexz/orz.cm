@@ -441,7 +441,7 @@ function getTelegramSafeContent(email: OriginalEmail) {
       ? `${normalized.slice(0, 3197)}...`
       : normalized;
 
-  return escapeTelegramHtml(truncated || "No Content");
+  return renderTelegramContentWithLinks(truncated || "No Content");
 }
 
 function stripHtml(value?: string) {
@@ -475,6 +475,43 @@ function escapeTelegramHtml(value: string) {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+function escapeTelegramHtmlAttribute(value: string) {
+  return escapeTelegramHtml(value).replaceAll('"', "&quot;");
+}
+
+function renderTelegramContentWithLinks(content: string) {
+  const urlRegex = /https?:\/\/[^\s<>"']+/g;
+  let result = "";
+  let lastIndex = 0;
+
+  for (const match of content.matchAll(urlRegex)) {
+    const rawUrl = match[0];
+    const startIndex = match.index ?? 0;
+    const { trimmedUrl, trailingText } = splitTrailingUrlPunctuation(rawUrl);
+
+    result += escapeTelegramHtml(content.slice(lastIndex, startIndex));
+    result += `<a href="${escapeTelegramHtmlAttribute(trimmedUrl)}">${escapeTelegramHtml(trimmedUrl)}</a>`;
+    result += escapeTelegramHtml(trailingText);
+    lastIndex = startIndex + rawUrl.length;
+  }
+
+  result += escapeTelegramHtml(content.slice(lastIndex));
+  return result;
+}
+
+function splitTrailingUrlPunctuation(url: string) {
+  const trailingMatch = url.match(/[),.!?]+$/);
+  if (!trailingMatch) {
+    return { trimmedUrl: url, trailingText: "" };
+  }
+
+  const trailingText = trailingMatch[0];
+  return {
+    trimmedUrl: url.slice(0, -trailingText.length),
+    trailingText,
+  };
 }
 
 async function readTelegramError(response: Response) {

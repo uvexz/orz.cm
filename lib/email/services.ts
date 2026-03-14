@@ -27,7 +27,6 @@ import {
   deleteForwardEmailsByIds,
   findActiveUserEmailByAddress,
   findOwnedUserEmail,
-  findReadableEmailId,
   findReadableEmailIds,
   findUserById,
   findUserEmailById,
@@ -232,8 +231,8 @@ export async function getEmailsByEmailAddress(
 }
 
 export async function markEmailAsRead(emailId: string, userId: string) {
-  const email = await findReadableEmailId(emailId, userId);
-  assertEmailRecordExists(email, READ_PERMISSION_ERROR);
+  const [ownedEmailId] = await findReadableEmailIds([emailId], userId);
+  assertEmailRecordExists(ownedEmailId, READ_PERMISSION_ERROR);
 
   return updateForwardEmailReadState(emailId);
 }
