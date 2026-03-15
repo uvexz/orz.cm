@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -27,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { Skeleton } from "../ui/skeleton";
 import { Switch } from "../ui/switch";
 import {
@@ -47,6 +49,12 @@ export default function QRCodeEditor({
   url: string;
 }) {
   const t = useTranslations("List");
+  const fgColorInputId = useId();
+  const bgColorInputId = useId();
+  const logoSwitchId = useId();
+  const sectionLabelClassName = "text-sm font-medium text-foreground";
+  const sectionPanelClassName =
+    "rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-4";
   const [params, setParams] = useState({
     key: user.apiKey,
     url,
@@ -95,13 +103,39 @@ export default function QRCodeEditor({
     setQrCodeUrl(generateQrCodeUrl());
   }, [params]);
 
-  const handleColorChange = useCallback(
-    debounce((color: string, type: "fgColor" | "bgColor") => {
-      setParams((prev) => ({ ...prev, [type]: color }));
-      localStorage.setItem(`qr-color-${type}`, color);
-    }, 300),
+  const handleColorChange = useMemo(
+    () =>
+      debounce((color: string, type: "fgColor" | "bgColor") => {
+        setParams((prev) => ({ ...prev, [type]: color }));
+        localStorage.setItem(`qr-color-${type}`, color);
+      }, 300),
     [],
   );
+
+  const handleChangeUrl = useMemo(
+    () =>
+      debounce((value: string) => {
+        setParams((prev) => ({ ...prev, url: value }));
+      }, 300),
+    [],
+  );
+
+  const handleChangeLogo = useMemo(
+    () =>
+      debounce((value: string) => {
+        setParams((prev) => ({ ...prev, logo: value }));
+        localStorage.setItem("qr-logo", value);
+      }, 300),
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      handleColorChange.cancel();
+      handleChangeUrl.cancel();
+      handleChangeLogo.cancel();
+    };
+  }, [handleChangeLogo, handleChangeUrl, handleColorChange]);
 
   const handleToggleLogo = (v: boolean) => {
     setParams((prev) => ({ ...prev, hideLogo: !v }));
@@ -115,19 +149,26 @@ export default function QRCodeEditor({
     anchorRef.current.click();
   }
 
-  const handleChangeUrl = useCallback(
-    debounce((value) => {
-      setParams((prev) => ({ ...prev, url: value }));
-      // localStorage.setItem("qr-url", value);
-    }, 300),
-    [],
-  );
-  const handleChangeLogo = useCallback(
-    debounce((value) => {
-      setParams((prev) => ({ ...prev, logo: value }));
-      localStorage.setItem("qr-logo", value);
-    }, 300),
-    [],
+  const renderColorSwatch = useCallback(
+    (color: string, type: "fgColor" | "bgColor", label: string) => {
+      const isSelected = params[type] === color;
+
+      return (
+        <button
+          key={color}
+          type="button"
+          aria-label={`${label}: ${color}`}
+          aria-pressed={isSelected}
+          className="size-10 rounded-full border border-border/70 shadow-sm transition-transform duration-200 ease-out hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          style={{
+            backgroundColor: color,
+            boxShadow: isSelected ? `0 0 0 2px ${color}` : undefined,
+          }}
+          onClick={() => handleColorChange(color, type)}
+        />
+      );
+    },
+    [handleColorChange, params],
   );
 
   const colorOptions = [
@@ -160,30 +201,43 @@ export default function QRCodeEditor({
   );
 
   return (
-    <div className="relative w-full max-w-lg rounded-lg bg-white p-4 shadow-lg dark:bg-neutral-900">
-      <h2 className="mb-4 text-lg font-semibold">{t("QR Code Design")}</h2>
+    <div className="relative w-full max-w-lg rounded-2xl border border-border/70 bg-background/95 p-4 shadow-sm sm:p-5">
+      <h2 className="mb-5 text-base font-semibold tracking-tight">
+        {t("QR Code Design")}
+      </h2>
 
       {/* QR Code Preview */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between gap-1">
-          <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
+      <div className={sectionPanelClassName}>
+        <div className="flex items-center gap-2">
+          <h3 className={sectionLabelClassName}>
             {t("Preview")}
           </h3>
           <DropdownMenu>
-            <DropdownMenuTrigger className="ml-auto px-2 py-2 hover:bg-accent hover:text-accent-foreground">
-              <Icons.download className="size-4" />
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t("Download QR code")}
+                className="ml-auto size-10 rounded-full text-muted-foreground hover:text-foreground"
+              >
+                <Icons.download className="size-4" />
+              </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
                 asChild
                 onClick={async () => {
                   qrData && download(await getQRAsSVGDataUri(qrData), "svg");
                 }}
               >
-                <div className="flex items-center gap-2 text-neutral-500">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 text-sm text-muted-foreground"
+                >
                   <Icons.media className="size-4" />
                   <span className="font-semibold">{t("Download SVG")}</span>
-                </div>
+                </button>
               </DropdownMenuItem>
               <DropdownMenuItem
                 asChild
@@ -195,10 +249,13 @@ export default function QRCodeEditor({
                     );
                 }}
               >
-                <div className="flex items-center gap-2 text-neutral-500">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 text-sm text-muted-foreground"
+                >
                   <Icons.media className="size-4" />
                   <span className="font-semibold">{t("Download PNG")}</span>
-                </div>
+                </button>
               </DropdownMenuItem>
               <DropdownMenuItem
                 asChild
@@ -210,10 +267,13 @@ export default function QRCodeEditor({
                     );
                 }}
               >
-                <div className="flex items-center gap-2 text-neutral-500">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 text-sm text-muted-foreground"
+                >
                   <Icons.media className="size-4" />
                   <span className="font-semibold">{t("Download JPG")}</span>
-                </div>
+                </button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -223,10 +283,17 @@ export default function QRCodeEditor({
             ref={anchorRef}
           />
 
-          <CopyButton value={`${siteConfig.url}${qrCodeUrl}`}></CopyButton>
+          <CopyButton
+            aria-label={t("Copy QR code link")}
+            value={`${siteConfig.url}${qrCodeUrl}`}
+            className="size-10 rounded-full border border-transparent text-muted-foreground hover:border-border hover:bg-accent/60 hover:text-foreground"
+          />
         </div>
-        <div className="relative mt-2 flex h-40 items-center justify-center overflow-hidden rounded-md border border-gray-300">
-          <div className="absolute inset-0 h-full w-full bg-neutral-50/60 bg-[radial-gradient(#d7d9dd_1px,transparent_1px)] [background-size:8px_9px]"></div>
+        <div className="relative mt-3 flex h-48 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted/30">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] opacity-50 [background-size:8px_9px]"
+          ></div>
           <div
             className="flex size-full items-center justify-center"
             style={{ filter: "blur(0px)", opacity: 1, willChange: "auto" }}
@@ -237,10 +304,10 @@ export default function QRCodeEditor({
               {qrCodeUrl && (
                 <BlurImage
                   src={qrCodeUrl}
-                  alt="QR Code Preview"
+                  alt="Preview of your QR code"
                   width={128}
                   height={128}
-                  className="h-auto max-w-full rounded"
+                  className="h-auto max-w-full rounded-lg"
                 />
               )}
             </Suspense>
@@ -248,12 +315,13 @@ export default function QRCodeEditor({
         </div>
       </div>
 
-      <div className="group mb-3 flex items-center justify-between">
-        <h3 className="text-nowrap text-sm font-semibold text-neutral-600 transition-all group-hover:ml-1 group-hover:font-bold dark:text-neutral-300">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Label className={sectionLabelClassName} htmlFor="qr-destination-url">
           {t("Url")}
-        </h3>
+        </Label>
         <Input
-          className="ml-auto w-3/5"
+          id="qr-destination-url"
+          className="w-full sm:w-3/5"
           type="text"
           placeholder="https://example.com"
           defaultValue={params.url}
@@ -261,15 +329,23 @@ export default function QRCodeEditor({
         />
       </div>
 
-      <div className="mb-3">
-        <div className="group mb-3 flex items-center justify-between">
-          <h3 className="text-nowrap text-sm font-semibold text-neutral-600 transition-all group-hover:ml-1 group-hover:font-bold dark:text-neutral-300">
+      <div className={`mt-4 ${sectionPanelClassName}`}>
+        <div className="flex items-center gap-2">
+          <Label className={sectionLabelClassName} htmlFor={logoSwitchId}>
             {t("Logo")}
-          </h3>
+          </Label>
           <TooltipProvider>
             <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <Icons.help className="ml-1 size-4 text-neutral-400" />
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("Display your logo in the center of the QR code")}
+                  className="size-8 rounded-full text-muted-foreground hover:text-foreground"
+                >
+                  <Icons.help className="size-4" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-64 text-left">
                 {t("Display your logo in the center of the QR code")}.
@@ -277,36 +353,39 @@ export default function QRCodeEditor({
             </Tooltip>
           </TooltipProvider>
           <Switch
+            id={logoSwitchId}
             className="ml-auto"
             checked={!params.hideLogo}
             onCheckedChange={(v) => handleToggleLogo(v)}
           />
         </div>
-        <details className="group">
-          <summary className="flex w-full cursor-pointer items-center justify-between">
-            <h3 className="text-nowrap text-sm font-semibold text-neutral-600 transition-all group-hover:ml-1 group-hover:font-bold dark:text-neutral-300">
+        <details className="group mt-3 rounded-xl border border-border/60 bg-background/80 px-3 py-3">
+          <summary className="flex w-full list-none cursor-pointer items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <h3 className={sectionLabelClassName}>
               {t("Custom Logo")}
             </h3>
             <TooltipProvider>
               <Tooltip delayDuration={0}>
-                <TooltipTrigger>
-                  <Badge
+                <TooltipTrigger asChild>
+                  <span>
+                    <Badge
                     variant={"outline"}
-                    className="ml-1 text-xs font-semibold"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
                   >
                     <Icons.crown className="mr-1 size-3" />
                     Premium
                   </Badge>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-64 text-left">
                   {t("Customize your QR code logo")}.
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Icons.chevronDown className="ml-auto size-4" />
+            <Icons.chevronDown className="ml-auto size-4 transition-transform duration-200 ease-out group-open:rotate-180" />
           </summary>
           <Input
-            className="mt-2"
+            className="mt-3"
             type="text"
             placeholder="https://example.com/logo.png"
             disabled={params.hideLogo}
@@ -316,32 +395,36 @@ export default function QRCodeEditor({
         </details>
       </div>
 
-      <details className="group mb-3">
-        <summary className="flex w-full cursor-pointer items-center justify-between">
-          <h3 className="text-nowrap text-sm font-semibold text-neutral-600 transition-all group-hover:ml-1 group-hover:font-bold dark:text-neutral-300">
+      <details className={`group mt-4 ${sectionPanelClassName}`}>
+        <summary className="flex w-full list-none cursor-pointer items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+          <h3 className={sectionLabelClassName}>
             {t("Front Color")}
           </h3>
-          <Icons.chevronDown className="ml-auto size-4" />
+          <Icons.chevronDown className="size-4 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180" />
         </summary>
-        <div className="mt-2 flex items-start space-x-4">
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
           <TooltipProvider>
             <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <div className="relative flex h-8 w-32 shrink-0 rounded-md shadow-sm">
+              <TooltipTrigger asChild>
+                <div className="relative flex h-10 w-full shrink-0 rounded-lg shadow-sm sm:w-40">
                   <div
-                    className="h-full w-10 rounded-l-md border"
+                    className="h-full w-10 rounded-l-lg border"
                     data-state="closed"
                     style={{
                       backgroundColor: params.fgColor,
                       borderColor: params.fgColor,
                     }}
                   ></div>
+                  <Label className="sr-only" htmlFor={fgColorInputId}>
+                    {t("Front Color")}
+                  </Label>
                   <input
-                    id="color"
-                    className="block w-full rounded-r-md border-2 border-l-0 pl-3 text-neutral-900 placeholder:text-gray-400 focus:outline-none focus:ring-black dark:text-neutral-300 sm:text-sm"
+                    id={fgColorInputId}
+                    aria-label={t("Front Color")}
+                    className="block w-full rounded-r-lg border-2 border-l-0 bg-background pl-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
                     spellCheck="false"
                     defaultValue={params.fgColor}
-                    name="color"
+                    name="front-color"
                     style={{ borderColor: params.fgColor }}
                     onChange={(e) =>
                       handleColorChange(e.target.value, "fgColor")
@@ -357,45 +440,44 @@ export default function QRCodeEditor({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <div className="flex flex-wrap items-center justify-start gap-2">
-            {colorOptions.map((color) => (
-              <button
-                key={color}
-                className="size-[30px] rounded-full border"
-                style={{ backgroundColor: color }}
-                onClick={() => handleColorChange(color, "fgColor")}
-              />
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {colorOptions.map((color) =>
+              renderColorSwatch(color, "fgColor", t("Front Color")),
+            )}
           </div>
         </div>
       </details>
 
-      <details className="group" open={true}>
-        <summary className="flex w-full cursor-pointer items-center justify-between">
-          <h3 className="text-nowrap text-sm font-semibold text-neutral-600 transition-all group-hover:ml-1 group-hover:font-bold dark:text-neutral-300">
+      <details className={`group mt-4 ${sectionPanelClassName}`} open={true}>
+        <summary className="flex w-full list-none cursor-pointer items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+          <h3 className={sectionLabelClassName}>
             {t("Background Color")}
           </h3>
-          <Icons.chevronDown className="ml-auto size-4" />
+          <Icons.chevronDown className="size-4 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180" />
         </summary>
-        <div className="my-2 flex items-start space-x-4">
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
           <TooltipProvider>
             <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <div className="relative flex h-8 w-32 shrink-0 rounded-md shadow-sm">
+              <TooltipTrigger asChild>
+                <div className="relative flex h-10 w-full shrink-0 rounded-lg shadow-sm sm:w-40">
                   <div
-                    className="h-full w-10 rounded-l-md border"
+                    className="h-full w-10 rounded-l-lg border"
                     data-state="closed"
                     style={{
                       backgroundColor: params.bgColor,
                       borderColor: params.bgColor,
                     }}
                   ></div>
+                  <Label className="sr-only" htmlFor={bgColorInputId}>
+                    {t("Background Color")}
+                  </Label>
                   <input
-                    id="color"
-                    className="block w-full rounded-r-md border-2 border-l-0 pl-3 text-neutral-900 placeholder:text-gray-400 focus:outline-none focus:ring-black dark:text-neutral-300 sm:text-sm"
+                    id={bgColorInputId}
+                    aria-label={t("Background Color")}
+                    className="block w-full rounded-r-lg border-2 border-l-0 bg-background pl-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
                     spellCheck="false"
                     defaultValue={params.bgColor}
-                    name="color"
+                    name="background-color"
                     style={{ borderColor: params.bgColor }}
                     onChange={(e) =>
                       handleColorChange(e.target.value, "bgColor")
@@ -411,29 +493,26 @@ export default function QRCodeEditor({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <div className="flex flex-wrap items-center justify-start gap-2">
-            {colorOptions.map((color) => (
-              <button
-                key={color}
-                className="size-[30px] rounded-full border"
-                style={{ backgroundColor: color }}
-                onClick={() => handleColorChange(color, "bgColor")}
-              />
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {colorOptions.map((color) =>
+              renderColorSwatch(color, "bgColor", t("Background Color")),
+            )}
           </div>
         </div>
       </details>
 
       {/* Api Key Mask */}
       {!user.apiKey && (
-        <div className="absolute left-0 top-0 z-20 flex size-full flex-col items-center justify-center gap-2 bg-neutral-100/20 px-4 backdrop-blur">
-          <p className="text-center text-sm">
-            {t("Please create a api key before use this feature")}.
-          </p>
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-background/80 px-4 backdrop-blur-sm">
+          <div className="max-w-xs rounded-2xl border border-border/70 bg-background px-5 py-4 text-center shadow-sm">
+            <p className="text-sm text-muted-foreground">
+              {t("Please create a api key before use this feature")}.
+            </p>
 
-          <Link href={"/dashboard/settings"}>
-            <Button>{t("Create Api Key")}</Button>
-          </Link>
+            <Link href={"/dashboard/settings"}>
+              <Button className="mt-4">{t("Create Api Key")}</Button>
+            </Link>
+          </div>
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ import useSWR from "swr";
 import { cn, fetcher, htmlToText } from "@/lib/utils";
 
 import BlurImage from "../shared/blur-image";
+import { EmptyPlaceholder } from "../shared/empty-placeholder";
 import { Icons } from "../shared/icons";
 import { PaginationWrapper } from "../shared/pagination";
 import { TimeAgoIntl } from "../shared/time-ago";
@@ -58,20 +59,56 @@ export default function EmailList({
   const [showMutiCheckBox, setShowMutiCheckBox] = useState(false);
 
   const [isDeleting, startDeleteTransition] = useTransition();
+  const inboxQuery = emailAddress
+    ? new URLSearchParams({
+        emailAddress,
+        page: currentPage.toString(),
+        size: pageSize.toString(),
+      }).toString()
+    : null;
+
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
 
   const { data, error, isLoading, mutate } = useSWR<{
     total: number;
     list: ForwardEmail[];
   }>(
-    emailAddress
-      ? `/api/email/inbox?emailAddress=${emailAddress}&page=${currentPage}&size=${pageSize}`
-      : null,
+    inboxQuery ? `/api/email/inbox?${inboxQuery}` : null,
     fetcher,
     {
       refreshInterval: isAutoRefresh ? 5000 : 0,
       dedupingInterval: 2000,
     },
   );
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedEmails([]);
+    setShowMutiCheckBox(false);
+    onSelectEmail(null);
+  }, [emailAddress, onSelectEmail]);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, data, pageSize]);
+
+  useEffect(() => {
+    if (!data?.list) {
+      return;
+    }
+
+    setSelectedEmails((prev) =>
+      prev.filter((id) => data.list.some((email) => email.id === id)),
+    );
+  }, [data]);
 
   useEffect(() => {
     if (emailAddress && selectedEmailId) {
@@ -85,11 +122,23 @@ export default function EmailList({
   }, [emailAddress, data, selectedEmailId]);
 
   const handleMarkAsRead = async (emailId: string) => {
-    await fetch("/api/email/read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ emailId }),
-    }).then(() => mutate());
+    try {
+      const response = await fetch("/api/email/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailId }),
+      });
+
+      if (!response.ok) {
+        throw new Error((await response.text()) || t("Please try again"));
+      }
+
+      await mutate();
+    } catch (error: unknown) {
+      toast.error(t("Failed to mark emails as read"), {
+        description: getErrorMessage(error, t("Please try again")),
+      });
+    }
   };
 
   const handleMarkSelectedAsRead = async () => {
@@ -107,13 +156,16 @@ export default function EmailList({
 
       if (response.ok) {
         setSelectedEmails([]);
-        mutate();
+        await mutate();
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || "Failed to mark emails as read");
+        toast.error(t("Failed to mark emails as read"), {
+          description: (await response.text()) || t("Please try again"),
+        });
       }
-    } catch (_error) {
-      toast.error("Error marking emails as read");
+    } catch (error: unknown) {
+      toast.error(t("Failed to mark emails as read"), {
+        description: getErrorMessage(error, t("Please try again")),
+      });
     }
   };
 
@@ -135,9 +187,16 @@ export default function EmailList({
 
   const handleManualRefresh = async () => {
     if (!isAutoRefresh) {
-      setIsRefreshing(true);
-      await mutate();
-      setIsRefreshing(false);
+      try {
+        setIsRefreshing(true);
+        await mutate();
+      } catch (error: unknown) {
+        toast.error(t("Refresh failed"), {
+          description: getErrorMessage(error, t("Please try again")),
+        });
+      } finally {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -153,12 +212,27 @@ export default function EmailList({
 
   const handleDeletEmails = async (ids: string[]) => {
     startDeleteTransition(async () => {
-      await fetch("/api/email/inbox", {
-        method: "DELETE",
-        body: JSON.stringify({ ids }),
-      }).then((v) => {
-        v.status === 200 && mutate();
-      });
+      try {
+        const response = await fetch("/api/email/inbox", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+
+        if (!response.ok) {
+          throw new Error((await response.text()) || t("Please try again"));
+        }
+
+        if (selectedEmailId && ids.includes(selectedEmailId)) {
+          onSelectEmail(null);
+        }
+        setSelectedEmails([]);
+        await mutate();
+      } catch (error: unknown) {
+        toast.error(t("Failed to delete emails"), {
+          description: getErrorMessage(error, t("Please try again")),
+        });
+      }
     });
   };
 
@@ -167,7 +241,7 @@ export default function EmailList({
   }
 
   return (
-    <div className={cn("grids flex flex-1 flex-col", className)}>
+    <div className={cn("grids flex min-w-0 flex-1 flex-col", className)}>
       <div className="flex items-center gap-2 bg-neutral-200/40 p-2 text-base font-semibold text-neutral-600 backdrop-blur dark:bg-neutral-800 dark:text-neutral-50">
         <Icons.inbox size={20} />
         <span>{t("INBOX")}</span>
@@ -277,6 +351,22 @@ export default function EmailList({
           ))}
         </div>
       )}
+      {!isLoading && error && (
+        <div className="flex h-[calc(100vh-105px)] items-center justify-center p-4">
+          <EmptyPlaceholder className="max-h-none shadow-none">
+            <EmptyPlaceholder.Icon name="warning" />
+            <EmptyPlaceholder.Title>
+              {t("Failed to load emails")}
+            </EmptyPlaceholder.Title>
+            <EmptyPlaceholder.Description className="max-w-sm break-words">
+              {getErrorMessage(error, t("Please try again"))}
+            </EmptyPlaceholder.Description>
+            <Button type="button" variant="outline" onClick={handleManualRefresh}>
+              {t("Retry")}
+            </Button>
+          </EmptyPlaceholder>
+        </div>
+      )}
       {!isLoading && !error && (
         <div className="scrollbar-hidden relative h-[calc(100vh-105px)] animate-fade-in overflow-scroll">
           {selectedEmailId ? (
@@ -308,14 +398,14 @@ export default function EmailList({
                         </div>
                       )}
                       <div
-                        className="flex-1 cursor-pointer"
+                        className="min-w-0 flex-1 cursor-pointer"
                         onClick={() => handleEmailSelection(email.id)}
                       >
-                        <div className="mb-1 flex items-center justify-between">
-                          <span className="w-3/4 truncate text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                        <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-800 dark:text-neutral-200">
                             {email.fromName || email.subject || "Untitled"}
                           </span>
-                          <span className="ml-auto text-xs text-neutral-600 dark:text-neutral-400">
+                          <span className="shrink-0 text-xs text-neutral-600 dark:text-neutral-400">
                             <TimeAgoIntl
                               date={new Date(email.date ?? email.createdAt)}
                             />
@@ -324,10 +414,10 @@ export default function EmailList({
                             <Icons.checkCheck className="ml-2 size-3 text-green-600" />
                           )}
                         </div>
-                        <div className="mb-0.5 line-clamp-1 w-3/4 truncate text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                        <div className="mb-0.5 min-w-0 line-clamp-1 truncate text-xs font-medium text-neutral-600 dark:text-neutral-400">
                           {email.subject}
                         </div>
-                        <div className="line-clamp-2 break-all text-xs text-neutral-500">
+                        <div className="line-clamp-2 break-words text-xs text-neutral-500">
                           {email.html
                             ? htmlToText(email.html)
                             : email.text || "No content"}

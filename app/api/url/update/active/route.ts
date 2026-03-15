@@ -18,6 +18,12 @@ export const POST = createAuthedApiRoute(
       });
     }
 
+    if (active !== 0 && active !== 1) {
+      throw badRequest({
+        statusText: "Active must be 0 or 1",
+      });
+    }
+
     const res = await updateUserShortUrlActive(user.id, id, active, user.role);
     if (res.status !== "success") {
       throw new ApiError(400, "Update failed");

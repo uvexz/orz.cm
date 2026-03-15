@@ -1,10 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import useSWR from "swr";
-
-import { fetcher } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 import { Icons } from "../shared/icons";
 import { Button } from "../ui/button";
@@ -14,51 +10,83 @@ interface NotificationConfigResponse {
 }
 
 export function Notification() {
+  const [notification, setNotification] = useState("");
   const [isVisible, setIsVisible] = useState(true);
-
-  const { data, isLoading, error } = useSWR<NotificationConfigResponse>(
-    "/api/configs?key=system_notification",
-    fetcher,
-    { dedupingInterval: 30000 },
-  );
 
   const handleClose = () => {
     setIsVisible(false);
   };
 
-  const notification =
-    typeof data?.system_notification === "string" ? data.system_notification : "";
+  useEffect(() => {
+    const controller = new AbortController();
 
-  if (error || isLoading || !notification) return null;
+    const loadNotification = async () => {
+      try {
+        const response = await fetch("/api/configs?key=system_notification", {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as NotificationConfigResponse;
+        const nextNotification =
+          typeof data.system_notification === "string"
+            ? data.system_notification
+            : "";
+
+        setNotification(nextNotification);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("[Notification] Failed to load system notification", error);
+        }
+      }
+    };
+
+    const idleCallback =
+      "requestIdleCallback" in window
+        ? window.requestIdleCallback(() => {
+            void loadNotification();
+          }, { timeout: 1500 })
+        : null;
+    const timeoutId =
+      idleCallback === null
+        ? window.setTimeout(() => {
+            void loadNotification();
+          }, 250)
+        : null;
+
+    return () => {
+      controller.abort();
+
+      if (idleCallback !== null) {
+        window.cancelIdleCallback(idleCallback);
+      }
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
+  if (!notification || !isVisible) return null;
 
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{
-            duration: 0.3,
-            ease: "easeInOut",
-          }}
-          className="relative flex max-h-48 w-full items-center justify-center bg-muted text-sm text-primary"
-        >
-          <div
-            className="flex-1 px-8 py-2.5 text-center"
-            dangerouslySetInnerHTML={{ __html: notification }}
-          />
+    <div className="relative flex max-h-48 w-full items-center justify-center bg-muted text-sm text-primary">
+      <div
+        className="flex-1 px-8 py-2.5 text-center"
+        dangerouslySetInnerHTML={{ __html: notification }}
+      />
 
-          <Button
-            onClick={handleClose}
-            variant={"ghost"}
-            size={"icon"}
-            className="absolute right-1.5 top-[18px] flex size-6 -translate-y-1/2 items-center justify-center"
-          >
-            <Icons.close className="size-4 text-primary" />
-          </Button>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      <Button
+        onClick={handleClose}
+        variant={"ghost"}
+        size={"icon"}
+        className="absolute right-1.5 top-[18px] flex size-6 -translate-y-1/2 items-center justify-center"
+      >
+        <Icons.close className="size-4 text-primary" />
+      </Button>
+    </div>
   );
 }

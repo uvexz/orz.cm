@@ -26,11 +26,11 @@ export async function UserInfoCard({
   const Icon = Icons[icon || "arrowRight"];
   const t = await getTranslations("Components");
   return (
-    <Card className="grids group bg-gray-50/70 backdrop-blur-lg dark:bg-primary-foreground">
+    <Card className="group border-border bg-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">
           <Link
-            className="font-semibold text-slate-500 duration-500 group-hover:text-blue-500 group-hover:underline"
+            className="font-semibold text-foreground/80 transition-colors duration-200 group-hover:text-foreground"
             href={link}
           >
             {t(title)}
@@ -45,7 +45,7 @@ export async function UserInfoCard({
           <div className="flex items-end gap-2 text-2xl font-bold">
             <CountUp count={count} />
             {total !== undefined && (
-              <span className="align-top text-base text-slate-500">
+              <span className="align-top text-base text-muted-foreground">
                 / {total}
               </span>
             )}
@@ -78,11 +78,11 @@ export async function DashboardInfoCard({
   const t = await getTranslations("Components");
   const Icon = Icons[icon || "arrowRight"];
   return (
-    <Card className="grids group animate-fade-in bg-gray-50/70 backdrop-blur-lg dark:bg-primary-foreground">
+    <Card className="group animate-fade-in border-border bg-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">
           <Link
-            className="font-semibold text-slate-500 duration-500 group-hover:text-blue-500 group-hover:underline"
+            className="font-semibold text-foreground/80 transition-colors duration-200 group-hover:text-foreground"
             href={link}
           >
             {t(title)}
@@ -97,7 +97,7 @@ export async function DashboardInfoCard({
           <div className="flex items-end gap-2 text-2xl font-bold">
             <CountUp count={monthTotal} />
             {total !== undefined && (
-              <p className="align-top text-base text-slate-500">
+              <p className="align-top text-base text-muted-foreground">
                 / {nFormatter(limit)}{" "}
                 <span className="text-xs">({t("monthly")})</span>
               </p>
@@ -124,11 +124,11 @@ export async function HeroCard({
   // const t = useTranslations("Components");
   const t = await getTranslations("Components");
   return (
-    <div className="grids group relative mb-4 h-full w-full shrink-0 origin-left overflow-hidden rounded-lg border bg-gray-50/70 px-5 pt-5 text-left duration-500 before:absolute before:right-1 before:top-1 before:z-[2] before:h-12 before:w-12 before:rounded-full before:bg-violet-500 before:blur-lg before:duration-500 after:absolute after:right-8 after:top-3 after:z-[2] after:h-20 after:w-20 after:rounded-full after:bg-rose-300 after:blur-lg after:duration-500 hover:border-cyan-600 hover:decoration-2 hover:duration-500 hover:before:-bottom-8 hover:before:right-12 hover:before:blur hover:before:[box-shadow:_20px_20px_20px_30px_#a21caf] hover:after:-right-8 group-hover:before:duration-500 group-hover:after:duration-500 dark:bg-primary-foreground">
+    <div className="group relative mb-4 h-full w-full shrink-0 origin-left overflow-hidden rounded-lg border border-border bg-card px-5 py-5 text-left">
       <div className="flex flex-row items-center justify-between">
         <Link
           href="/emails"
-          className="text-lg font-bold duration-500 group-hover:text-blue-500 group-hover:underline"
+          className="text-lg font-bold text-foreground transition-colors duration-200 group-hover:text-foreground/80"
         >
           {t("Email box")}
         </Link>
@@ -142,7 +142,7 @@ export async function HeroCard({
           <div className="flex items-end gap-2 text-2xl font-bold">
             <CountUp count={monthTotal} />
             {total !== undefined && (
-              <p className="align-top text-base text-slate-500">
+              <p className="align-top text-base text-muted-foreground">
                 / {nFormatter(limit)}{" "}
                 <span className="text-xs">({t("monthly")})</span>
               </p>
@@ -171,11 +171,11 @@ export async function StaticInfoCard({
   const Icon = Icons[icon || "arrowRight"];
   const t = await getTranslations("Components");
   return (
-    <Card className="grids group bg-gray-50/70 backdrop-blur-lg dark:bg-primary-foreground">
+    <Card className="group border-border bg-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">
           <Link
-            className="font-semibold text-slate-500 duration-500 group-hover:text-blue-500 group-hover:underline"
+            className="font-semibold text-foreground/80 transition-colors duration-200 group-hover:text-foreground"
             href={link}
           >
             {t(title)}

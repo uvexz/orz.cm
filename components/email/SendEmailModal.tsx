@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -21,6 +22,7 @@ interface SendEmailModalProps {
   className?: string;
   emailAddress: string | null;
   triggerButton?: React.ReactNode; // 自定义触发按钮
+  triggerLabel?: string;
   onSuccess?: () => void; // 发送成功后的回调
 }
 
@@ -28,6 +30,7 @@ export function SendEmailModal({
   className,
   emailAddress,
   triggerButton,
+  triggerLabel,
   onSuccess,
 }: SendEmailModalProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -41,19 +44,33 @@ export function SendEmailModal({
 
   const t = useTranslations("Email");
 
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+
+  const openModal = (
+    event?: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>,
+  ) => {
+    event?.stopPropagation();
+    setIsOpen(true);
+  };
+
   const handleSendEmail = async () => {
     if (!emailAddress) {
-      toast.error("No email address selected");
+      toast.error(t("No email address selected"));
       return;
     }
 
-    if (!sendForm.to || !sendForm.subject || !sendForm.html) {
-      toast.error("Please fill in all required fields");
+    const trimmedTo = sendForm.to.trim();
+    const trimmedSubject = sendForm.subject.trim();
+    const trimmedText = sendForm.text.trim();
+
+    if (!trimmedTo || !trimmedSubject || !sendForm.html.trim()) {
+      toast.error(t("Please fill in all required fields"));
       return;
     }
 
-    if (sendForm.text.trim().length < 10) {
-      toast.error("Email content must be at least 10 characters");
+    if (trimmedText.length < 10) {
+      toast.error(t("Email content must be at least 10 characters"));
       return;
     }
 
@@ -61,27 +78,32 @@ export function SendEmailModal({
       try {
         const response = await fetch("/api/email/send", {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             from: emailAddress,
-            to: sendForm.to,
-            subject: sendForm.subject,
+            to: trimmedTo,
+            subject: trimmedSubject,
             html: sendForm.html,
-            text: sendForm.text,
+            text: trimmedText,
           }),
         });
 
         if (response.ok) {
-          toast.success("Email sent successfully");
+          toast.success(t("Email sent successfully"));
           setIsOpen(false);
           setSendForm({ to: "", subject: "", html: "", text: "" });
           onSuccess?.();
         } else {
-          toast.error("Failed to send email", {
+          toast.error(t("Failed to send email"), {
             description: await response.text(),
           });
         }
-      } catch (error) {
-        toast.error(error.message || "Error sending email");
+      } catch (error: unknown) {
+        toast.error(t("Error sending email"), {
+          description: getErrorMessage(error, t("Please try again")),
+        });
       }
     });
   };
@@ -89,12 +111,25 @@ export function SendEmailModal({
   return (
     <>
       {triggerButton ? (
-        <div onClick={() => setIsOpen(true)}>{triggerButton}</div>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={triggerLabel}
+          onClick={openModal}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              openModal(event);
+            }
+          }}
+        >
+          {triggerButton}
+        </div>
       ) : (
         <Button
           className={className}
           variant="ghost"
           size="sm"
+          aria-label={triggerLabel ?? t("Send Email")}
           onClick={() => setIsOpen(true)}
         >
           <Icons.send size={17} />
@@ -140,7 +175,7 @@ export function SendEmailModal({
                 onChange={(e) =>
                   setSendForm({ ...sendForm, subject: e.target.value })
                 }
-                placeholder="Your subject"
+                placeholder={t("Your subject")}
                 className="border-none"
               />
             </div>

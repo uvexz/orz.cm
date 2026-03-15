@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -42,18 +42,24 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
     userName: "",
   });
   const [isPending, startTransition] = useTransition();
+  const [statusPendingIds, setStatusPendingIds] = useState<Record<string, boolean>>(
+    {},
+  );
   const [currentListClickData, setCurrentListClickData] = useState<
     Record<string, number>
   >({});
 
   const [searchType, setSearchType] = useState<UrlListSearchType>("slug");
+  const deferredSearchParams = useDeferredValue(searchParams);
 
   const { mutate } = useSWRConfig();
   const listQuery = useMemo(
-    () => buildUrlListQuery(action, currentPage, pageSize, searchParams),
-    [action, currentPage, pageSize, searchParams],
+    () => buildUrlListQuery(action, currentPage, pageSize, deferredSearchParams),
+    [action, currentPage, pageSize, deferredSearchParams],
   );
-  const { data, isLoading } = useSWR<UrlListResponse>(
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+  const { data, error, isLoading } = useSWR<UrlListResponse, Error>(
     listQuery,
     fetcher,
     {
@@ -62,7 +68,11 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
   );
 
   const currentListIds = useMemo(() => {
-    return data?.list?.map((item) => item.id ?? "") ?? [];
+    return (
+      data?.list
+        ?.map((item) => item.id)
+        .filter((id): id is string => Boolean(id)) ?? []
+    );
   }, [data?.list]);
   const currentListIdsKey = currentListIds.join(",");
 
@@ -72,37 +82,96 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
       return;
     }
 
+    let isActive = true;
+
     startTransition(async () => {
-      const res = await fetch(action, {
-        method: "POST",
-        body: JSON.stringify({ ids: currentListIds }),
-      });
-      if (res.ok) {
+      try {
+        const res = await fetch(action, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ids: currentListIds }),
+        });
+        if (!res.ok) {
+          throw new Error((await res.text()) || t("Please try again"));
+        }
+        if (!isActive) {
+          return;
+        }
         const nextData = (await res.json()) as Record<string, number>;
         setCurrentListClickData(nextData);
+      } catch {
+        if (isActive) {
+          setCurrentListClickData({});
+        }
       }
     });
-  }, [action, currentListIds, currentListIdsKey, startTransition]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [action, currentListIds, currentListIdsKey, startTransition, t]);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, data, pageSize]);
+
+  useEffect(() => {
+    if (!selectedUrl?.id || data?.list?.some((item) => item.id === selectedUrl.id)) {
+      return;
+    }
+
+    setSelectedUrl(null);
+    setCurrentView("List");
+    setShowQrcode(false);
+  }, [data?.list, selectedUrl, setShowQrcode]);
 
   const handleRefresh = () => {
-    mutate(listQuery, undefined);
+    void mutate(listQuery);
   };
 
   const handleChangeStatu = async (checked: boolean, id: string) => {
-    const res = await fetch(`/api/url/update/active`, {
-      method: "POST",
-      body: JSON.stringify({
-        id,
-        active: checked ? 1 : 0,
-      }),
-    });
-    if (res.ok) {
-      const data = (await res.json()) as Record<string, unknown>;
-      if (data) {
-        toast.success("Successed!");
+    if (!id) {
+      return;
+    }
+
+    setStatusPendingIds((prev) => ({ ...prev, [id]: true }));
+
+    try {
+      const res = await fetch(`/api/url/update/active`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          active: checked ? 1 : 0,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error((await res.text()) || t("Please try again"));
       }
-    } else {
-      toast.error("Activation failed!");
+
+      toast.success(t("Status updated"));
+      void mutate(listQuery);
+    } catch (error: unknown) {
+      toast.error(t("Activation failed"), {
+        description: getErrorMessage(error, t("Please try again")),
+      });
+    } finally {
+      setStatusPendingIds((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     }
   };
 
@@ -176,6 +245,7 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
           userRole={user.role}
           data={data?.list || []}
           isLoading={isLoading}
+          error={error}
           onRefresh={handleRefresh}
           onAddUrl={handleOpenAddForm}
           showCreateAction={!action.includes("admin")}
@@ -189,12 +259,15 @@ export default function UserUrlsList({ user, action }: UrlListProps) {
           data={data}
           isLoading={isLoading}
           isPending={isPending}
+          error={error}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
           pageSize={pageSize}
           setPageSize={setPageSize}
           selectedUrl={selectedUrl}
           currentListClickData={currentListClickData}
+          statusPendingIds={statusPendingIds}
+          onRetry={handleRefresh}
           onEdit={handleOpenEditForm}
           onOpenQrCode={handleOpenQrCode}
           onToggleStats={handleToggleStats}

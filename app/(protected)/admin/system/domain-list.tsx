@@ -328,6 +328,7 @@ export default function DomainList({ user, action }: DomainListProps) {
                               className="size-[25px] p-1.5"
                               size="sm"
                               variant="ghost"
+                              aria-label={t("Open domain actions")}
                             >
                               <Icons.moreVertical className="size-4" />
                             </Button>

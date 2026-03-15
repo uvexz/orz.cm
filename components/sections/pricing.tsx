@@ -13,7 +13,7 @@ import { PlanQuotaFormData } from "@/lib/dto/plan";
 import { cn, fetcher, nFormatter } from "@/lib/utils";
 
 import { Icons } from "../shared/icons";
-import { Button, buttonVariants } from "../ui/button";
+import { buttonVariants } from "../ui/button";
 
 const getBenefits = (plan: PlanQuotaFormData) => [
   {
@@ -78,30 +78,30 @@ export const PricingSection = () => {
   return (
     <section
       id="pricing"
-      className="relative overflow-hidden bg-zinc-50 text-zinc-800 selection:bg-zinc-200 dark:bg-zinc-950 dark:text-zinc-200 dark:selection:bg-zinc-600"
+      className="relative border-y bg-muted/20 text-foreground"
     >
-      <div className="absolute inset-0 bg-[radial-gradient(100%_100%_at_50%_0%,rgba(245,245,245,0.8),rgba(240,240,240,1))] dark:bg-[radial-gradient(100%_100%_at_50%_0%,rgba(13,13,17,1),rgba(9,9,11,1))]"></div>
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-20 text-center md:px-8">
         <div className="mb-12 space-y-3">
           <h2 className="text-center text-xl font-semibold leading-tight sm:text-3xl sm:leading-tight md:text-4xl md:leading-tight">
             {t("pricingTitle")}
           </h2>
-          <p className="text-center text-base text-zinc-600 dark:text-zinc-400 md:text-lg">
+          <p className="text-center text-base text-muted-foreground md:text-lg">
             {t("pricingDescription")}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {plan && (
             <PriceCard
               tier={t("freeTier")}
               price={t("freePrice")}
               bestFor={t("freeBestFor")}
               CTA={
-                <Link href={"/dashboard"}>
-                  <Button className="w-full" variant={"default"}>
-                    {t("getStartedFree")}
-                  </Button>
+                <Link
+                  href={"/dashboard"}
+                  className={cn(buttonVariants({ variant: "default" }), "w-full")}
+                >
+                  {t("getStartedFree")}
                 </Link>
               }
               benefits={getBenefits(plan.list[0])}
@@ -113,10 +113,11 @@ export const PricingSection = () => {
               price={t("enterprisePrice")}
               bestFor={t("enterpriseBestFor")}
               CTA={
-                <Link href={`mailto:${siteConfig.mailSupport}`}>
-                  <Button className="w-full" variant="outline">
-                    {t("contactUs")}
-                  </Button>
+                <Link
+                  href={`mailto:${siteConfig.mailSupport}`}
+                  className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+                >
+                  {t("contactUs")}
                 </Link>
               }
               benefits={getBenefits(plan.list[plan.list.length - 1])}
@@ -142,14 +143,14 @@ export const PricingSection = () => {
 const PriceCard = ({ tier, price, bestFor, CTA, benefits }: PriceCardProps) => {
   return (
     <Card>
-      <div className="flex flex-col items-center border-b border-zinc-200 pb-6 dark:border-zinc-700">
-        <span className="mb-6 inline-block text-zinc-800 dark:text-zinc-50">
+      <div className="flex flex-col items-start border-b border-border pb-6 text-left">
+        <span className="mb-4 inline-block text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           {tier}
         </span>
-        <span className="mb-3 inline-block text-4xl font-medium text-zinc-900 dark:text-zinc-100">
+        <span className="mb-2 inline-block text-4xl font-medium text-foreground">
           {price}
         </span>
-        <span className="bg-gradient-to-br from-zinc-700 to-zinc-900 bg-clip-text text-center text-transparent dark:from-zinc-200 dark:to-zinc-500">
+        <span className="text-sm font-medium text-muted-foreground">
           {bestFor}
         </span>
       </div>
@@ -171,11 +172,11 @@ const Benefit = ({ text, checked, icon }: BenefitType) => {
       {checked ? (
         <span className="grid size-5 place-content-center">{icon}</span>
       ) : (
-        <span className="grid size-5 place-content-center rounded-full bg-zinc-200 text-sm text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <span className="grid size-5 place-content-center rounded-full bg-muted text-sm text-muted-foreground">
           <X className="h-3 w-3" />
         </span>
       )}
-      <span className="text-sm text-neutral-600 dark:text-zinc-300">
+      <span className="text-sm text-muted-foreground">
         {text}
       </span>
     </div>
@@ -186,10 +187,12 @@ const Card = ({ className, children, style = {} }: CardProps) => {
   return (
     <motion.div
       initial={{
-        filter: "blur(2px)",
+        opacity: 0,
+        y: 16,
       }}
       whileInView={{
-        filter: "blur(0px)",
+        opacity: 1,
+        y: 0,
       }}
       transition={{
         duration: 0.5,
@@ -198,7 +201,7 @@ const Card = ({ className, children, style = {} }: CardProps) => {
       }}
       style={style}
       className={cn(
-        "relative h-full w-full overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-br from-zinc-50/50 to-zinc-100/80 p-6 dark:border-zinc-700 dark:from-zinc-950/50 dark:to-zinc-900/80",
+        "relative h-full w-full overflow-hidden rounded-2xl border border-border bg-background p-6 text-left",
         className,
       )}
     >

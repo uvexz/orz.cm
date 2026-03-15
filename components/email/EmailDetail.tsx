@@ -174,8 +174,8 @@ export default function EmailDetail({
             email.fromName?.[0].toUpperCase() ||
             "U"}
         </div>
-        <div className="max-w-[80%] grow text-neutral-600 dark:text-neutral-300">
-          <p className="text-sm">
+        <div className="min-w-0 max-w-[80%] grow text-neutral-600 dark:text-neutral-300">
+          <p className="break-words text-sm">
             <strong>{email.subject}</strong>
           </p>
           <TooltipProvider>
@@ -190,11 +190,11 @@ export default function EmailDetail({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <p className="text-xs">
+          <p className="break-all text-xs">
             <strong>{t("To")}:</strong> {email.to}
           </p>
           {email.replyTo && email.replyTo !== '""' && (
-            <p className="text-xs">
+            <p className="break-all text-xs">
               <strong>{t("Reply-To")}:</strong> {email.replyTo}
             </p>
           )}
@@ -255,7 +255,7 @@ export default function EmailDetail({
                       ) : (
                         <FileIcon className="size-4 text-neutral-500 dark:text-neutral-400" />
                       )}
-                      <div>
+                      <div className="min-w-0">
                         <p
                           className="max-w-full truncate text-xs text-neutral-800 dark:text-neutral-400"
                           title={attachment.filename}

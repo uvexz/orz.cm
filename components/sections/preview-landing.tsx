@@ -6,13 +6,13 @@ import MaxWidthWrapper from "@/components/shared/max-width-wrapper";
 
 export default function PreviewLanding() {
   return (
-    <div className="pb-2 sm:pb-10">
+    <div className="pb-4 sm:pb-8">
       <MaxWidthWrapper>
-        <div className="h-auto rounded-xl md:bg-muted/30 md:p-3.5 md:ring-1 md:ring-inset md:ring-border">
-          <div className="relative overflow-hidden rounded-xl border md:rounded-lg">
+        <div className="h-auto rounded-2xl border border-border/70 bg-muted/20 p-2 sm:p-3">
+          <div className="relative overflow-hidden rounded-xl border border-border/60 bg-background">
             <BlurImage
               src={lightPreview}
-              alt="ligth preview landing"
+              alt="Dashboard overview in light mode"
               className="flex size-full object-contain object-center dark:hidden"
               width={1500}
               height={750}
@@ -21,7 +21,7 @@ export default function PreviewLanding() {
             />
             <BlurImage
               src={darkPreview}
-              alt="dark preview landing"
+              alt="Dashboard overview in dark mode"
               className="hidden size-full object-contain object-center dark:flex"
               width={1500}
               height={750}

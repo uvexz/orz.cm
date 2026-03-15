@@ -35,6 +35,7 @@ interface UrlListToolbarProps {
   userRole: UrlListViewer["role"];
   data: UrlListResponse["list"];
   isLoading: boolean;
+  error?: Error;
   onRefresh: () => void;
   onAddUrl: () => void;
   showCreateAction: boolean;
@@ -52,6 +53,7 @@ export function UrlListToolbar({
   userRole,
   data,
   isLoading,
+  error,
   onRefresh,
   onAddUrl,
   showCreateAction,
@@ -87,17 +89,17 @@ export function UrlListToolbar({
         </TabsTrigger>
         {selectedUrlLabel ? (
           <TabsTrigger
-            className="flex items-center gap-1 text-muted-foreground"
+            className="flex max-w-[220px] items-center gap-1 text-muted-foreground sm:max-w-[280px]"
             value={selectedUrlLabel.id}
             onClick={() => onChangeView(selectedUrlLabel.id)}
           >
-            <Icons.lineChart className="size-4" />
-            {selectedUrlLabel.url}
+            <Icons.lineChart className="size-4 shrink-0" />
+            <span className="truncate">{selectedUrlLabel.url}</span>
           </TabsTrigger>
         ) : null}
       </TabsList>
-      <div className="flex items-center justify-end gap-3">
-        <div className="ml-auto flex items-center">
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+        <div className="ml-auto flex min-w-0 items-center">
           <Select
             value={searchType}
             onValueChange={(value: UrlListSearchType) => onSearchTypeChange(value)}
@@ -117,7 +119,7 @@ export function UrlListToolbar({
               ))}
             </SelectContent>
           </Select>
-          <div className="relative flex-1">
+          <div className="relative min-w-[180px] flex-1 sm:min-w-[240px]">
             <Input
               className="h-10 rounded-l-none border-l-0 pr-8 text-sm"
               placeholder={placeholderMap[searchType]}
@@ -136,7 +138,12 @@ export function UrlListToolbar({
           </div>
         </div>
         <UrlExporter data={data} />
-        <Button variant="outline" onClick={onRefresh} disabled={isLoading}>
+        <Button
+          variant="outline"
+          onClick={onRefresh}
+          disabled={isLoading}
+          title={error ? String(error.message || t("Please try again")) : undefined}
+        >
           {isLoading ? (
             <Icons.refreshCw className="size-4 animate-spin" />
           ) : (

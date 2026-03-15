@@ -52,12 +52,15 @@ interface UrlListResultsProps {
   data?: UrlListResponse;
   isLoading: boolean;
   isPending: boolean;
+  error?: Error;
   currentPage: number;
   setCurrentPage: (page: number) => void;
   pageSize: number;
   setPageSize: (pageSize: number) => void;
   selectedUrl: ShortUrlFormData | null;
   currentListClickData: Record<string, number>;
+  statusPendingIds: Record<string, boolean>;
+  onRetry: () => void;
   onEdit: (url: ShortUrlFormData) => void;
   onOpenQrCode: (url: ShortUrlFormData) => void;
   onToggleStats: (url: ShortUrlFormData) => void;
@@ -102,12 +105,15 @@ export function UrlListResults({
   data,
   isLoading,
   isPending,
+  error,
   currentPage,
   setCurrentPage,
   pageSize,
   setPageSize,
   selectedUrl,
   currentListClickData,
+  statusPendingIds,
+  onRetry,
   onEdit,
   onOpenQrCode,
   onToggleStats,
@@ -120,9 +126,24 @@ export function UrlListResults({
     <PageSectionEmptyState
       icon="link"
       title={t("No urls")}
-      description="You don't have any url yet. Start creating url."
+      description={t("No urls description")}
       className="col-span-full"
     />
+  );
+
+  const renderError = () => (
+    <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-dashed p-6">
+      <div className="flex max-w-md flex-col items-center gap-3 text-center">
+        <Icons.warning className="size-10 text-amber-500" />
+        <h3 className="text-lg font-semibold">{t("Failed to load urls")}</h3>
+        <p className="break-words text-sm text-muted-foreground">
+          {error?.message || t("Please try again")}
+        </p>
+        <Button type="button" variant="outline" onClick={onRetry}>
+          {t("Retry")}
+        </Button>
+      </div>
+    </div>
   );
 
   const renderEmptyRow = () => (
@@ -173,6 +194,9 @@ export function UrlListResults({
   return (
     <>
       <TabsContent className="mt-0 space-y-3" value="List">
+        {error && !isLoading ? (
+          renderError()
+        ) : (
         <Table>
           <TableHeader className="bg-gray-100/50 dark:bg-primary-foreground">
             <TableRow className="grid grid-cols-3 items-center sm:grid-cols-11">
@@ -217,20 +241,23 @@ export function UrlListResults({
                   className="grid grid-cols-3 items-center sm:grid-cols-11"
                   key={short.id}
                 >
-                  <TableCell className="col-span-1 flex items-center gap-1 sm:col-span-2">
+                  <TableCell className="col-span-1 min-w-0 flex items-center gap-1 sm:col-span-2">
                     <Link
-                      className="overflow-hidden text-ellipsis whitespace-normal text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-400"
+                      className="min-w-0 overflow-hidden text-ellipsis whitespace-normal break-all text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-400"
                       href={`https://${short.prefix}/${short.url}${short.password ? `?password=${short.password}` : ""}`}
                       target="_blank"
                       prefetch={false}
-                      title={short.url}
+                      title={`${short.prefix}/${short.url}`}
                     >
                       <Badge variant="outline">
-                        {short.prefix}/{short.url}
+                        <span className="inline-block max-w-full truncate align-bottom">
+                          {short.prefix}/{short.url}
+                        </span>
                       </Badge>
                     </Link>
                     <CopyButton
                       value={`${short.prefix}/${short.url}${short.password ? `?password=${short.password}` : ""}`}
+                      aria-label={t("Copy short URL")}
                       className={cn(
                         "size-[25px]",
                         "duration-250 transition-all group-hover:opacity-100",
@@ -263,6 +290,7 @@ export function UrlListResults({
                   <TableCell className="col-span-1 hidden sm:flex">
                     <Switch
                       checked={short.active === 1}
+                      disabled={statusPendingIds[short.id || ""]}
                       onCheckedChange={(value) =>
                         onToggleStatus(value, short.id || "")
                       }
@@ -284,6 +312,7 @@ export function UrlListResults({
                       className="h-7 px-1 text-xs hover:bg-slate-100 dark:hover:text-primary-foreground sm:px-1.5"
                       size="sm"
                       variant="outline"
+                      aria-label={t("Edit URL")}
                       onClick={() => onEdit(short)}
                     >
                       <p className="hidden text-nowrap sm:block">{t("Edit")}</p>
@@ -293,6 +322,7 @@ export function UrlListResults({
                       className="h-7 px-1 text-xs hover:bg-slate-100 dark:hover:text-primary-foreground"
                       size="sm"
                       variant="outline"
+                      aria-label={t("Open QR code")}
                       onClick={() => onOpenQrCode(short)}
                     >
                       <Icons.qrcode className="mx-0.5 size-4" />
@@ -301,6 +331,7 @@ export function UrlListResults({
                       className="h-7 px-1 text-xs hover:bg-slate-100 dark:hover:text-primary-foreground"
                       size="sm"
                       variant="outline"
+                      aria-label={t("Analytics")}
                       onClick={() => onToggleStats(short)}
                     >
                       <Icons.lineChart className="mx-0.5 size-4" />
@@ -313,10 +344,14 @@ export function UrlListResults({
             )}
           </TableBody>
         </Table>
+        )}
         {renderPagination()}
       </TabsContent>
 
       <TabsContent className="mt-0 space-y-3" value="Grid">
+        {error && !isLoading ? (
+          renderError()
+        ) : (
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {isLoading ? (
             <>
@@ -333,7 +368,7 @@ export function UrlListResults({
                 key={short.id}
               >
                 <div className="flex h-full flex-col rounded-lg border border-dotted bg-white px-3 py-1.5 backdrop-blur-lg dark:bg-black">
-                  <div className="flex items-center justify-between gap-1">
+                  <div className="flex min-w-0 items-center justify-between gap-1">
                     <BlurImage
                       src={`https://unavatar.io/${extractHostname(short.target)}?fallback=https://orz.cm/logo.png`}
                       alt="logo"
@@ -341,19 +376,20 @@ export function UrlListResults({
                       height={30}
                       className="rounded-md"
                     />
-                    <div className="ml-2 mr-auto flex flex-col justify-between truncate">
-                      <div className="flex items-center">
+                    <div className="ml-2 mr-auto flex min-w-0 flex-col justify-between truncate">
+                      <div className="flex min-w-0 items-center">
                         <Link
-                          className="overflow-hidden text-ellipsis whitespace-normal text-sm font-semibold text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-300"
+                          className="min-w-0 overflow-hidden text-ellipsis whitespace-normal break-all text-sm font-semibold text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-300"
                           href={`https://${short.prefix}/${short.url}${short.password ? `?password=${short.password}` : ""}`}
                           target="_blank"
                           prefetch={false}
-                          title={short.url}
+                          title={`${short.prefix}/${short.url}`}
                         >
                           {short.prefix}/{short.url}
                         </Link>
                         <CopyButton
                           value={`https://${short.prefix}/${short.url}${short.password ? `?password=${short.password}` : ""}`}
+                          aria-label={t("Copy short URL")}
                           className={cn(
                             "size-[25px]",
                             "duration-250 transition-all group-hover:opacity-100",
@@ -363,6 +399,7 @@ export function UrlListResults({
                           className="duration-250 size-[26px] p-1.5 text-foreground transition-all hover:border hover:text-foreground dark:text-foreground"
                           size="sm"
                           variant="ghost"
+                          aria-label={t("Open QR code")}
                           onClick={() => onOpenQrCode(short)}
                         >
                           <Icons.qrcode className="size-4" />
@@ -372,7 +409,7 @@ export function UrlListResults({
                         ) : null}
                       </div>
 
-                      <div className="flex items-center gap-1 overflow-hidden truncate text-sm text-muted-foreground">
+                      <div className="flex min-w-0 items-center gap-1 overflow-hidden truncate text-sm text-muted-foreground">
                         <Icons.forwardArrow className="size-4 shrink-0 text-gray-400" />
                         <LinkInfoPreviewer
                           apiKey={user.apiKey}
@@ -388,7 +425,12 @@ export function UrlListResults({
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button className="size-[25px] p-1.5" size="sm" variant="ghost">
+                        <Button
+                          className="size-[25px] p-1.5"
+                          size="sm"
+                          variant="ghost"
+                          aria-label={t("Open URL actions")}
+                        >
                           <Icons.moreVertical className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -446,6 +488,7 @@ export function UrlListResults({
                     <Switch
                       className="scale-[0.6]"
                       checked={short.active === 1}
+                      disabled={statusPendingIds[short.id || ""]}
                       onCheckedChange={(value) =>
                         onToggleStatus(value, short.id || "")
                       }
@@ -458,6 +501,7 @@ export function UrlListResults({
             renderEmpty()
           )}
         </section>
+        )}
 
         {renderPagination()}
       </TabsContent>

@@ -11,13 +11,25 @@ interface CopyButtonProps extends React.HTMLAttributes<HTMLButtonElement> {
   value: string;
 }
 
-export function CopyButton({ value, className, ...props }: CopyButtonProps) {
+export function CopyButton({
+  value,
+  className,
+  onClick,
+  ...props
+}: CopyButtonProps) {
   const [hasCopied, setHasCopied] = React.useState(false);
+  const accessibleLabel = props["aria-label"] ?? "Copy";
 
   React.useEffect(() => {
-    setTimeout(() => {
+    if (!hasCopied) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
       setHasCopied(false);
     }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
   }, [hasCopied]);
 
   const handleCopyValue = (value: string) => {
@@ -30,14 +42,20 @@ export function CopyButton({ value, className, ...props }: CopyButtonProps) {
       type="button"
       size="sm"
       variant="ghost"
+      aria-label={accessibleLabel}
       className={cn(
         "z-10 size-[30px] p-1.5 text-foreground hover:border hover:text-foreground dark:text-foreground",
         className,
       )}
-      onClick={() => handleCopyValue(value)}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) {
+          handleCopyValue(value);
+        }
+      }}
       {...props}
     >
-      <span className="sr-only">Copy</span>
+      <span className="sr-only">{accessibleLabel}</span>
       {hasCopied ? (
         <Icons.check className="size-4" />
       ) : (

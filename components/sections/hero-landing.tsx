@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import useSWR from "swr";
 
 import { siteConfig } from "@/config/site";
-import { cn, fetcher } from "@/lib/utils";
+import { cn, extractHost, fetcher } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Icons } from "@/components/shared/icons";
 
@@ -16,12 +16,23 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../ui/collapsible";
-import { InfiniteSlider } from "../ui/infinite-slider";
-import { ProgressiveBlur } from "../ui/progressive-blur";
 import { Separator } from "../ui/separator";
 import EmailManagerExp from "./email";
 import PreviewLanding from "./preview-landing";
 import UrlShortener from "./url-shortener";
+
+const sectionEyebrowClass =
+  "text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground";
+const sectionTitleClass =
+  "mb-4 text-xl font-semibold tracking-tight text-foreground md:text-3xl";
+const featureTriggerClass =
+  "flex min-h-11 w-full items-center py-3 text-left text-sm font-medium text-foreground transition-colors hover:text-foreground/70";
+const featureMediaFrameClass =
+  "order-first rounded-3xl border border-border/70 bg-muted/20 p-4 sm:p-6 lg:order-none";
+const featureMediaInnerClass =
+  "flex min-h-[220px] size-full items-center justify-center sm:min-h-[260px]";
+const featureMediaImageClass =
+  "h-auto w-full max-w-[260px] object-contain sm:max-w-[350px]";
 
 export default function HeroLanding({
   userId,
@@ -30,7 +41,10 @@ export default function HeroLanding({
 }) {
   const t = useTranslations("Landing");
 
-  const { data: shortDomains, isLoading } = useSWR<{ domain_name: string }[]>(
+  const {
+    data: shortDomains,
+    error,
+  } = useSWR<{ domain_name: string }[]>(
     "/api/domain?feature=short",
     fetcher,
     {
@@ -38,30 +52,17 @@ export default function HeroLanding({
       dedupingInterval: 10000,
     },
   );
+  const domainLabels =
+    shortDomains?.length && !error
+      ? shortDomains.map((domain) => domain.domain_name)
+      : [extractHost(siteConfig.url)];
 
   return (
     <section className="relative space-y-6 py-12 sm:py-16">
-      <div className="container flex max-w-screen-lg flex-col items-center gap-5 text-center">
-        <Link
-          href={siteConfig.links.github}
-          target="_blank"
-          className={cn(
-            buttonVariants({ variant: "outline", size: "sm", rounded: "xl" }),
-            "px-4",
-          )}
-        >
-          <span className="mr-1">🚀</span>
-          {t("deployWithVercel")}&nbsp;
-          <span className="font-bold" style={{ fontFamily: "Bahamas Bold" }}>
-            Vercel
-          </span>
-          &nbsp;
-          {t("now")}
-        </Link>
-
-        <h1 className="text-balance font-satoshi text-[40px] font-black leading-[1.15] tracking-tight sm:text-5xl md:text-6xl md:leading-[1.15]">
+      <div className="container flex max-w-screen-lg flex-col gap-6">
+        <h1 className="max-w-4xl text-balance font-satoshi text-[40px] font-black leading-[1.15] tracking-tight sm:text-5xl md:text-6xl md:leading-[1.15]">
           {t("onePlatformPowers")}
-          <span className="bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 bg-clip-text text-transparent">
+          <span className="mt-2 block text-foreground/72">
             {t("endlessSolutions")}
           </span>
         </h1>
@@ -70,19 +71,7 @@ export default function HeroLanding({
           {t("platformDescription")}
         </p>
 
-        <div className="mb-10 flex items-center justify-center gap-4">
-          <Link
-            href={siteConfig.links.github}
-            target="_blank"
-            rel="noreferrer"
-            className={cn(
-              buttonVariants({ rounded: "xl", size: "lg", variant: "outline" }),
-              "gap-2 bg-primary-foreground px-4 text-[15px] font-semibold text-primary hover:bg-slate-100",
-            )}
-          >
-            <span>GitHub</span>
-            <Icons.github className="size-4" />
-          </Link>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/dashboard"
             prefetch={true}
@@ -92,52 +81,33 @@ export default function HeroLanding({
             )}
           >
             <span>{userId ? t("Dashboard") : t("signInForFree")}</span>
-            {/* <Icons.arrowRight className="size-4" /> */}
+          </Link>
+          <Link
+            href={siteConfig.links.github}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              buttonVariants({ rounded: "xl", size: "lg", variant: "outline" }),
+              "gap-2 self-start bg-background px-4 text-[15px] font-semibold text-foreground hover:bg-accent hover:text-accent-foreground",
+            )}
+          >
+            <span>GitHub</span>
+            <Icons.github className="size-4" />
           </Link>
         </div>
 
         <PreviewLanding />
 
-        <div className="group relative m-auto hidden max-w-4xl md:block">
-          <div className="flex flex-col items-center md:flex-row">
-            <div className="mb-4 hidden md:mb-0 md:block md:max-w-44 md:border-r md:border-gray-600 md:pr-6">
-              <p className="text-end text-sm text-blue-600">
-                {t("Activated Domains")}
-              </p>
-            </div>
-            <div className="relative py-6 md:w-[calc(100%-11rem)]">
-              <InfiniteSlider durationOnHover={20} duration={40} gap={112}>
-                {isLoading
-                  ? [1, 2, 3, 4].map(() => (
-                      <span
-                        className="text-lg"
-                        style={{ fontFamily: "Bahamas Bold" }}
-                      >
-                        {siteConfig.name}
-                      </span>
-                    ))
-                  : shortDomains?.map((domain) => (
-                      <span
-                        className="text-lg"
-                        style={{ fontFamily: "Bahamas Bold" }}
-                      >
-                        {domain.domain_name}
-                      </span>
-                    ))}
-              </InfiniteSlider>
-
-              <ProgressiveBlur
-                className="pointer-events-none absolute left-0 top-0 h-full w-20"
-                direction="left"
-                blurIntensity={1}
-              />
-              <ProgressiveBlur
-                className="pointer-events-none absolute right-0 top-0 h-full w-20"
-                direction="right"
-                blurIntensity={1}
-              />
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-border/70 pt-4">
+          <p className={sectionEyebrowClass}>{t("Activated Domains")}</p>
+          {domainLabels.slice(0, 8).map((domain) => (
+            <span
+              key={domain}
+              className="rounded-full border border-border bg-background px-3 py-1 text-sm text-foreground"
+            >
+              {domain}
+            </span>
+          ))}
         </div>
       </div>
     </section>
@@ -149,11 +119,11 @@ export function LandingImages() {
   return (
     <>
       <div className="mx-auto w-full max-w-5xl px-6">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <h2 className="font-mono font-semibold uppercase tracking-wider text-blue-600">
+        <div className="max-w-2xl space-y-3 text-left">
+          <h2 className={sectionEyebrowClass}>
             {t("FEATURES")}
           </h2>
-          <p className="text-balance text-2xl font-semibold text-muted-foreground">
+          <p className="text-balance text-2xl font-semibold text-foreground">
             {"All In One Means"}
           </p>
         </div>
@@ -161,7 +131,7 @@ export function LandingImages() {
         {/* Short Link Service */}
         <div className="mt-16 grid gap-12 sm:px-12 lg:grid-cols-12 lg:gap-24 lg:px-0">
           <div className="items-start px-2 py-4 text-left lg:col-span-5">
-            <h3 className="mb-4 text-xl font-bold text-blue-500 md:text-3xl">
+            <h3 className={sectionTitleClass}>
               {t("shortLinkService")}
             </h3>
             <p className="font-semibold text-muted-foreground">
@@ -170,7 +140,7 @@ export function LandingImages() {
 
             <div className="mt-6">
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.link className="mr-2 size-4" /> {t("customSuffix")}
                   <Icons.chevronDown className="ml-auto size-4" />
                 </CollapsibleTrigger>
@@ -183,7 +153,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.lineChart className="mr-2 size-4" />{" "}
                   {t("realtimeStats")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -197,7 +167,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.pwdKey className="mr-2 size-4" />{" "}
                   {t("passwordProtection")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -211,7 +181,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.clock className="mr-2 size-4" />
                   {t("linkExpiration")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -225,7 +195,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.qrcode className="mr-2 size-4" />
                   {t("customQRCode")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -239,7 +209,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.braces className="mr-2 size-4" />
                   {t("shortLinkOpenAPI")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -253,10 +223,10 @@ export function LandingImages() {
               </Collapsible>
             </div>
           </div>
-          <div className="text-clip rounded-xl border py-4 md:p-3.5 lg:col-span-7">
-            <div className="flex size-full items-center justify-center rounded-lg border p-3 md:bg-muted/50">
+          <div className={cn(featureMediaFrameClass, "lg:col-span-7")}>
+            <div className={featureMediaInnerClass}>
               <Image
-                className="size-[350px] rounded-lg transition-all hover:border hover:opacity-90 hover:shadow-xl"
+                className={featureMediaImageClass}
                 alt={t("exampleImageAlt")}
                 src="/_static/landing/link.svg"
                 placeholder="blur"
@@ -271,7 +241,7 @@ export function LandingImages() {
         {/* Domain Email Service */}
         <div className="mt-16 grid gap-12 sm:px-12 lg:grid-cols-12 lg:gap-24 lg:px-0">
           <div className="items-start px-2 py-4 text-left lg:col-span-5">
-            <h3 className="mb-4 text-xl font-bold text-blue-500 md:text-3xl">
+            <h3 className={sectionTitleClass}>
               {t("domainEmail")}
             </h3>
             <p className="font-semibold text-muted-foreground">
@@ -280,7 +250,7 @@ export function LandingImages() {
 
             <div className="mt-6">
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.mail className="mr-2 size-4" />
                   {t("customEmailPrefix")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -294,7 +264,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.mailPlus className="mr-2 size-4" />
                   {t("unlimitedMailboxes")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -308,7 +278,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.inbox className="mr-2 size-4" />
                   {t("unlimitedReceiving")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -319,7 +289,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.send className="mr-2 size-4" />
                   {t("flexibleSending")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -330,7 +300,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.mailOpen className="mr-2 size-4" />
                   {t("emailForwarding")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -341,7 +311,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.braces className="mr-2 size-4" />
                   {t("emailOpenAPI")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -352,10 +322,10 @@ export function LandingImages() {
               </Collapsible>
             </div>
           </div>
-          <div className="text-clip rounded-xl border py-4 md:p-3.5 lg:col-span-7">
-            <div className="flex size-full items-center justify-center rounded-lg border p-3 md:bg-muted/50">
+          <div className={cn(featureMediaFrameClass, "lg:col-span-7")}>
+            <div className={featureMediaInnerClass}>
               <Image
-                className="size-[350px] rounded-lg transition-all hover:border hover:opacity-90 hover:shadow-xl"
+                className={featureMediaImageClass}
                 alt={t("exampleImageAlt")}
                 src="/_static/landing/email.svg"
                 placeholder="blur"
@@ -370,7 +340,7 @@ export function LandingImages() {
         {/* Subdomain Hosting Service */}
         <div className="mt-16 grid gap-12 sm:px-12 lg:grid-cols-12 lg:gap-24 lg:px-0">
           <div className="items-start px-2 py-4 text-left lg:col-span-5">
-            <h3 className="mb-4 text-xl font-bold text-blue-500 md:text-3xl">
+            <h3 className={sectionTitleClass}>
               {t("subdomainHosting")}
             </h3>
             <p className="font-semibold text-muted-foreground">
@@ -379,7 +349,7 @@ export function LandingImages() {
 
             <div className="mt-6">
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.cloudflare className="mr-2 size-4" />
                   {t("cloudflareHosting")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -393,7 +363,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.globe className="mr-2 size-4" />
                   {t("multiDomainSync")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -404,7 +374,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.puzzle className="mr-2 size-4" />
                   {t("flexibleDNSConfig")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -415,7 +385,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.globeLock className="mr-2 size-4" />
                   {t("antiAbuseManagement")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -426,10 +396,10 @@ export function LandingImages() {
               </Collapsible>
             </div>
           </div>
-          <div className="text-clip rounded-xl border py-4 md:p-3.5 lg:col-span-7">
-            <div className="flex size-full items-center justify-center rounded-lg border p-3 md:bg-muted/50">
+          <div className={cn(featureMediaFrameClass, "lg:col-span-7")}>
+            <div className={featureMediaInnerClass}>
               <Image
-                className="size-[350px] rounded-lg transition-all hover:border hover:opacity-90 hover:shadow-xl"
+                className={featureMediaImageClass}
                 alt={t("exampleImageAlt")}
                 src="/_static/landing/hosting.svg"
                 placeholder="blur"
@@ -444,7 +414,7 @@ export function LandingImages() {
         {/* File Storage Service */}
         <div className="mt-16 grid gap-12 sm:px-12 lg:grid-cols-12 lg:gap-24 lg:px-0">
           <div className="items-start px-2 py-4 text-left lg:col-span-5">
-            <h3 className="mb-4 text-xl font-bold text-blue-500 md:text-3xl">
+            <h3 className={sectionTitleClass}>
               {t("fileStorage")}
             </h3>
             <p className="font-semibold text-muted-foreground">
@@ -453,7 +423,7 @@ export function LandingImages() {
 
             <div className="mt-6">
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.globe className="mr-2 size-4" />
                   {t("s3Compatible")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -464,7 +434,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.dashboard className="mr-2 size-4" />
                   {t("multipleBuckets")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -478,7 +448,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.fileText className="mr-2 size-4" />
                   {t("uploadSizeLimit")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -492,7 +462,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.hand className="mr-2 size-4" />
                   {t("multipleUploadMethods")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -506,7 +476,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.trash className="mr-2 size-4" />
                   {t("batchDelete")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -520,7 +490,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.qrcode className="mr-2 size-4" />
                   {t("quickShortLink")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -534,10 +504,10 @@ export function LandingImages() {
               </Collapsible>
             </div>
           </div>
-          <div className="text-clip rounded-xl border py-4 md:p-3.5 lg:col-span-7">
-            <div className="flex size-full items-center justify-center rounded-lg border p-3 md:bg-muted/50">
+          <div className={cn(featureMediaFrameClass, "lg:col-span-7")}>
+            <div className={featureMediaInnerClass}>
               <Image
-                className="size-[350px] rounded-lg transition-all hover:border hover:opacity-90 hover:shadow-xl"
+                className={featureMediaImageClass}
                 alt={t("exampleImageAlt")}
                 src="/_static/landing/domain.svg"
                 placeholder="blur"
@@ -552,7 +522,7 @@ export function LandingImages() {
         {/* Open API Service */}
         <div className="mt-16 grid gap-12 sm:px-12 lg:grid-cols-12 lg:gap-24 lg:px-0">
           <div className="items-start px-2 py-4 text-left lg:col-span-5">
-            <h3 className="mb-4 text-xl font-bold text-blue-500 md:text-3xl">
+            <h3 className={sectionTitleClass}>
               {t("openAPI")}
             </h3>
             <p className="font-semibold text-muted-foreground">
@@ -561,7 +531,7 @@ export function LandingImages() {
 
             <div className="mt-6">
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.scanQrCode className="mr-2 size-4" />
                   {t("websiteMetadata")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -575,7 +545,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.camera className="mr-2 size-4" />
                   {t("websiteScreenshot")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -589,7 +559,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.qrcode className="mr-2 size-4" />
                   {t("websiteQRCode")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -603,7 +573,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.monitorDown className="mr-2 size-4" />
                   {t("websiteConversion")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -617,7 +587,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.braces className="mr-2 size-4" />
                   {t("apiKeyMechanism")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -628,10 +598,10 @@ export function LandingImages() {
               </Collapsible>
             </div>
           </div>
-          <div className="text-clip rounded-xl border py-4 md:p-3.5 lg:col-span-7">
-            <div className="flex size-full items-center justify-center rounded-lg border p-3 md:bg-muted/50">
+          <div className={cn(featureMediaFrameClass, "lg:col-span-7")}>
+            <div className={featureMediaInnerClass}>
               <Image
-                className="size-[350px] rounded-lg transition-all hover:border hover:opacity-90 hover:shadow-xl"
+                className={featureMediaImageClass}
                 alt={t("exampleImageAlt")}
                 src="/_static/landing/screenshot.svg"
                 placeholder="blur"
@@ -646,7 +616,7 @@ export function LandingImages() {
         {/* Permission Management Module */}
         <div className="mt-16 grid gap-12 sm:px-12 lg:grid-cols-12 lg:gap-24 lg:px-0">
           <div className="items-start px-2 py-4 text-left lg:col-span-5">
-            <h3 className="mb-4 text-xl font-bold text-blue-500 md:text-3xl">
+            <h3 className={sectionTitleClass}>
               {t("permissionManagement")}
             </h3>
             <p className="font-semibold text-muted-foreground">
@@ -655,7 +625,7 @@ export function LandingImages() {
 
             <div className="mt-6">
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.lineChart className="mr-2 size-4" />
                   {t("dataVisualization")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -669,7 +639,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.cog className="mr-2 size-4" />
                   {t("serviceConfiguration")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -680,7 +650,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.users className="mr-2 size-4" />
                   {t("userManagement")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -691,7 +661,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.shieldCheck className="mr-2 size-4" />
                   {t("loginMethods")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -702,7 +672,7 @@ export function LandingImages() {
               </Collapsible>
               <Separator />
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center py-3 hover:underline">
+                <CollapsibleTrigger className={featureTriggerClass}>
                   <Icons.databaseZap className="mr-2 size-4" />
                   {t("resourceManagement")}
                   <Icons.chevronDown className="ml-auto size-4" />
@@ -713,10 +683,10 @@ export function LandingImages() {
               </Collapsible>
             </div>
           </div>
-          <div className="text-clip rounded-xl border py-4 md:p-3.5 lg:col-span-7">
-            <div className="flex size-full items-center justify-center rounded-lg border p-3 md:bg-muted/50">
+          <div className={cn(featureMediaFrameClass, "lg:col-span-7")}>
+            <div className={featureMediaInnerClass}>
               <Image
-                className="size-[350px] rounded-lg transition-all hover:border hover:opacity-90 hover:shadow-xl"
+                className={featureMediaImageClass}
                 alt={t("exampleImageAlt")}
                 src="/_static/landing/info.svg"
                 placeholder="blur"
@@ -733,7 +703,7 @@ export function LandingImages() {
 
       <DynamicData />
 
-      <div className="grids grids-dark mx-auto my-12 flex w-full max-w-6xl px-4">
+      <div className="mx-auto my-12 grid w-full max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-2">
         <UrlShortener />
         <EmailManagerExp />
       </div>
@@ -746,8 +716,8 @@ export function DynamicData() {
   return (
     <div>
       <div className="mx-auto mt-10 max-w-5xl space-y-8 px-6 md:space-y-16">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <h2 className="font-mono font-semibold uppercase tracking-wider text-blue-600">
+        <div className="max-w-2xl space-y-3 text-left">
+          <h2 className={sectionEyebrowClass}>
             {t("STATS")}
           </h2>
           <div className="text-balance text-2xl text-foreground">
@@ -760,19 +730,19 @@ export function DynamicData() {
         </div>
         <div className="grid grid-cols-2 gap-12 divide-y-0 text-center md:grid-cols-4 md:gap-2 md:divide-x">
           <div className="space-y-4">
-            <div className="text-5xl font-bold text-blue-600">2.5K+</div>
+            <div className="text-5xl font-bold text-foreground">2.5K+</div>
             <p>{t("Happy Customers")}</p>
           </div>
           <div className="space-y-4">
-            <div className="text-5xl font-bold text-blue-600">6.2K+</div>
+            <div className="text-5xl font-bold text-foreground">6.2K+</div>
             <p>{t("Short Links")}</p>
           </div>
           <div className="space-y-4">
-            <div className="text-5xl font-bold text-blue-600">2M+</div>
+            <div className="text-5xl font-bold text-foreground">2M+</div>
             <p>{t("Tracked Clicks")}</p>
           </div>
           <div className="space-y-4">
-            <div className="text-5xl font-bold text-blue-600">40K+</div>
+            <div className="text-5xl font-bold text-foreground">40K+</div>
             <p>{t("Inbox Emails")}</p>
           </div>
         </div>
@@ -828,11 +798,11 @@ export function TechStackGrid() {
 
   return (
     <div className="mx-auto mt-16 max-w-5xl">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <h2 className="font-mono font-semibold uppercase tracking-wider text-blue-600">
+      <div className="max-w-2xl space-y-3 text-left">
+        <h2 className={sectionEyebrowClass}>
           {t("TECH STACK")}
         </h2>
-        <p className="text-balance text-2xl font-semibold text-muted-foreground">
+        <p className="text-balance text-2xl font-semibold text-foreground">
           {t("Build with your favorite tech stack")}
         </p>
       </div>
@@ -841,17 +811,17 @@ export function TechStackGrid() {
         {items.map((item, index) => (
           <div
             key={index}
-            className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-muted"
+            className="border-t border-border pt-4"
           >
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 text-lg font-bold text-gray-700">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted/70 text-lg font-bold text-foreground">
                 {item.icon}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 {item.title}
               </h3>
             </div>
-            <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {item.description}
             </p>
           </div>

@@ -9,11 +9,11 @@ interface MarketingLayoutProps {
 
 export default function MarketingLayout({ children }: MarketingLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col dark:bg-black">
+    <div className="flex min-h-screen flex-col bg-background">
       <NavMobile />
       <NavBar scroll={true} />
       <Notification />
-      <main className="flex-1 bg-[radial-gradient(circle_500px_at_50%_300px,#a1fffc36,#ffffff)] dark:bg-[radial-gradient(circle_500px_at_50%_300px,#a1fffc36,#000)]">
+      <main className="flex-1">
         {children}
       </main>
       <SiteFooter />

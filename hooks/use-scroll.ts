@@ -1,16 +1,37 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function useScroll(threshold: number) {
   const [scrolled, setScrolled] = useState(false);
-
-  const onScroll = useCallback(() => {
-    setScrolled(window.pageYOffset > threshold);
-  }, [threshold]);
+  const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [onScroll]);
+    const updateScrollState = () => {
+      frameRef.current = null;
+      const nextScrolled = window.scrollY > threshold;
+      setScrolled((previous) =>
+        previous === nextScrolled ? previous : nextScrolled,
+      );
+    };
+
+    const onScroll = () => {
+      if (frameRef.current !== null) {
+        return;
+      }
+
+      frameRef.current = window.requestAnimationFrame(updateScrollState);
+    };
+
+    updateScrollState();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [threshold]);
 
   return scrolled;
 }

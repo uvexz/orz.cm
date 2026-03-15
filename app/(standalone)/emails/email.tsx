@@ -18,6 +18,10 @@ export function EmailDashboard({ user }: { user: AppSessionUser }) {
   const [isAdminModel, setAdminModel] = useState(false);
 
   useEffect(() => {
+    setSelectedEmailId(null);
+  }, [selectedEmailAddress]);
+
+  useEffect(() => {
     if (isMobile && selectedEmailAddress) {
       setIsCollapsed(true);
     }

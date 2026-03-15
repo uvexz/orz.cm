@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useState, useTransition } from "react";
 import type { AppSessionUser } from "@/lib/auth/server";
 import randomName from "@scaleway/random-name";
 import {
@@ -29,6 +29,7 @@ import { TimeAgoIntl } from "../shared/time-ago";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { Modal } from "../ui/modal";
 import {
   Select,
@@ -84,6 +85,16 @@ export default function EmailSidebar({
   const [onlyUnread, setOnlyUnread] = useState(false);
 
   const [pageSize] = useState(15);
+  const deferredSearchQuery = useDeferredValue(searchQuery.trim());
+  const sidebarQuery = new URLSearchParams({
+    page: currentPage.toString(),
+    size: pageSize.toString(),
+    search: deferredSearchQuery,
+    all: String(isAdminModel),
+    unread: String(onlyUnread),
+  }).toString();
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
 
   const { data, isLoading, error, mutate } = useSWR<{
     list: UserEmailList[];
@@ -91,7 +102,7 @@ export default function EmailSidebar({
     totalInboxCount: number;
     totalUnreadCount: number;
   }>(
-    `/api/email?page=${currentPage}&size=${pageSize}&search=${searchQuery}&all=${isAdminModel}&unread=${onlyUnread}`,
+    `/api/email?${sidebarQuery}`,
     fetcher,
     { dedupingInterval: 5000 },
   );
@@ -102,9 +113,18 @@ export default function EmailSidebar({
     revalidateOnFocus: false,
     dedupingInterval: 10000,
   });
+  const hasEmailDomains = (emailDomains?.length ?? 0) > 0;
 
   useEffect(() => {
-    if (!domainSuffix && emailDomains && emailDomains.length > 0) {
+    if (!emailDomains || emailDomains.length === 0) {
+      setDomainSuffix(null);
+      return;
+    }
+
+    if (
+      !domainSuffix ||
+      !emailDomains.some((domain) => domain.domain_name === domainSuffix)
+    ) {
       setDomainSuffix(emailDomains[0].domain_name);
     }
   }, [domainSuffix, emailDomains]);
@@ -115,43 +135,72 @@ export default function EmailSidebar({
     }
   }, [data, onSelectEmail, selectedEmailAddress]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deferredSearchQuery, isAdminModel, onlyUnread]);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    const pageCount = Math.max(1, Math.ceil(data.total / pageSize));
+    if (currentPage > pageCount) {
+      setCurrentPage(pageCount);
+    }
+  }, [currentPage, data, pageSize]);
+
   const userEmails = data?.list || [];
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
 
   const handleSubmitEmail = async (emailSuffix: string) => {
+    const normalizedEmailSuffix = emailSuffix.trim();
+    const selectedDomainSuffix = domainSuffix?.trim();
+
+    if (!hasEmailDomains || !selectedDomainSuffix) {
+      toast.error(t("No domains configured"));
+      return;
+    }
+
     const limit_len =
-      emailDomains?.find((d) => d.domain_name === domainSuffix)
+      emailDomains?.find((d) => d.domain_name === selectedDomainSuffix)
         ?.min_email_length ?? 1;
-    if (!emailSuffix || emailSuffix.length < limit_len) {
+    if (!normalizedEmailSuffix || normalizedEmailSuffix.length < limit_len) {
       toast.error(`Email address characters must be at least ${limit_len}`);
       return;
     }
-    if (/[^a-zA-Z0-9_\-\.]/.test(emailSuffix)) {
+    if (/[^a-zA-Z0-9_\-\.]/.test(normalizedEmailSuffix)) {
       toast.error("Invalid email address");
       return;
     }
-    if (!domainSuffix) {
-      toast.error("Domain suffix cannot be empty");
-      return;
-    }
-    if (reservedAddressSuffix.includes(emailSuffix)) {
+    if (reservedAddressSuffix.includes(normalizedEmailSuffix)) {
       toast.error("Email address is reserved, please choose another one");
       return;
     }
+
+    const fullEmailAddress = `${normalizedEmailSuffix}@${selectedDomainSuffix}`;
 
     startTransition(async () => {
       if (isEdit) {
         const editEmailId = userEmails.find(
           (email) => email.emailAddress === selectedEmailAddress,
         )?.id;
+        if (!editEmailId) {
+          toast.error(t("Please try again"));
+          return;
+        }
         const res = await fetch(`/api/email/${editEmailId}`, {
           method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
-            emailAddress: `${emailSuffix}@${domainSuffix}`,
+            emailAddress: fullEmailAddress,
           }),
         });
         if (res.ok) {
-          mutate();
+          await mutate();
+          onSelectEmail(fullEmailAddress);
           setShowEmailModal(false);
           toast.success("Email updated successfully");
         } else {
@@ -164,12 +213,17 @@ export default function EmailSidebar({
         try {
           const res = await fetch("/api/email", {
             method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
             body: JSON.stringify({
-              emailAddress: `${emailSuffix}@${domainSuffix}`,
+              emailAddress: fullEmailAddress,
             }),
           });
           if (res.ok) {
-            mutate();
+            setCurrentPage(1);
+            await mutate();
+            onSelectEmail(fullEmailAddress);
             setShowEmailModal(false);
             toast.success("Email created successfully");
           } else {
@@ -177,7 +231,7 @@ export default function EmailSidebar({
               description: await res.text(),
             });
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.log("Error creating email:", error);
           toast.error("Error creating email");
         }
@@ -185,15 +239,13 @@ export default function EmailSidebar({
     });
   };
 
-  const handleOpenEditEmail = async (
+  const handleOpenEditEmail = (
     email: Pick<UserEmailList, "id" | "emailAddress">,
   ) => {
     onSelectEmail(email.emailAddress);
     setDomainSuffix(email.emailAddress.split("@")[1]);
-    if (selectedEmailAddress === email.emailAddress) {
-      setIsEdit(true);
-      setShowEmailModal(true);
-    }
+    setIsEdit(true);
+    setShowEmailModal(true);
   };
 
   const handleDeleteEmail = async (id: string) => {
@@ -203,7 +255,11 @@ export default function EmailSidebar({
           method: "DELETE",
         });
         if (res.ok) {
-          mutate();
+          const deletedEmail = userEmails.find((email) => email.id === id);
+          if (deletedEmail?.emailAddress === selectedEmailAddress) {
+            onSelectEmail(null);
+          }
+          await mutate();
           setShowDeleteModal(false);
           setDeleteInput("");
           setEmailToDelete(null);
@@ -226,16 +282,32 @@ export default function EmailSidebar({
     if (!selectedEmail) return;
 
     const expectedInput = `delete ${selectedEmail.emailAddress}`;
-    if (deleteInput === expectedInput) {
+    if (deleteInput.trim() === expectedInput) {
       handleDeleteEmail(emailToDelete);
     } else {
       toast.error("Input does not match. Please type correctly.");
     }
   };
 
+  const handleManualRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await mutate();
+    } catch (error: unknown) {
+      toast.error(t("Refresh failed"), {
+        description: getErrorMessage(error, t("Please try again")),
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div
-      className={cn(`flex h-full flex-col border-r transition-all`, className)}
+      className={cn(
+        `flex h-full min-w-0 flex-col border-r transition-all`,
+        className,
+      )}
     >
       {/* Header */}
       <div className="border-b p-2 text-center">
@@ -246,12 +318,9 @@ export default function EmailSidebar({
                 className="size-8 lg:size-7"
                 variant="outline"
                 size="icon"
-                onClick={async () => {
-                  setIsRefreshing(true);
-                  await mutate();
-                  setIsRefreshing(false);
-                }}
+                onClick={handleManualRefresh}
                 disabled={isRefreshing}
+                aria-label={t("Refresh email list")}
               >
                 <Icons.refreshCw
                   size={15}
@@ -263,7 +332,11 @@ export default function EmailSidebar({
                 />
               </Button>
               <div className="relative w-full grow">
+                <Label className="sr-only" htmlFor="email-search">
+                  {t("Search emails")}
+                </Label>
                 <Input
+                  id="email-search"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -279,6 +352,9 @@ export default function EmailSidebar({
             variant="outline"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label={
+              isCollapsed ? t("Expand email sidebar") : t("Collapse email sidebar")
+            }
           >
             {isCollapsed ? (
               <PanelRightClose size={16} className="stroke-muted-foreground" />
@@ -296,10 +372,12 @@ export default function EmailSidebar({
           }
           variant="default"
           size="icon"
+          aria-label={t("Create New Email")}
           onClick={() => {
             setIsEdit(false);
             setShowEmailModal(true);
           }}
+          disabled={!hasEmailDomains || isLoadingDomains}
         >
           <SquarePlus className="size-4" />
           {!isCollapsed && (
@@ -335,7 +413,10 @@ export default function EmailSidebar({
               </p>
             </div>
 
-            <div
+            <button
+              type="button"
+              aria-pressed={onlyUnread}
+              aria-label={t("Filter unread emails")}
               className={cn(
                 "relative flex cursor-pointer flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
                 {
@@ -359,20 +440,21 @@ export default function EmailSidebar({
               </p>
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger>
-                    <Icons.listFilter className="absolute bottom-1 right-1 size-3" />
+                  <TooltipTrigger asChild>
+                    <span className="absolute bottom-1 right-1">
+                      <Icons.listFilter className="size-3" />
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>{t("Filter unread emails")}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            </div>
+            </button>
 
             {/* Admin Mode */}
             {user.role === "ADMIN" && (
               <div
-                onClick={() => setAdminModel(!isAdminModel)}
                 className={cn(
-                  "flex cursor-pointer flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
+                  "flex flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
                   {
                     "bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700":
                       isAdminModel,
@@ -388,6 +470,7 @@ export default function EmailSidebar({
                 <Switch
                   className="scale-90"
                   checked={isAdminModel}
+                  aria-label={t("Toggle admin mode")}
                   onCheckedChange={(v) => setAdminModel(v)}
                 />
               </div>
@@ -410,13 +493,35 @@ export default function EmailSidebar({
             <Skeleton className="h-[60px] w-full rounded-lg" />
           </div>
         )}
-        {error && (
-          <div className="flex flex-col gap-1 p-1">
-            <Skeleton className="h-[50px] w-full rounded-lg" />
-            <Skeleton className="h-[50px] w-full rounded-lg" />
-            <Skeleton className="h-[50px] w-full rounded-lg" />
-          </div>
-        )}
+        {error &&
+          (isCollapsed ? (
+            <div className="flex flex-col items-center gap-2 px-1 py-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleManualRefresh}
+                aria-label={t("Refresh email list")}
+              >
+                <Icons.refreshCw className="size-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center px-2">
+              <EmptyPlaceholder className="max-h-none px-4 py-6 shadow-none">
+                <EmptyPlaceholder.Icon name="warning" />
+                <EmptyPlaceholder.Title>
+                  {t("Failed to load emails")}
+                </EmptyPlaceholder.Title>
+                <EmptyPlaceholder.Description className="max-w-sm break-words">
+                  {getErrorMessage(error, t("Please try again"))}
+                </EmptyPlaceholder.Description>
+                <Button type="button" variant="outline" onClick={handleManualRefresh}>
+                  {t("Retry")}
+                </Button>
+              </EmptyPlaceholder>
+            </div>
+          ))}
         {!error && !isLoading && userEmails && userEmails.length === 0 && (
           <>
             {!isCollapsed ? (
@@ -451,6 +556,15 @@ export default function EmailSidebar({
           <div
             key={email.id}
             onClick={() => onSelectEmail(email.emailAddress)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelectEmail(email.emailAddress);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-pressed={selectedEmailAddress === email.emailAddress}
             className={cn(
               `border-gray-5 group m-1 cursor-pointer bg-neutral-50 p-2 transition-colors hover:bg-neutral-100 dark:border-zinc-700 dark:bg-neutral-800 dark:hover:bg-neutral-900`,
               selectedEmailAddress === email.emailAddress
@@ -461,7 +575,7 @@ export default function EmailSidebar({
           >
             <div
               className={cn(
-                "flex items-center justify-between gap-1 text-sm font-bold text-neutral-500 dark:text-zinc-400",
+                "flex min-w-0 items-center justify-between gap-1 text-sm font-bold text-neutral-500 dark:text-zinc-400",
                 isCollapsed
                   ? "size-10 justify-center rounded-xl bg-neutral-400 text-center text-white dark:text-neutral-100"
                   : "",
@@ -470,7 +584,7 @@ export default function EmailSidebar({
                   : "",
               )}
             >
-              <span className="w-2/3 truncate" title={email.emailAddress}>
+              <span className="min-w-0 flex-1 truncate" title={email.emailAddress}>
                 {isCollapsed
                   ? email.emailAddress.slice(0, 1).toLocaleUpperCase()
                   : email.emailAddress}
@@ -478,8 +592,9 @@ export default function EmailSidebar({
               {!isCollapsed && (
                 <>
                   <SendEmailModal
-                    emailAddress={selectedEmailAddress}
+                    emailAddress={email.emailAddress}
                     onSuccess={mutate}
+                    triggerLabel={t("Send email")}
                     triggerButton={
                       <Icons.send
                         className={cn(
@@ -491,37 +606,54 @@ export default function EmailSidebar({
                       />
                     }
                   />
-                  <PenLine
+                  <button
+                    type="button"
+                    aria-label={t("Edit email")}
                     className={cn(
                       "size-5 rounded border p-1 text-primary",
                       !isMobile
                         ? "hidden hover:bg-neutral-200 group-hover:inline"
                         : "",
                     )}
-                    onClick={() => handleOpenEditEmail(email)}
-                  />
-                  <Icons.trash
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleOpenEditEmail(email);
+                    }}
+                  >
+                    <PenLine aria-hidden="true" className="size-full" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("Delete email")}
+                    disabled={Boolean(email.deletedAt)}
                     className={cn(
-                      "size-5 rounded border p-1 text-primary",
+                      "size-5 rounded border p-1 text-primary disabled:cursor-not-allowed disabled:opacity-60",
                       !isMobile
                         ? "hidden hover:bg-neutral-200 group-hover:inline"
                         : "",
                       email.deletedAt ? "bg-gray-400" : "",
                     )}
-                    onClick={() => {
+                    onClick={(event) => {
+                      event.stopPropagation();
                       if (!email.deletedAt) {
                         setEmailToDelete(email.id);
                         setShowDeleteModal(true);
                       }
                     }}
-                  />
+                  >
+                    <Icons.trash aria-hidden="true" className="size-full" />
+                  </button>
                   <CopyButton
                     value={`${email.emailAddress}`}
+                    aria-label={t("Copy email address")}
                     className={cn(
                       "size-5 rounded border p-1",
                       "duration-250 transition-all hover:bg-neutral-200",
                     )}
                     title="Copy email address"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
                   />
                 </>
               )}
@@ -600,6 +732,8 @@ export default function EmailSidebar({
                     defaultValue={
                       isEdit ? selectedEmailAddress?.split("@")[0] || "" : ""
                     }
+                    autoCapitalize="none"
+                    autoCorrect="off"
                   />
                   {isLoadingDomains ? (
                     <Skeleton className="h-9 w-1/3 rounded-none border-x-0 shadow-inner" />
@@ -615,7 +749,7 @@ export default function EmailSidebar({
                         siteConfig.mailSupport.split("@")[1] ||
                         "orz.cm"
                       }
-                      disabled={isEdit}
+                      disabled={isEdit || !hasEmailDomains}
                     >
                       <SelectTrigger className="w-1/3 rounded-none border-x-0 shadow-inner">
                         <SelectValue placeholder="Select a domain" />
@@ -631,9 +765,9 @@ export default function EmailSidebar({
                             </SelectItem>
                           ))
                         ) : (
-                          <Button className="w-full" variant="ghost">
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">
                             {t("No domains configured")}
-                          </Button>
+                          </div>
                         )}
                       </SelectContent>
                     </Select>
@@ -643,7 +777,8 @@ export default function EmailSidebar({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={isEdit}
+                    aria-label={t("Generate random email prefix")}
+                    disabled={isEdit || !hasEmailDomains}
                     onClick={() => {
                       (
                         document.getElementById(
@@ -691,7 +826,7 @@ export default function EmailSidebar({
             </p>
             <p className="mb-4 text-sm text-neutral-600">
               {t("To confirm, please type")}{" "}
-              <strong>
+              <strong className="break-all">
                 delete{" "}
                 {userEmails.find((e) => e.id === emailToDelete)?.emailAddress}
               </strong>
@@ -701,6 +836,8 @@ export default function EmailSidebar({
               onChange={(e) => setDeleteInput(e.target.value)}
               placeholder={`please input`}
               className="mb-4"
+              autoCapitalize="none"
+              autoCorrect="off"
             />
             <div className="flex justify-end gap-2">
               <Button
@@ -718,7 +855,7 @@ export default function EmailSidebar({
                 onClick={confirmDelete}
                 disabled={
                   isPending ||
-                  deleteInput !==
+                  deleteInput.trim() !==
                     `delete ${
                       userEmails.find((e) => e.id === emailToDelete)
                         ?.emailAddress

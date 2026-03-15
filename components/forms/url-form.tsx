@@ -64,6 +64,8 @@ export function UrlForm({
   const t = useTranslations("List");
   const isAdmin = user.role === "ADMIN";
   const [email, setEmail] = useState(initData?.user?.email);
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
 
   const {
     handleSubmit,
@@ -90,6 +92,7 @@ export function UrlForm({
     revalidateOnFocus: false,
     dedupingInterval: 10000,
   });
+  const hasShortDomains = (shortDomains?.length ?? 0) > 0;
 
   const validDefaultDomain = useMemo(() => {
     if (!shortDomains?.length) return undefined;
@@ -108,15 +111,19 @@ export function UrlForm({
     if (validDefaultDomain) {
       setValue("prefix", validDefaultDomain);
       setCurrentPrefix(validDefaultDomain);
+      return;
     }
-  }, [validDefaultDomain]);
+
+    setValue("prefix", "");
+    setCurrentPrefix("");
+  }, [setValue, validDefaultDomain]);
 
   useEffect(() => {
     setLimitLen(
       shortDomains?.find((d) => d.domain_name === currentPrefix)
         ?.min_url_length || 3,
     );
-  }, [currentPrefix]);
+  }, [currentPrefix, shortDomains]);
 
   const onSubmit = handleSubmit((data) => {
     if (type === "add") {
@@ -127,50 +134,104 @@ export function UrlForm({
   });
 
   const handleCreateUrl = async (data: ShortUrlFormData) => {
-    if (data.password !== "" && data.password.length !== 6) {
+    const normalizedData = {
+      ...data,
+      target: data.target.trim(),
+      url: data.url.trim(),
+      prefix: data.prefix.trim(),
+      password: data.password.trim(),
+    };
+
+    if (!hasShortDomains || !normalizedData.prefix) {
+      toast.error(t("No domains configured"));
+      return;
+    }
+
+    if (
+      normalizedData.password !== "" &&
+      normalizedData.password.length !== 6
+    ) {
       toast.error("Password must be 6 characters!");
       return;
     }
     startTransition(async () => {
-      const response = await fetch(`${action}/add`, {
-        method: "POST",
-        body: JSON.stringify({
-          data,
-        }),
-      });
-      if (!response.ok || response.status !== 200) {
-        toast.error("Created Failed!", {
-          description: await response.text(),
+      try {
+        const response = await fetch(`${action}/add`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            data: normalizedData,
+          }),
         });
-      } else {
-        const res = await response.json();
-        toast.success(`Created successfully!`);
-        setShowForm(false);
-        onRefresh(res.id);
+        if (!response.ok || response.status !== 200) {
+          toast.error(t("Create failed"), {
+            description: (await response.text()) || t("Please try again"),
+          });
+        } else {
+          const res = await response.json();
+          toast.success(t("Created successfully"));
+          setShowForm(false);
+          onRefresh(res.id);
+        }
+      } catch (error: unknown) {
+        toast.error(t("Create failed"), {
+          description: getErrorMessage(error, t("Please try again")),
+        });
       }
     });
   };
 
   const handleUpdateUrl = async (data: ShortUrlFormData) => {
-    if (data.password !== "" && data.password.length !== 6) {
+    const normalizedData = {
+      ...data,
+      target: data.target.trim(),
+      url: data.url.trim(),
+      prefix: data.prefix.trim(),
+      password: data.password.trim(),
+    };
+
+    if (!hasShortDomains || !normalizedData.prefix) {
+      toast.error(t("No domains configured"));
+      return;
+    }
+
+    if (
+      normalizedData.password !== "" &&
+      normalizedData.password.length !== 6
+    ) {
       toast.error("Password must be 6 characters!");
       return;
     }
     startTransition(async () => {
       if (type === "edit") {
-        const response = await fetch(`${action}/update`, {
-          method: "POST",
-          body: JSON.stringify({ data, userId: initData?.userId, email }),
-        });
-        if (!response.ok || response.status !== 200) {
-          toast.error("Update Failed", {
-            description: await response.text(),
+        try {
+          const response = await fetch(`${action}/update`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              data: normalizedData,
+              userId: initData?.userId,
+              email: email?.trim(),
+            }),
           });
-        } else {
-          const res = await response.json();
-          toast.success(`Update successfully!`);
-          setShowForm(false);
-          onRefresh();
+          if (!response.ok || response.status !== 200) {
+            toast.error(t("Update failed"), {
+              description: (await response.text()) || t("Please try again"),
+            });
+          } else {
+            await response.json();
+            toast.success(t("Updated successfully"));
+            setShowForm(false);
+            onRefresh();
+          }
+        } catch (error: unknown) {
+          toast.error(t("Update failed"), {
+            description: getErrorMessage(error, t("Please try again")),
+          });
         }
       }
     });
@@ -179,22 +240,31 @@ export function UrlForm({
   const handleDeleteUrl = async () => {
     if (type === "edit") {
       startDeleteTransition(async () => {
-        const response = await fetch(`${action}/delete`, {
-          method: "POST",
-          body: JSON.stringify({
-            url_id: initData?.id,
-            userId: initData?.userId,
-          }),
-        });
-        if (!response.ok || response.status !== 200) {
-          toast.error("Delete Failed", {
-            description: await response.text(),
+        try {
+          const response = await fetch(`${action}/delete`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              url_id: initData?.id,
+              userId: initData?.userId,
+            }),
           });
-        } else {
-          await response.json();
-          toast.success(`Success`);
-          setShowForm(false);
-          onRefresh();
+          if (!response.ok || response.status !== 200) {
+            toast.error(t("Delete failed"), {
+              description: (await response.text()) || t("Please try again"),
+            });
+          } else {
+            await response.json();
+            toast.success(t("Deleted successfully"));
+            setShowForm(false);
+            onRefresh();
+          }
+        } catch (error: unknown) {
+          toast.error(t("Delete failed"), {
+            description: getErrorMessage(error, t("Please try again")),
+          });
         }
       });
     }
@@ -217,9 +287,12 @@ export function UrlForm({
                   id="email"
                   className="flex-1 shadow-inner"
                   size={32}
+                  type="email"
                   value={email || ""}
                   onChange={(e) => setEmail(e.target.value)}
-                // disabled={type === "edit"}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </div>
             </FormSectionColumns>
@@ -235,6 +308,9 @@ export function UrlForm({
                 id="target"
                 className="flex-1 shadow-inner"
                 size={32}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 {...register("target")}
               />
             </div>
@@ -267,7 +343,7 @@ export function UrlForm({
                     }}
                     name="prefix"
                     defaultValue={validDefaultDomain}
-                    disabled={type === "edit"}
+                    disabled={type === "edit" || !hasShortDomains}
                   >
                     <SelectTrigger className="w-1/3 rounded-r-none border-r-0 shadow-inner">
                       <SelectValue placeholder="Select a domain" />
@@ -280,9 +356,9 @@ export function UrlForm({
                           </SelectItem>
                         ))
                       ) : (
-                        <Button className="w-full" variant="ghost">
-                          No domains configured
-                        </Button>
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                          {t("No domains configured")}
+                        </div>
                       )}
                     </SelectContent>
                   </Select>
@@ -292,15 +368,18 @@ export function UrlForm({
                   className="w-full rounded-none pl-[8px] shadow-inner"
                   size={20}
                   minLength={limitLen}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   {...register("url")}
-                  disabled={type === "edit"}
+                  disabled={type === "edit" || !hasShortDomains}
                 />
                 <Button
                   className="rounded-l-none border-l-0"
                   type="button"
                   size="sm"
                   variant="outline"
-                  disabled={type === "edit"}
+                  disabled={type === "edit" || !hasShortDomains}
                   onClick={() => {
                     setValue("url", generateUrlSuffix(6));
                   }}
@@ -314,9 +393,14 @@ export function UrlForm({
                 <p className="pb-0.5 text-[13px] text-red-600">
                   {errors.url.message}
                 </p>
+              ) : !hasShortDomains ? (
+                <p className="pb-0.5 text-[13px] text-amber-600">
+                  {t("Short link domains missing description")}
+                </p>
               ) : (
                 <p className="pb-0.5 text-[13px] text-muted-foreground">
-                  {t("A random url suffix")}. {t("Final url like")}
+                  {t("A random url suffix")} ({t("Minimum")} {limitLen}).{" "}
+                  {t("Final url like")}
                   「orz.cm/suffix」
                 </p>
               )}
@@ -337,6 +421,9 @@ export function UrlForm({
                 maxLength={6}
                 type="password"
                 placeholder={t("Enter 6 character password")}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 {...register("password")}
               />
             </div>
@@ -385,7 +472,7 @@ export function UrlForm({
               variant="destructive"
               className="mr-auto w-[80px] px-0"
               onClick={() => handleDeleteUrl()}
-              disabled={isDeleting}
+              disabled={isDeleting || isPending}
             >
               {isDeleting ? (
                 <Icons.spinner className="size-4 animate-spin" />
@@ -399,13 +486,14 @@ export function UrlForm({
             variant="outline"
             className="w-[80px] px-0"
             onClick={() => setShowForm(false)}
+            disabled={isDeleting || isPending}
           >
             {t("Cancel")}
           </Button>
           <Button
             type="submit"
             variant="blue"
-            disabled={isPending}
+            disabled={isPending || isDeleting || !hasShortDomains}
             className="w-[80px] shrink-0 px-0"
           >
             {isPending ? (

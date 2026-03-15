@@ -33,5 +33,13 @@ export function buildUrlListQuery(
   size: number,
   searchParams: UrlListSearchParams,
 ) {
-  return `${action}?page=${page}&size=${size}&slug=${searchParams.slug}&userName=${searchParams.userName}&target=${searchParams.target}`;
+  const query = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    slug: searchParams.slug,
+    userName: searchParams.userName,
+    target: searchParams.target,
+  });
+
+  return `${action}?${query.toString()}`;
 }

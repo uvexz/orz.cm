@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
@@ -50,15 +50,24 @@ export function LinkPreviewer({
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (screenshotInfo.tmp_url.startsWith("blob:")) {
+        URL.revokeObjectURL(screenshotInfo.tmp_url);
+      }
+    };
+  }, [screenshotInfo.tmp_url]);
+
   return (
     <TooltipProvider>
       <Tooltip delayDuration={200} onOpenChange={handleOpenChange}>
-        <TooltipTrigger className="w-full hover:text-blue-400 hover:underline">
+        <TooltipTrigger asChild>
           <Link
-            className="flex items-center"
+            className="flex w-full items-center hover:text-blue-400 hover:underline"
             target="_blank"
             href={url}
             title={url}
+            rel="noreferrer"
           >
             <span className="truncate">{formatUrl}</span>
             <Icons.outLink className="ml-0.5 mt-0.5 size-3 shrink-0" />
@@ -204,12 +213,13 @@ export function LinkInfoPreviewer({
   return (
     <TooltipProvider>
       <Tooltip delayDuration={200} onOpenChange={handleOpenChange}>
-        <TooltipTrigger className="w-full hover:text-blue-400 hover:underline">
+        <TooltipTrigger asChild>
           <Link
-            className="flex items-center"
+            className="flex w-full items-center hover:text-blue-400 hover:underline"
             target="_blank"
             href={url}
             title={url}
+            rel="noreferrer"
           >
             <span className="truncate">{formatUrl}</span>
             <Icons.outLink className="ml-0.5 mt-0.5 size-3 shrink-0" />
