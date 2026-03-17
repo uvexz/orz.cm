@@ -1,5 +1,7 @@
 import { desc, eq, like, sql, type SQL } from "drizzle-orm";
 
+import { CACHE_TTL, delCacheMany, getOrSetCache } from "@/lib/cache";
+
 import { db } from "../db";
 import { domains } from "../db/schema";
 
@@ -52,6 +54,40 @@ function getFeatureColumn(feature: string) {
   }
 }
 
+function getDomainsByFeatureCacheKey(feature: string, admin: boolean) {
+  return `domains:feature:${feature}:${admin ? "admin" : "public"}`;
+}
+
+function getDomainByNameCacheKey(domainName: string) {
+  return `domains:name:${domainName}`;
+}
+
+function getDomainEmailProviderCacheKey(domainName: string) {
+  return `domains:email-provider:${domainName}`;
+}
+
+function getConfiguredEmailDomainsCacheKey() {
+  return "domains:configured-email";
+}
+
+async function invalidateDomainCache(domainName?: string | null) {
+  await delCacheMany([
+    getDomainsByFeatureCacheKey("enable_short_link", false),
+    getDomainsByFeatureCacheKey("enable_short_link", true),
+    getDomainsByFeatureCacheKey("enable_email", false),
+    getDomainsByFeatureCacheKey("enable_email", true),
+    getDomainsByFeatureCacheKey("enable_dns", false),
+    getDomainsByFeatureCacheKey("enable_dns", true),
+    getConfiguredEmailDomainsCacheKey(),
+    ...(domainName
+      ? [
+          getDomainByNameCacheKey(domainName),
+          getDomainEmailProviderCacheKey(domainName),
+        ]
+      : []),
+  ]);
+}
+
 export async function getAllDomains(page = 1, size = 10, target: string = "") {
   try {
     const whereClause = target ? like(domains.domain_name, `%${target}%`) : undefined;
@@ -94,24 +130,30 @@ export async function getDomainsByFeature(
       return [];
     }
 
-    const rows = await db
-      .select()
-      .from(domains)
-      .where(eq(featureColumn, true));
+    return getOrSetCache(
+      getDomainsByFeatureCacheKey(feature, admin),
+      CACHE_TTL.dto,
+      async () => {
+        const rows = await db
+          .select()
+          .from(domains)
+          .where(eq(featureColumn, true));
 
-    return rows.map((domain) => ({
-      domain_name: domain.domain_name,
-      cf_record_types: domain.cf_record_types,
-      min_url_length: domain.min_url_length,
-      min_email_length: domain.min_email_length,
-      min_record_length: domain.min_record_length,
-      enable_short_link: admin ? domain.enable_short_link : undefined,
-      enable_email: admin ? domain.enable_email : undefined,
-      enable_dns: admin ? domain.enable_dns : undefined,
-      cf_zone_id: admin ? domain.cf_zone_id : undefined,
-      cf_api_key: admin ? domain.cf_api_key : undefined,
-      cf_email: admin ? domain.cf_email : undefined,
-    }));
+        return rows.map((domain) => ({
+          domain_name: domain.domain_name,
+          cf_record_types: domain.cf_record_types,
+          min_url_length: domain.min_url_length,
+          min_email_length: domain.min_email_length,
+          min_record_length: domain.min_record_length,
+          enable_short_link: admin ? domain.enable_short_link : undefined,
+          enable_email: admin ? domain.enable_email : undefined,
+          enable_dns: admin ? domain.enable_dns : undefined,
+          cf_zone_id: admin ? domain.cf_zone_id : undefined,
+          cf_api_key: admin ? domain.cf_api_key : undefined,
+          cf_email: admin ? domain.cf_email : undefined,
+        }));
+      },
+    );
   } catch (error) {
     throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -141,36 +183,44 @@ export async function getDomainsByFeatureClient(feature: string) {
 }
 
 export async function getDomainByName(domain_name: string) {
-  const [domain] = await db
-    .select()
-    .from(domains)
-    .where(eq(domains.domain_name, domain_name))
-    .limit(1);
+  return getOrSetCache(getDomainByNameCacheKey(domain_name), CACHE_TTL.dto, async () => {
+    const [domain] = await db
+      .select()
+      .from(domains)
+      .where(eq(domains.domain_name, domain_name))
+      .limit(1);
 
-  return domain ?? null;
+    return domain ?? null;
+  });
 }
 
 export async function checkDomainIsConfiguratedEmailProvider(
   domain_name: string,
 ) {
   try {
-    const [domain] = await db
-      .select({
-        email_provider: domains.email_provider,
-        resend_api_key: domains.resend_api_key,
-        brevo_api_key: domains.brevo_api_key,
-      })
-      .from(domains)
-      .where(eq(domains.domain_name, domain_name))
-      .limit(1);
+    return getOrSetCache(
+      getDomainEmailProviderCacheKey(domain_name),
+      CACHE_TTL.dto,
+      async () => {
+        const [domain] = await db
+          .select({
+            email_provider: domains.email_provider,
+            resend_api_key: domains.resend_api_key,
+            brevo_api_key: domains.brevo_api_key,
+          })
+          .from(domains)
+          .where(eq(domains.domain_name, domain_name))
+          .limit(1);
 
-    if (domain?.email_provider === "Resend") {
-      return { email_key: domain.resend_api_key, provider: "Resend" };
-    }
-    if (domain?.email_provider === "Brevo") {
-      return { email_key: domain.brevo_api_key, provider: "Brevo" };
-    }
-    return { email_key: null, provider: null };
+        if (domain?.email_provider === "Resend") {
+          return { email_key: domain.resend_api_key, provider: "Resend" };
+        }
+        if (domain?.email_provider === "Brevo") {
+          return { email_key: domain.brevo_api_key, provider: "Brevo" };
+        }
+        return { email_key: null, provider: null };
+      },
+    );
   } catch (error) {
     throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -178,14 +228,19 @@ export async function checkDomainIsConfiguratedEmailProvider(
 
 export async function getConfiguredEmailDomains() {
   try {
-    return await db
-      .select({
-        domain_name: domains.domain_name,
-        brevo_api_key: domains.brevo_api_key,
-      })
-      .from(domains)
-      .where(eq(domains.email_provider, "Brevo"))
-      .orderBy(desc(domains.updatedAt));
+    return getOrSetCache(
+      getConfiguredEmailDomainsCacheKey(),
+      CACHE_TTL.dto,
+      async () =>
+        db
+          .select({
+            domain_name: domains.domain_name,
+            brevo_api_key: domains.brevo_api_key,
+          })
+          .from(domains)
+          .where(eq(domains.email_provider, "Brevo"))
+          .orderBy(desc(domains.updatedAt)),
+    );
   } catch (error) {
     return [];
   }
@@ -203,6 +258,7 @@ export async function createDomain(data: DomainConfig) {
       })
       .returning();
 
+    await invalidateDomainCache(data.domain_name);
     return createdDomain ?? null;
   } catch (error) {
     throw new Error(`Failed to create domain: ${error instanceof Error ? error.message : String(error)}`);
@@ -211,6 +267,12 @@ export async function createDomain(data: DomainConfig) {
 
 export async function updateDomain(id: string, data: Partial<DomainConfig>) {
   try {
+    const [currentDomain] = await db
+      .select({ domain_name: domains.domain_name })
+      .from(domains)
+      .where(eq(domains.id, id))
+      .limit(1);
+
     const [updatedDomain] = await db
       .update(domains)
       .set({
@@ -219,6 +281,11 @@ export async function updateDomain(id: string, data: Partial<DomainConfig>) {
       })
       .where(eq(domains.id, id))
       .returning();
+
+    await invalidateDomainCache(currentDomain?.domain_name);
+    if (data.domain_name && data.domain_name !== currentDomain?.domain_name) {
+      await invalidateDomainCache(data.domain_name);
+    }
 
     return updatedDomain ?? null;
   } catch (error) {
@@ -233,6 +300,7 @@ export async function deleteDomain(domain_name: string) {
       .where(eq(domains.domain_name, domain_name))
       .returning();
 
+    await invalidateDomainCache(domain_name);
     return deletedDomain ?? null;
   } catch (error) {
     throw new Error("Failed to delete domain");

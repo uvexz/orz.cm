@@ -21,7 +21,19 @@ const queryState: {
   insertResult: unknown;
   insertError: unknown;
   existingShortUrl: { id: string } | null;
+  existingShortUrlById: { id: string; url: string } | null;
+  shortUrlBySuffix: {
+    id: string;
+    target: string;
+    active: number;
+    prefix: string;
+    expiration: string;
+    password: string;
+    updatedAt: Date;
+  } | null;
   updateOwnerResult: unknown;
+  updateAdminResult: unknown;
+  updateActiveResult: unknown;
   removeResult: unknown;
   listResult: unknown;
   statusRecords: ShortUrlStatusRecord[];
@@ -36,7 +48,11 @@ const queryState: {
   insertResult: { id: "url_1" },
   insertError: null,
   existingShortUrl: null,
+  existingShortUrlById: { id: "url_1", url: "demo" },
+  shortUrlBySuffix: null,
   updateOwnerResult: { id: "url_1", target: "https://updated.example.com" },
+  updateAdminResult: null,
+  updateActiveResult: null,
   removeResult: { success: true },
   listResult: { list: [{ id: "url_1", url: "demo" }], total: 1 },
   statusRecords: [],
@@ -81,7 +97,8 @@ mock.module("@/lib/short-urls/queries", () => ({
   },
   countUserShortUrls: async () => ({ total: 0, month_total: 0 }),
   findShortUrlIdBySuffix: async () => queryState.existingShortUrl,
-  findShortUrlBySuffix: async () => null,
+  findShortUrlBySuffix: async () => queryState.shortUrlBySuffix,
+  findShortUrlSlugById: async () => queryState.existingShortUrlById,
   findUrlMetaByIp: async () => null,
   findUserShortLinksByIds: async () => [],
   incrementUrlMetaClick: async () => null,
@@ -106,12 +123,44 @@ mock.module("@/lib/short-urls/queries", () => ({
     queryState.lastDeleteArgs = [userId, urlId];
     return queryState.removeResult;
   },
-  updateShortUrlActiveState: async () => null,
+  updateShortUrlActiveState: async () => queryState.updateActiveResult,
   updateShortUrlVisibilityState: async () => null,
-  updateUserShortUrlByAdmin: async () => null,
+  updateUserShortUrlByAdmin: async () => queryState.updateAdminResult,
   updateUserShortUrlByOwner: async (data: ShortUrlFormData) => {
     queryState.lastUpdateOwnerArg = data;
     return queryState.updateOwnerResult;
+  },
+}));
+
+const cacheState: {
+  values: Map<string, unknown>;
+  lastDeletedKeys: string[];
+} = {
+  values: new Map(),
+  lastDeletedKeys: [],
+};
+
+mock.module("@/lib/cache", () => ({
+  CACHE_TTL: {
+    shortUrl: 600,
+    shortUrlNegative: 60,
+    dto: 3600,
+  },
+  delCache: async (key: string) => {
+    cacheState.lastDeletedKeys.push(key);
+    cacheState.values.delete(key);
+  },
+  getOrSetCache: async <T>(key: string, _ttlSeconds: number, loader: () => Promise<T>) => {
+    if (cacheState.values.has(key)) {
+      return cacheState.values.get(key) as T;
+    }
+
+    const value = await loader();
+    cacheState.values.set(key, value);
+    return value;
+  },
+  setCache: async <T>(key: string, value: T) => {
+    cacheState.values.set(key, value);
   },
 }));
 
@@ -147,9 +196,11 @@ mock.module("@/lib/dto/user", () => ({
 const {
   createUserShortUrl,
   deleteUserShortUrl,
+  getUrlBySuffix,
   getUrlClicksByIds,
   getUrlStatusOptimized,
   updateUserShortUrl,
+  updateUserShortUrlActive,
 } = await import("@/lib/short-urls/services");
 const { GET, POST } = await import("@/app/api/url/route");
 
@@ -169,10 +220,14 @@ describe("lib/short-urls/services", () => {
     queryState.insertResult = { id: "url_1" };
     queryState.insertError = null;
     queryState.existingShortUrl = null;
+    queryState.existingShortUrlById = { id: "url_1", url: "demo" };
+    queryState.shortUrlBySuffix = null;
     queryState.updateOwnerResult = {
       id: "url_1",
       target: "https://updated.example.com",
     };
+    queryState.updateAdminResult = null;
+    queryState.updateActiveResult = null;
     queryState.removeResult = { success: true };
     queryState.listResult = { list: [{ id: "url_1", url: "demo" }], total: 1 };
     queryState.statusRecords = [];
@@ -183,6 +238,8 @@ describe("lib/short-urls/services", () => {
     queryState.lastDeleteArgs = null;
     queryState.lastListArgs = [];
     queryState.lastAggregateArgs = [];
+    cacheState.values.clear();
+    cacheState.lastDeletedKeys = [];
     authState.currentUser = {
       id: "user_1",
       role: "USER",
@@ -204,6 +261,7 @@ describe("lib/short-urls/services", () => {
       data: { id: "url_1" },
     });
     expect(queryState.lastInsertArg).toEqual(sampleShortUrl);
+    expect(cacheState.lastDeletedKeys).toEqual(["short-url:demo"]);
   });
 
   it("rejects duplicate short URL slugs before insert", async () => {
@@ -224,6 +282,7 @@ describe("lib/short-urls/services", () => {
       status: "success",
       data: queryState.updateOwnerResult,
     });
+    expect(cacheState.lastDeletedKeys).toEqual(["short-url:demo"]);
 
     queryState.updateOwnerResult = null;
     const failedResult = await updateUserShortUrl(sampleShortUrl);
@@ -279,6 +338,7 @@ describe("lib/short-urls/services", () => {
 
     expect(result).toEqual({ success: true });
     expect(queryState.lastDeleteArgs).toEqual(["user_1", "url_1"]);
+    expect(cacheState.lastDeletedKeys).toEqual(["short-url:demo"]);
   });
 
   it("returns a zero-filled click map when click aggregation fails", async () => {
@@ -290,6 +350,60 @@ describe("lib/short-urls/services", () => {
       url_1: 0,
       url_2: 0,
     });
+  });
+
+  it("caches short URL lookups and negative misses", async () => {
+    queryState.shortUrlBySuffix = {
+      id: "url_1",
+      target: "https://example.com",
+      active: 1,
+      prefix: "go",
+      expiration: "-1",
+      password: "",
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+
+    const firstResult = await getUrlBySuffix("demo");
+    queryState.shortUrlBySuffix = {
+      id: "url_1",
+      target: "https://changed.example.com",
+      active: 1,
+      prefix: "go",
+      expiration: "-1",
+      password: "",
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+    };
+    const secondResult = await getUrlBySuffix("demo");
+
+    expect(firstResult).toEqual(secondResult);
+
+    queryState.shortUrlBySuffix = null;
+    const missingResult = await getUrlBySuffix("missing");
+    queryState.shortUrlBySuffix = {
+      id: "url_missing",
+      target: "https://later.example.com",
+      active: 1,
+      prefix: "go",
+      expiration: "-1",
+      password: "",
+      updatedAt: new Date("2026-01-03T00:00:00.000Z"),
+    };
+    const stillMissingResult = await getUrlBySuffix("missing");
+
+    expect(missingResult).toBe(null);
+    expect(stillMissingResult).toBe(null);
+  });
+
+  it("invalidates short URL cache when active state changes", async () => {
+    queryState.updateActiveResult = { id: "url_1", active: 0 };
+
+    const result = await updateUserShortUrlActive("user_1", "url_1", 0, "USER");
+
+    expect(result).toEqual({
+      status: "success",
+      data: { id: "url_1", active: 0 },
+    });
+    expect(cacheState.lastDeletedKeys).toEqual(["short-url:demo"]);
   });
 
   it("lists short URLs through the route with parsed filters", async () => {

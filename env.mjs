@@ -18,6 +18,7 @@ export const env = createEnv({
     EMAIL_FROM: z.string().optional(),
     EMAIL_FROM_NAME: z.string().optional(),
     SCREENSHOTONE_BASE_URL: z.string().optional(),
+    REDIS_URL: z.string().url().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().optional(),
@@ -43,6 +44,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     SCREENSHOTONE_BASE_URL: process.env.SCREENSHOTONE_BASE_URL,
+    REDIS_URL: process.env.REDIS_URL,
     LinuxDo_CLIENT_ID: process.env.LinuxDo_CLIENT_ID,
     LinuxDo_CLIENT_SECRET: process.env.LinuxDo_CLIENT_SECRET,
   },

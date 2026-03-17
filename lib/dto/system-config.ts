@@ -1,5 +1,7 @@
 import { asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
+import { CACHE_TTL, delCache, getOrSetCache } from "@/lib/cache";
+
 import { db } from "../db";
 import { systemConfigs } from "../db/schema";
 
@@ -117,21 +119,31 @@ function toSystemConfigData(config: SystemConfigRow): SystemConfigData {
   };
 }
 
+function getSystemConfigCacheKey(key: string) {
+  return `system-config:${key}`;
+}
+
+async function invalidateSystemConfigCache(key: string) {
+  await delCache(getSystemConfigCacheKey(key));
+}
+
 // 获取单个配置
 export async function getSystemConfig(
   key: string,
 ): Promise<SystemConfigData | null> {
-  const [config] = await db
-    .select()
-    .from(systemConfigs)
-    .where(eq(systemConfigs.key, key))
-    .limit(1);
+  return getOrSetCache(getSystemConfigCacheKey(key), CACHE_TTL.dto, async () => {
+    const [config] = await db
+      .select()
+      .from(systemConfigs)
+      .where(eq(systemConfigs.key, key))
+      .limit(1);
 
-  if (!config) {
-    return null;
-  }
+    if (!config) {
+      return null;
+    }
 
-  return toSystemConfigData(config);
+    return toSystemConfigData(config);
+  });
 }
 
 // 获取配置值（简化版本，直接返回解析后的值）
@@ -186,6 +198,7 @@ export async function createSystemConfig(data: CreateSystemConfigData) {
     })
     .returning();
 
+  await invalidateSystemConfigCache(data.key);
   return config ?? null;
 }
 
@@ -220,6 +233,7 @@ export async function updateSystemConfig(
     .where(eq(systemConfigs.key, key))
     .returning();
 
+  await invalidateSystemConfigCache(key);
   return config ?? null;
 }
 
@@ -245,6 +259,7 @@ export async function setSystemConfig(
       .where(eq(systemConfigs.key, key))
       .returning();
 
+    await invalidateSystemConfigCache(key);
     return updatedConfig ?? null;
   }
 
@@ -262,6 +277,7 @@ export async function setSystemConfig(
     })
     .returning();
 
+  await invalidateSystemConfigCache(key);
   return createdConfig ?? null;
 }
 
@@ -272,6 +288,7 @@ export async function deleteSystemConfig(key: string) {
     .where(eq(systemConfigs.key, key))
     .returning();
 
+  await invalidateSystemConfigCache(key);
   return config ?? null;
 }
 

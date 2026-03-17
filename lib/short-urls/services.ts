@@ -1,9 +1,17 @@
+import {
+  CACHE_TTL,
+  delCache,
+  getOrSetCache,
+  setCache,
+} from "@/lib/cache";
+
 import { calculateUrlStatusStats, normalizeShortUrlFormData } from "./policies";
 import {
   aggregateUrlClicksByIds,
   countUserShortUrls,
   findShortUrlBySuffix,
   findShortUrlIdBySuffix,
+  findShortUrlSlugById,
   findUrlMetaByIp,
   findUserShortLinksByIds,
   incrementUrlMetaClick,
@@ -21,10 +29,52 @@ import {
 } from "./queries";
 import type { ShortUrlFormData, ShortUrlMetaInput, UrlStatusStats, UserRole } from "./types";
 
+type ShortUrlCacheValue = NonNullable<
+  Awaited<ReturnType<typeof findShortUrlBySuffix>>
+>;
+type NegativeShortUrlCacheValue = { missing: true };
+
 function createUniqueConstraintError() {
   const error = new Error("Unique constraint failed") as Error & { code?: string };
   error.code = "UNIQUE_CONSTRAINT";
   return error;
+}
+
+function getShortUrlCacheKey(slug: string) {
+  return `short-url:${slug}`;
+}
+
+async function invalidateShortUrlCache(...slugs: Array<string | null | undefined>) {
+  const uniqueSlugs = [...new Set(slugs.filter(Boolean))] as string[];
+  await Promise.all(uniqueSlugs.map((slug) => delCache(getShortUrlCacheKey(slug))));
+}
+
+async function readShortUrlFromCache(
+  slug: string,
+): Promise<ShortUrlCacheValue | null> {
+  const cachedValue = await getOrSetCache<ShortUrlCacheValue | NegativeShortUrlCacheValue>(
+    getShortUrlCacheKey(slug),
+    CACHE_TTL.shortUrl,
+    async () => {
+      const shortUrl = await findShortUrlBySuffix(slug);
+      if (!shortUrl) {
+        return { missing: true } satisfies NegativeShortUrlCacheValue;
+      }
+
+      return shortUrl;
+    },
+  );
+
+  if ("missing" in cachedValue) {
+    await setCache(
+      getShortUrlCacheKey(slug),
+      cachedValue,
+      CACHE_TTL.shortUrlNegative,
+    );
+    return null;
+  }
+
+  return cachedValue;
 }
 
 async function assertShortUrlSlugAvailable(url: string, currentId?: string) {
@@ -117,6 +167,7 @@ export async function createUserShortUrl(data: ShortUrlFormData) {
     const normalizedData = normalizeShortUrlFormData(data);
     await assertShortUrlSlugAvailable(normalizedData.url);
     const shortUrl = await insertUserShortUrl(normalizedData);
+    await invalidateShortUrlCache(normalizedData.url);
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -126,12 +177,17 @@ export async function createUserShortUrl(data: ShortUrlFormData) {
 export async function updateUserShortUrl(data: ShortUrlFormData) {
   try {
     const normalizedData = normalizeShortUrlFormData(data);
+    const existingShortUrl = normalizedData.id
+      ? await findShortUrlSlugById(normalizedData.id)
+      : null;
+
     await assertShortUrlSlugAvailable(normalizedData.url, normalizedData.id);
     const shortUrl = await updateUserShortUrlByOwner(normalizedData);
     if (!shortUrl) {
       throw new Error("Short URL not found");
     }
 
+    await invalidateShortUrlCache(existingShortUrl?.url, normalizedData.url);
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -144,12 +200,17 @@ export async function updateUserShortUrlAdmin(
 ) {
   try {
     const normalizedData = normalizeShortUrlFormData(data);
+    const existingShortUrl = normalizedData.id
+      ? await findShortUrlSlugById(normalizedData.id)
+      : null;
+
     await assertShortUrlSlugAvailable(normalizedData.url, normalizedData.id);
     const shortUrl = await updateUserShortUrlByAdmin(normalizedData, newUserId);
     if (!shortUrl) {
       throw new Error("Short URL not found");
     }
 
+    await invalidateShortUrlCache(existingShortUrl?.url, normalizedData.url);
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -163,11 +224,13 @@ export async function updateUserShortUrlActive(
   role: UserRole = "USER",
 ) {
   try {
+    const existingShortUrl = await findShortUrlSlugById(id);
     const shortUrl = await updateShortUrlActiveState(userId, id, active, role);
     if (!shortUrl) {
       throw new Error("Short URL not found");
     }
 
+    await invalidateShortUrlCache(existingShortUrl?.url);
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -188,7 +251,10 @@ export async function updateUserShortUrlVisibility(id: string, visible: number) 
 }
 
 export async function deleteUserShortUrl(userId: string, urlId: string) {
-  return removeUserShortUrl(userId, urlId);
+  const existingShortUrl = await findShortUrlSlugById(urlId);
+  const deletedShortUrl = await removeUserShortUrl(userId, urlId);
+  await invalidateShortUrlCache(existingShortUrl?.url);
+  return deletedShortUrl;
 }
 
 export async function getUserUrlMetaInfo(urlId: string, dateRange = "") {
@@ -196,7 +262,7 @@ export async function getUserUrlMetaInfo(urlId: string, dateRange = "") {
 }
 
 export async function getUrlBySuffix(suffix: string) {
-  return findShortUrlBySuffix(suffix);
+  return readShortUrlFromCache(suffix);
 }
 
 export async function createUserShortUrlMeta(data: ShortUrlMetaInput) {

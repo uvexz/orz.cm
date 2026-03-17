@@ -1,5 +1,7 @@
 import { asc, eq, ilike, sql } from "drizzle-orm";
 
+import { CACHE_TTL, delCacheMany, getOrSetCache } from "@/lib/cache";
+
 import { db } from "../db";
 import { plans } from "../db/schema";
 
@@ -29,55 +31,77 @@ export interface PlanQuotaFormData extends PlanQuota {
   updatedAt?: Date;
 }
 
-// 获取计划配额
-export async function getPlanQuota(planName: string) {
-  const [plan] = await db
-    .select()
-    .from(plans)
-    .where(eq(plans.name, planName))
-    .limit(1);
+function getPlanQuotaCacheKey(planName: string) {
+  return `plan:quota:${planName}`;
+}
 
-  if (!plan) {
-    return {
-      name: planName,
-      slTrackedClicks: 0,
-      slNewLinks: 0,
-      slAnalyticsRetention: 0,
-      slDomains: 0,
-      slAdvancedAnalytics: false,
-      slCustomQrCodeLogo: false,
-      rcNewRecords: 0,
-      emEmailAddresses: 0,
-      emDomains: 0,
-      emSendEmails: 0,
-      stMaxFileSize: "26214400",
-      stMaxTotalSize: "524288000",
-      stMaxFileCount: 1000,
-      appSupport: "BASIC",
-      appApiAccess: true,
-      isActive: true,
-    };
+function getPlanNamesCacheKey() {
+  return "plan:names";
+}
+
+async function invalidatePlanCache(...planNames: Array<string | null | undefined>) {
+  const keys = [getPlanNamesCacheKey()];
+
+  for (const planName of planNames) {
+    if (planName) {
+      keys.push(getPlanQuotaCacheKey(planName));
+    }
   }
 
-  return {
-    name: planName,
-    slTrackedClicks: plan.slTrackedClicks,
-    slNewLinks: plan.slNewLinks,
-    slAnalyticsRetention: plan.slAnalyticsRetention,
-    slDomains: plan.slDomains,
-    slAdvancedAnalytics: plan.slAdvancedAnalytics,
-    slCustomQrCodeLogo: plan.slCustomQrCodeLogo,
-    rcNewRecords: plan.rcNewRecords,
-    emEmailAddresses: plan.emEmailAddresses,
-    emDomains: plan.emDomains,
-    emSendEmails: plan.emSendEmails,
-    stMaxFileSize: plan.stMaxFileSize,
-    stMaxTotalSize: plan.stMaxTotalSize,
-    stMaxFileCount: plan.stMaxFileCount,
-    appSupport: plan.appSupport.toLowerCase(),
-    appApiAccess: plan.appApiAccess,
-    isActive: plan.isActive,
-  };
+  await delCacheMany(keys);
+}
+
+// 获取计划配额
+export async function getPlanQuota(planName: string) {
+  return getOrSetCache(getPlanQuotaCacheKey(planName), CACHE_TTL.dto, async () => {
+    const [plan] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.name, planName))
+      .limit(1);
+
+    if (!plan) {
+      return {
+        name: planName,
+        slTrackedClicks: 0,
+        slNewLinks: 0,
+        slAnalyticsRetention: 0,
+        slDomains: 0,
+        slAdvancedAnalytics: false,
+        slCustomQrCodeLogo: false,
+        rcNewRecords: 0,
+        emEmailAddresses: 0,
+        emDomains: 0,
+        emSendEmails: 0,
+        stMaxFileSize: "26214400",
+        stMaxTotalSize: "524288000",
+        stMaxFileCount: 1000,
+        appSupport: "BASIC",
+        appApiAccess: true,
+        isActive: true,
+      };
+    }
+
+    return {
+      name: planName,
+      slTrackedClicks: plan.slTrackedClicks,
+      slNewLinks: plan.slNewLinks,
+      slAnalyticsRetention: plan.slAnalyticsRetention,
+      slDomains: plan.slDomains,
+      slAdvancedAnalytics: plan.slAdvancedAnalytics,
+      slCustomQrCodeLogo: plan.slCustomQrCodeLogo,
+      rcNewRecords: plan.rcNewRecords,
+      emEmailAddresses: plan.emEmailAddresses,
+      emDomains: plan.emDomains,
+      emSendEmails: plan.emSendEmails,
+      stMaxFileSize: plan.stMaxFileSize,
+      stMaxTotalSize: plan.stMaxTotalSize,
+      stMaxFileCount: plan.stMaxFileCount,
+      appSupport: plan.appSupport.toLowerCase(),
+      appApiAccess: plan.appApiAccess,
+      isActive: plan.isActive,
+    };
+  });
 }
 
 // 获取所有计划
@@ -107,17 +131,25 @@ export async function getAllPlans(page = 1, size = 10, target: string = "") {
 
 // 获取计划所有名称
 export async function getPlanNames() {
-  const data = await db
-    .select({ name: plans.name })
-    .from(plans)
-    .where(eq(plans.isActive, true))
-    .orderBy(asc(plans.name));
+  return getOrSetCache(getPlanNamesCacheKey(), CACHE_TTL.dto, async () => {
+    const data = await db
+      .select({ name: plans.name })
+      .from(plans)
+      .where(eq(plans.isActive, true))
+      .orderBy(asc(plans.name));
 
-  return data.map((item) => item.name);
+    return data.map((item) => item.name);
+  });
 }
 
 // 更新计划配额
 export async function updatePlanQuota(plan: PlanQuotaFormData) {
+  const [currentPlan] = await db
+    .select({ name: plans.name })
+    .from(plans)
+    .where(eq(plans.id, plan.id!))
+    .limit(1);
+
   const [updatedPlan] = await db
     .update(plans)
     .set({
@@ -142,6 +174,7 @@ export async function updatePlanQuota(plan: PlanQuotaFormData) {
     .where(eq(plans.id, plan.id!))
     .returning();
 
+  await invalidatePlanCache(currentPlan?.name, plan.name);
   return updatedPlan ?? null;
 }
 
@@ -173,6 +206,7 @@ export async function createPlan(plan: PlanQuota) {
     })
     .returning();
 
+  await invalidatePlanCache(plan.name);
   return createdPlan ?? null;
 }
 
@@ -183,5 +217,6 @@ export async function deletePlan(id: string) {
     .where(eq(plans.id, id))
     .returning();
 
+  await invalidatePlanCache(deletedPlan?.name);
   return deletedPlan ?? null;
 }

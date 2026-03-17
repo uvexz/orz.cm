@@ -399,6 +399,19 @@ export async function findShortUrlBySuffix(suffix: string) {
   return shortUrl ?? null;
 }
 
+export async function findShortUrlSlugById(id: string) {
+  const [shortUrl] = await db
+    .select({
+      id: userUrls.id,
+      url: userUrls.url,
+    })
+    .from(userUrls)
+    .where(eq(userUrls.id, id))
+    .limit(1);
+
+  return shortUrl ?? null;
+}
+
 export async function findShortUrlIdBySuffix(suffix: string) {
   const [shortUrl] = await db
     .select({ id: userUrls.id })
