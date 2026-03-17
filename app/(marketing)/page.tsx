@@ -16,9 +16,6 @@ export default function IndexPage() {
             {" 短链接及临时邮箱"}
           </span>
         </h1>
-        <p className="max-w-2xl text-balance break-words text-sm text-muted-foreground sm:text-base">
-          {siteConfig.description}
-        </p>
       </div>
     </section>
   );

@@ -10,10 +10,7 @@ export type SiteConfig = {
   ogImage: string;
   mailSupport: string;
   links: {
-    twitter: string;
     github: string;
-    discord: string;
-    oichat: string;
   };
   emailR2Domain: string;
 };

@@ -13,10 +13,7 @@ export const siteConfig: SiteConfig = {
   url: siteUrl,
   ogImage: `${siteUrl}/_static/og.jpg`,
   links: {
-    twitter: "https://twitter.com/yesmoree",
-    github: "https://github.com/oiov/wr.do",
-    discord: "https://discord.gg/AHPQYuZu3m",
-    oichat: "https://oi.wr.do",
+    github: "https://github.com/uvexz/orz.cm"
   },
   mailSupport: supportEmail,
   emailR2Domain,
