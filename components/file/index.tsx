@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { User } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -103,6 +103,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const [currentSearchType, setCurrentSearchType] = useState("name");
+  const [searchInput, setSearchInput] = useState("");
   const [searchParams, setSearchParams] = useState({
     name: "",
     fileSize: "",
@@ -111,6 +112,21 @@ export default function UserFileManager({ user, action }: FileListProps) {
   });
 
   const [bucketUsage, setBucketUsage] = useState<BucketUsage | null>(null);
+
+  const filesKey = useMemo(() => {
+    if (!currentBucketInfo.bucket) {
+      return null;
+    }
+
+    return `${action}/s3/files?provider=${currentBucketInfo.provider_name}&bucket=${currentBucketInfo.bucket}&page=${currentPage}&pageSize=${pageSize}&name=${searchParams.name}&fileSize=${searchParams.fileSize}&mimeType=${searchParams.mimeType}&status=${searchParams.status}`;
+  }, [
+    action,
+    currentBucketInfo.bucket,
+    currentBucketInfo.provider_name,
+    currentPage,
+    pageSize,
+    searchParams,
+  ]);
 
   // const isAdmin = action.includes("/admin");
 
@@ -126,16 +142,10 @@ export default function UserFileManager({ user, action }: FileListProps) {
     data: files,
     isLoading: isLoadingFiles,
     error,
-  } = useSWR<FileListData>(
-    currentBucketInfo.bucket
-      ? `${action}/s3/files?provider=${currentBucketInfo.provider_name}&bucket=${currentBucketInfo.bucket}&page=${currentPage}&pageSize=${pageSize}&name=${searchParams.name}&fileSize=${searchParams.fileSize}&mimeType=${searchParams.mimeType}&status=${searchParams.status}`
-      : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 5000, // 防抖
-    },
-  );
+  } = useSWR<FileListData>(filesKey, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 5000, // 防抖
+  });
 
   const { data: plan } = useSWR<StorageUserPlan>(
     `/api/plan?team=${user.team}`,
@@ -189,12 +199,29 @@ export default function UserFileManager({ user, action }: FileListProps) {
     }
   }, [files, currentBucketInfo, plan]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearchParams((prev) => {
+        if (prev[currentSearchType] === searchInput) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [currentSearchType]: searchInput,
+        };
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentSearchType, searchInput]);
+
   const handleRefresh = () => {
     setSelectedFiles([]);
-    mutate(
-      `${action}/s3/files?provider=${currentBucketInfo.provider_name}&bucket=${currentBucketInfo.bucket}&page=${currentPage}&pageSize=${pageSize}&name=${searchParams.name}&fileSize=${searchParams.fileSize}&mimeType=${searchParams.mimeType}&status=${searchParams.status}`,
-      undefined,
-    );
+
+    if (filesKey) {
+      mutate(filesKey, undefined);
+    }
   };
 
   const handleChangeBucket = (
@@ -271,6 +298,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
             value={currentSearchType}
             onValueChange={(value) => {
               setCurrentSearchType(value);
+              setSearchInput("");
               setSearchParams({
                 name: "",
                 fileSize: "",
@@ -299,12 +327,9 @@ export default function UserFileManager({ user, action }: FileListProps) {
           <Input
             className="min-w-28 rounded-l-none border-l-0 placeholder:text-xs sm:w-48 sm:flex-none"
             placeholder={`Search by ${currentSearchType}...`}
-            value={searchParams[currentSearchType] || ""}
+            value={searchInput}
             onChange={(e) => {
-              setSearchParams({
-                ...searchParams,
-                [currentSearchType]: e.target.value,
-              });
+              setSearchInput(e.target.value);
               setCurrentPage(1);
             }}
           />

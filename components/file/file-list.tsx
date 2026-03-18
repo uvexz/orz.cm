@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { User } from "@/lib/db/types";
@@ -35,7 +36,6 @@ import { UrlForm } from "../forms/url-form";
 import { CopyButton } from "../shared/copy-button";
 import { EmptyPlaceholder } from "../shared/empty-placeholder";
 import { Icons } from "../shared/icons";
-import QRCodeEditor from "../shared/qr";
 import { TimeAgoIntl } from "../shared/time-ago";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -51,6 +51,10 @@ import { Modal } from "../ui/modal";
 import { Skeleton } from "../ui/skeleton";
 import { Switch } from "../ui/switch";
 import { TableCell, TableRow } from "../ui/table";
+
+const QRCodeEditor = dynamic(() => import("../shared/qr"), {
+  loading: () => <Skeleton className="h-[480px] w-full rounded-xl" />,
+});
 
 interface Props {
   user: Pick<User, "id" | "name" | "apiKey" | "email" | "role" | "team">;
