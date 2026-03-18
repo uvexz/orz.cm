@@ -63,6 +63,15 @@ bun run dev
 
 如果是全新数据库，先访问 `/login` 创建第一个账号，再访问 `/setup` 完成初始化管理员配置。
 
+### Redis 缓存（可选）
+
+项目支持通过 `REDIS_URL` 启用 Redis 作为可选缓存层。
+
+- 未配置 `REDIS_URL` 时，应用会自动降级为直接读数据库，不会阻止本地开发或部署
+- 当前 Redis 集成仅用于 Node runtime，不适用于 Edge runtime
+- 当前已接入缓存的主要数据包括：短链解析、域名配置、套餐配额、系统配置读取
+- Docker 部署时如需启用 Redis，请同时在运行环境中提供 `REDIS_URL`
+
 ## 常用命令
 
 ```bash
@@ -83,6 +92,8 @@ bun run check-db && bun run build
 ```
 
 也可以使用仓库内的 `docker-compose.yml` 或 `docker-compose-localdb.yml` 进行部署。
+
+如需在部署中启用 Redis 缓存，请为应用容器提供 `REDIS_URL`。如果未配置，应用会继续工作，但相关读路径将回退到数据库查询。
 
 ## 回归验证
 

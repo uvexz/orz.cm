@@ -63,6 +63,15 @@ The default local app URL is `http://localhost:3000`.
 
 For a fresh database, create the first account on `/login`, then visit `/setup` to complete initial admin setup.
 
+### Redis Cache (Optional)
+
+The project supports Redis via `REDIS_URL` as an optional cache layer.
+
+- If `REDIS_URL` is not configured, the app automatically falls back to direct database reads
+- The current Redis integration is Node-runtime only and is not intended for Edge runtime routes
+- The main cached reads currently include short-link resolution, domain configuration, plan quotas, and system-config reads
+- If you deploy with Docker, provide `REDIS_URL` in the runtime environment when you want Redis enabled
+
 ## Common Commands
 
 ```bash
@@ -83,6 +92,8 @@ bun run check-db && bun run build
 ```
 
 You can also deploy with the repository's `docker-compose.yml` or `docker-compose-localdb.yml`.
+
+To enable Redis caching in deployment, provide `REDIS_URL` to the app container. If it is omitted, the app still works, but the affected read paths fall back to database queries.
 
 ## Validation
 

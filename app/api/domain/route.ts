@@ -6,7 +6,7 @@ import {
   apiOk,
   createAuthedApiRoute,
 } from "@/lib/api/route";
-import { FeatureMap, getDomainsByFeatureClient } from "@/lib/dto/domains";
+import { FeatureMap, getDomainsByFeature } from "@/lib/dto/domains";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export const GET = createAuthedApiRoute(
       );
     }
 
-    const domainList = await getDomainsByFeatureClient(FeatureMap[feature]);
+    const domainList = await getDomainsByFeature(FeatureMap[feature]);
 
     return apiOk(domainList);
   },

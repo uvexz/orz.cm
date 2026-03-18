@@ -134,49 +134,39 @@ export async function getDomainsByFeature(
       getDomainsByFeatureCacheKey(feature, admin),
       CACHE_TTL.dto,
       async () => {
-        const rows = await db
-          .select()
-          .from(domains)
-          .where(eq(featureColumn, true));
+        if (admin) {
+          return db
+            .select({
+              domain_name: domains.domain_name,
+              cf_record_types: domains.cf_record_types,
+              min_url_length: domains.min_url_length,
+              min_email_length: domains.min_email_length,
+              min_record_length: domains.min_record_length,
+              enable_short_link: domains.enable_short_link,
+              enable_email: domains.enable_email,
+              enable_dns: domains.enable_dns,
+              cf_zone_id: domains.cf_zone_id,
+              cf_api_key: domains.cf_api_key,
+              cf_email: domains.cf_email,
+            })
+            .from(domains)
+            .where(eq(featureColumn, true))
+            .orderBy(desc(domains.updatedAt));
+        }
 
-        return rows.map((domain) => ({
-          domain_name: domain.domain_name,
-          cf_record_types: domain.cf_record_types,
-          min_url_length: domain.min_url_length,
-          min_email_length: domain.min_email_length,
-          min_record_length: domain.min_record_length,
-          enable_short_link: admin ? domain.enable_short_link : undefined,
-          enable_email: admin ? domain.enable_email : undefined,
-          enable_dns: admin ? domain.enable_dns : undefined,
-          cf_zone_id: admin ? domain.cf_zone_id : undefined,
-          cf_api_key: admin ? domain.cf_api_key : undefined,
-          cf_email: admin ? domain.cf_email : undefined,
-        }));
+        return db
+          .select({
+            domain_name: domains.domain_name,
+            cf_record_types: domains.cf_record_types,
+            min_url_length: domains.min_url_length,
+            min_email_length: domains.min_email_length,
+            min_record_length: domains.min_record_length,
+          })
+          .from(domains)
+          .where(eq(featureColumn, true))
+          .orderBy(desc(domains.updatedAt));
       },
     );
-  } catch (error) {
-    throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-export async function getDomainsByFeatureClient(feature: string) {
-  try {
-    const featureColumn = getFeatureColumn(feature);
-    if (!featureColumn) {
-      return [];
-    }
-
-    return await db
-      .select({
-        domain_name: domains.domain_name,
-        cf_record_types: domains.cf_record_types,
-        min_url_length: domains.min_url_length,
-        min_email_length: domains.min_email_length,
-        min_record_length: domains.min_record_length,
-      })
-      .from(domains)
-      .where(eq(featureColumn, true))
-      .orderBy(desc(domains.updatedAt));
   } catch (error) {
     throw new Error(`Failed to fetch domain config: ${error instanceof Error ? error.message : String(error)}`);
   }
