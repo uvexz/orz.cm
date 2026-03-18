@@ -57,6 +57,7 @@ interface EmailSidebarProps {
   setIsCollapsed: (isCollapsed: boolean) => void;
   isAdminModel: boolean;
   setAdminModel: (isAdminModel: boolean) => void;
+  setIsMobileSidebarOpen?: (isOpen: boolean) => void;
 }
 
 export default function EmailSidebar({
@@ -68,6 +69,7 @@ export default function EmailSidebar({
   setIsCollapsed,
   isAdminModel,
   setAdminModel,
+  setIsMobileSidebarOpen,
 }: EmailSidebarProps) {
   const { isMobile } = useMediaQuery();
   const t = useTranslations("Email");
@@ -130,10 +132,10 @@ export default function EmailSidebar({
   }, [domainSuffix, emailDomains]);
 
   useEffect(() => {
-    if (!selectedEmailAddress && data && data.list.length > 0) {
+    if (!isMobile && !selectedEmailAddress && data && data.list.length > 0) {
       onSelectEmail(data.list[0].emailAddress);
     }
-  }, [data, onSelectEmail, selectedEmailAddress]);
+  }, [data, isMobile, onSelectEmail, selectedEmailAddress]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -302,6 +304,9 @@ export default function EmailSidebar({
     }
   };
 
+  const isSidebarCollapsed = Boolean(isCollapsed);
+  const shouldShowExpandedSidebar = !isSidebarCollapsed;
+
   return (
     <div
       className={cn(
@@ -311,11 +316,36 @@ export default function EmailSidebar({
     >
       {/* Header */}
       <div className="border-b p-2 text-center">
-        <div className="mb-2 flex items-center justify-center gap-2">
-          {!isCollapsed && (
+        {isMobile && selectedEmailAddress && setIsMobileSidebarOpen && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-left">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">{t("Selected mailbox")}</p>
+              <p className="truncate text-sm font-medium text-foreground">
+                {selectedEmailAddress}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            >
+              {t("Open inbox")}
+            </Button>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            "mb-2 flex items-start justify-center gap-2",
+            shouldShowExpandedSidebar && "flex-col sm:flex-row sm:items-center",
+          )}
+        >
+          {shouldShowExpandedSidebar && (
             <div className="flex w-full items-center gap-2">
               <Button
-                className="size-8 lg:size-7"
+                className="size-9 shrink-0 lg:size-8"
                 variant="outline"
                 size="icon"
                 onClick={handleManualRefresh}
@@ -341,51 +371,72 @@ export default function EmailSidebar({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t("Search emails")}
-                  className="h-8 w-full border-border bg-background pl-8 text-xs placeholder:text-xs"
+                  className="h-9 w-full border-border bg-background pl-8 text-xs placeholder:text-xs"
                 />
-                <Search className="absolute left-2 top-2 size-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
               </div>
             </div>
           )}
-          <Button
-            className={cn("px-1", !isCollapsed ? "size-7" : "size-8")}
-            variant="outline"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            aria-label={
-              isCollapsed ? t("Expand email sidebar") : t("Collapse email sidebar")
-            }
-          >
-            {isCollapsed ? (
-              <PanelRightClose size={16} className="stroke-muted-foreground" />
-            ) : (
-              <PanelLeftClose size={16} className="stroke-muted-foreground" />
-            )}
-          </Button>
+          {!isMobile && (
+            <Button
+              className={cn("px-1", shouldShowExpandedSidebar ? "size-8" : "size-9")}
+              variant="outline"
+              size="icon"
+              onClick={() => setIsCollapsed(!isSidebarCollapsed)}
+              aria-label={
+                isSidebarCollapsed
+                  ? t("Expand email sidebar")
+                  : t("Collapse email sidebar")
+              }
+            >
+              {isSidebarCollapsed ? (
+                <PanelRightClose size={16} className="stroke-muted-foreground" />
+              ) : (
+                <PanelLeftClose size={16} className="stroke-muted-foreground" />
+              )}
+            </Button>
+          )}
         </div>
 
-        <Button
-          className={
-            isCollapsed
-              ? "mx-auto size-9 lg:size-8"
-              : "flex h-8 w-full items-center justify-center gap-2"
-          }
-          variant="default"
-          size="icon"
-          aria-label={t("Create New Email")}
-          onClick={() => {
-            setIsEdit(false);
-            setShowEmailModal(true);
-          }}
-          disabled={!hasEmailDomains || isLoadingDomains}
-        >
-          <SquarePlus className="size-4" />
-          {!isCollapsed && (
-            <span className="text-xs">{t("Create New Email")}</span>
+        <div
+          className={cn(
+            "flex gap-2",
+            shouldShowExpandedSidebar ? "flex-col sm:flex-row" : "justify-center",
           )}
-        </Button>
+        >
+          <Button
+            className={
+              shouldShowExpandedSidebar
+                ? "flex h-9 min-w-0 flex-1 items-center justify-center gap-2"
+                : "mx-auto size-9 lg:size-8"
+            }
+            variant="default"
+            size="icon"
+            aria-label={t("Create New Email")}
+            onClick={() => {
+              setIsEdit(false);
+              setShowEmailModal(true);
+            }}
+            disabled={!hasEmailDomains || isLoadingDomains}
+          >
+            <SquarePlus className="size-4" />
+            {shouldShowExpandedSidebar && (
+              <span className="truncate text-xs">{t("Create New Email")}</span>
+            )}
+          </Button>
+          {isMobile && setIsMobileSidebarOpen && selectedEmailAddress && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 sm:w-auto"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            >
+              {t("Open inbox")}
+            </Button>
+          )}
+        </div>
 
-        {!isCollapsed && (
+        {shouldShowExpandedSidebar && (
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg text-xs text-muted-foreground">
             {/* Address */}
             <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
@@ -489,7 +540,7 @@ export default function EmailSidebar({
           </div>
         )}
         {error &&
-          (isCollapsed ? (
+          (isSidebarCollapsed ? (
             <div className="flex flex-col items-center gap-2 px-1 py-3">
               <Button
                 type="button"
@@ -519,7 +570,7 @@ export default function EmailSidebar({
           ))}
         {!error && !isLoading && userEmails && userEmails.length === 0 && (
           <>
-            {!isCollapsed ? (
+            {shouldShowExpandedSidebar ? (
               <div className="flex h-full items-center justify-center">
                 <EmptyPlaceholder className="shadow-none">
                   <EmptyPlaceholder.Icon name="mailPlus" />
@@ -553,16 +604,16 @@ export default function EmailSidebar({
             className={cn(
               "group m-1 rounded-lg border bg-background p-2 transition-colors hover:bg-muted/40",
               selectedEmailAddress === email.emailAddress && "bg-muted/60",
-              isCollapsed && "flex items-center justify-center",
+              isSidebarCollapsed && "flex items-center justify-center",
             )}
           >
             <div
               className={cn(
                 "flex min-w-0 items-center justify-between gap-1 text-sm font-bold text-muted-foreground",
-                isCollapsed &&
+                isSidebarCollapsed &&
                   "size-10 justify-center rounded-xl bg-muted text-center text-foreground",
                 selectedEmailAddress === email.emailAddress &&
-                  isCollapsed &&
+                  isSidebarCollapsed &&
                   "bg-primary text-primary-foreground",
               )}
             >
@@ -573,17 +624,17 @@ export default function EmailSidebar({
                 aria-pressed={selectedEmailAddress === email.emailAddress}
                 className={cn(
                   "h-auto min-w-0 flex-1 justify-start p-0 text-left text-sm font-bold text-foreground hover:bg-transparent",
-                  isCollapsed &&
+                  isSidebarCollapsed &&
                     "size-full justify-center text-center text-inherit hover:bg-transparent",
                 )}
               >
                 <span className="min-w-0 flex-1 truncate" title={email.emailAddress}>
-                  {isCollapsed
+                  {isSidebarCollapsed
                     ? email.emailAddress.slice(0, 1).toLocaleUpperCase()
                     : email.emailAddress}
                 </span>
               </Button>
-              {!isCollapsed && (
+              {shouldShowExpandedSidebar && (
                 <div className="ml-2 flex shrink-0 items-center gap-1">
                   <SendEmailModal
                     emailAddress={email.emailAddress}
@@ -647,7 +698,7 @@ export default function EmailSidebar({
                 </div>
               )}
             </div>
-            {!isCollapsed && (
+            {shouldShowExpandedSidebar && (
               <Button
                 type="button"
                 variant="ghost"
@@ -676,7 +727,7 @@ export default function EmailSidebar({
       </div>
 
       {/* Pagination */}
-      {!isCollapsed && data && totalPages > 1 && (
+      {shouldShowExpandedSidebar && data && totalPages > 1 && (
         <PaginationWrapper
           className="m-0 scale-75"
           total={data.total}
@@ -718,13 +769,13 @@ export default function EmailSidebar({
                 >
                   {t("Email Address")}
                 </label>
-                <div className="flex items-center justify-center">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Input
                     id="emailAddress"
                     name="emailAddress"
                     type="text"
                     placeholder={t("Enter email prefix")}
-                    className="w-full rounded-r-none"
+                    className="w-full sm:rounded-r-none"
                     required
                     defaultValue={
                       isEdit ? selectedEmailAddress?.split("@")[0] || "" : ""
@@ -733,7 +784,7 @@ export default function EmailSidebar({
                     autoCorrect="off"
                   />
                   {isLoadingDomains ? (
-                    <Skeleton className="h-9 w-1/3 rounded-none border-x-0 shadow-inner" />
+                    <Skeleton className="h-9 w-full sm:w-1/3 sm:rounded-none sm:border-x-0 sm:shadow-inner" />
                   ) : (
                     <Select
                       onValueChange={(value: string) => {
@@ -748,7 +799,7 @@ export default function EmailSidebar({
                       }
                       disabled={isEdit || !hasEmailDomains}
                     >
-                      <SelectTrigger className="w-1/3 rounded-none border-x-0 shadow-inner">
+                      <SelectTrigger className="w-full sm:w-1/3 sm:rounded-none sm:border-x-0 sm:shadow-inner">
                         <SelectValue placeholder="Select a domain" />
                       </SelectTrigger>
                       <SelectContent>
@@ -770,7 +821,7 @@ export default function EmailSidebar({
                     </Select>
                   )}
                   <Button
-                    className="rounded-l-none"
+                    className="sm:rounded-l-none"
                     type="button"
                     size="sm"
                     variant="outline"
@@ -788,7 +839,7 @@ export default function EmailSidebar({
                   </Button>
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"

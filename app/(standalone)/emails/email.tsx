@@ -16,38 +16,58 @@ export function EmailDashboard({ user }: { user: AppSessionUser }) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isAdminModel, setAdminModel] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(true);
 
   useEffect(() => {
     setSelectedEmailId(null);
   }, [selectedEmailAddress]);
 
   useEffect(() => {
-    if (isMobile && selectedEmailAddress) {
-      setIsCollapsed(true);
+    if (isMobile) {
+      setIsMobileSidebarOpen(!selectedEmailAddress);
+      return;
     }
+
+    setIsMobileSidebarOpen(true);
   }, [isMobile, selectedEmailAddress]);
 
+  const handleSelectEmailAddress = (emailAddress: string | null) => {
+    setSelectedEmailAddress(emailAddress);
+
+    if (isMobile && emailAddress) {
+      setIsMobileSidebarOpen(false);
+    }
+  };
+
   return (
-    <div className="flex h-[calc(100vh-60px)] w-full min-w-0">
+    <div className="flex h-[calc(100vh-60px)] w-full min-w-0 overflow-hidden">
       <EmailSidebar
         className={cn(
-          !isCollapsed ? "w-64 xl:w-72" : "w-16",
-          isMobile && !isCollapsed ? "w-screen" : "",
+          isMobile
+            ? isMobileSidebarOpen
+              ? "w-full"
+              : "hidden"
+            : !isCollapsed
+              ? "w-64 xl:w-72"
+              : "w-16",
         )}
         user={user}
-        onSelectEmail={setSelectedEmailAddress}
+        onSelectEmail={handleSelectEmailAddress}
         selectedEmailAddress={selectedEmailAddress}
-        isCollapsed={isCollapsed}
+        isCollapsed={isMobile ? false : isCollapsed}
         setIsCollapsed={setIsCollapsed}
         isAdminModel={isAdminModel}
         setAdminModel={setAdminModel}
+        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
       />
       <EmailList
-        className="flex-1"
+        className={cn("min-w-0 flex-1", isMobile && isMobileSidebarOpen && "hidden")}
         emailAddress={selectedEmailAddress}
         selectedEmailId={selectedEmailId}
         onSelectEmail={setSelectedEmailId}
         isAdminModel={isAdminModel}
+        showMailboxSwitcher={isMobile}
+        onShowMailboxList={() => setIsMobileSidebarOpen(true)}
       />
     </div>
   );

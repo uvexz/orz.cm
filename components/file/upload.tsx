@@ -97,7 +97,7 @@ export const FileUploader = ({
                   </Button>
                 </DrawerClose>
               </DrawerHeader>
-              <div className="flex items-center justify-between gap-3 px-4">
+              <div className="flex flex-col gap-2 px-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center space-x-1 text-sm text-muted-foreground">
                   <div className="min-w-0 truncate">{bucketInfo.provider_name}</div>
                   <Icons.arrowRight className="size-3 shrink-0" />
@@ -105,7 +105,7 @@ export const FileUploader = ({
                     {bucketInfo.bucket}
                   </div>
                 </div>
-                <Badge variant="outline" className="shrink-0 text-xs">
+                <Badge variant="outline" className="w-fit shrink-0 text-xs">
                   {t("Limit")}:{" "}
                   {formatFileSize(bucketUsage.limits.maxSingleFileSize, {
                     precision: 1,
@@ -194,10 +194,10 @@ export const FileUploader = ({
                         <div className="relative z-10 px-4 py-3">
                           <div
                             className={cn(
-                              "flex justify-between gap-3",
+                              "flex flex-col gap-3 sm:flex-row sm:justify-between",
                               file.status === "uploading"
                                 ? "items-start"
-                                : "items-center",
+                                : "sm:items-center",
                             )}
                           >
                             <div className="min-w-0 flex-1">
@@ -210,9 +210,9 @@ export const FileUploader = ({
                             </div>
 
                             {/* 状态指示器和操作按钮 */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                               {file.status === "pending" ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                   <div className="flex items-center gap-1 rounded-full bg-neutral-600 px-3 py-1 text-xs text-white dark:bg-neutral-700">
                                     <div className="h-2 w-2 rounded-full bg-neutral-300 dark:bg-neutral-400"></div>
                                     {t("Pending Upload")}
@@ -221,13 +221,13 @@ export const FileUploader = ({
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => removeFile(file.id)}
-                                    className="size-[30px] p-1.5 text-red-600 transition-colors hover:text-red-800"
+                                    className="size-8 p-1.5 text-red-600 transition-colors hover:text-red-800"
                                   >
                                     <X className="size-4" />
                                   </Button>
                                 </div>
                               ) : file.status === "uploading" ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                   <span className="text-sm">
                                     {file.progress}%
                                   </span>
@@ -236,7 +236,7 @@ export const FileUploader = ({
                                     {t("Uploading")}
                                   </div>
                                   <Button
-                                    className="size-6"
+                                    className="size-8"
                                     size="icon"
                                     variant="destructive"
                                     onClick={() => cancelUpload(file.id)}
@@ -246,7 +246,7 @@ export const FileUploader = ({
                                   </Button>
                                 </div>
                               ) : file.status === "completed" ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                   <div className="flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 text-xs text-white dark:bg-green-700">
                                     <div className="h-2 w-2 rounded-full bg-green-300 dark:bg-green-400"></div>
                                     {t("Completed")}
@@ -258,7 +258,7 @@ export const FileUploader = ({
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => removeFile(file.id)}
-                                    className="size-[30px] p-1.5 text-red-600 transition-colors hover:text-red-800"
+                                    className="size-8 p-1.5 text-red-600 transition-colors hover:text-red-800"
                                   >
                                     <X className="size-4" />
                                   </Button>
@@ -267,7 +267,7 @@ export const FileUploader = ({
                                 (file.status === "error" ||
                                   file.status === "cancelled") && (
                                   <div className="flex flex-col gap-2">
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="flex flex-wrap items-center justify-end gap-2">
                                       <div className="flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs text-white dark:bg-red-700">
                                         <div className="h-2 w-2 rounded-full bg-red-300 dark:bg-red-400"></div>
                                         {file.status === "cancelled"
@@ -275,7 +275,7 @@ export const FileUploader = ({
                                           : t("Failed")}
                                       </div>
                                       <Button
-                                        className="size-6"
+                                        className="size-8"
                                         size="icon"
                                         variant="secondary"
                                         onClick={() => retryUpload(file.id)}
@@ -283,7 +283,7 @@ export const FileUploader = ({
                                         <RotateCcw className="size-4" />
                                       </Button>
                                       <Button
-                                        className="size-6"
+                                        className="size-8"
                                         size="icon"
                                         variant="destructive"
                                         onClick={() => removeFile(file.id)}
@@ -329,23 +329,24 @@ export const FileUploader = ({
                   </div>
                 )}
               </div>
-              <DrawerFooter className="sticky bottom-0 flex flex-row items-center justify-between gap-2 backdrop-blur-md">
+              <DrawerFooter className="sticky bottom-0 flex flex-col gap-2 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
                 <DrawerClose asChild>
-                  <Button variant="outline">{t("Cancel")}</Button>
+                  <Button variant="outline" className="w-full sm:w-auto">{t("Cancel")}</Button>
                 </DrawerClose>
 
                 {files.length > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                     <Button
                       onClick={startUpload}
                       disabled={isUploading || stats.pending === 0}
-                      className="gap-2"
+                      className="gap-2 sm:w-auto"
                     >
                       <Play className="h-4 w-4" />
                       {t("Start Upload")}
                     </Button>
                     <Button
                       variant="destructive"
+                      className="sm:w-auto"
                       onClick={() => {
                         clearAll();
                         setSelectedFile(null);

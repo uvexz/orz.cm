@@ -271,9 +271,10 @@ export default function EmailDetail({
                     </div>
                     <Button
                       onClick={() => handleDownload(attachment)}
-                      className="absolute right-1 top-1 hidden h-7 animate-fade-in px-2 group-hover:block"
+                      className="absolute right-1 top-1 inline-flex h-8 px-2 md:hidden md:group-hover:inline-flex"
                       size="sm"
                       variant="default"
+                      aria-label={t("Download attachment")}
                     >
                       <Icons.download className="size-3" />
                     </Button>

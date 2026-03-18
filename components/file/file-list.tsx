@@ -266,7 +266,7 @@ export default function UserFileList({
   );
 
   const renderListView = () => (
-    <div className="overflow-hidden rounded-lg border bg-background">
+    <div className="overflow-hidden rounded-lg border bg-background max-sm:hidden">
       <div className="grid grid-cols-5 gap-4 border-b bg-muted/40 px-6 py-3 text-sm font-medium text-muted-foreground sm:grid-cols-10">
         {showMutiCheckBox && (
           <div className="col-end-1">
@@ -467,7 +467,10 @@ export default function UserFileList({
 
   const renderGridView = () => (
     <div
-      className="grid justify-center justify-items-center gap-4 sm:justify-start"
+      className={cn(
+        "grid justify-center justify-items-center gap-4 sm:justify-start",
+        view === "List" && "sm:hidden",
+      )}
       style={{
         gridTemplateColumns: "repeat(auto-fill, minmax(80px, 100px))",
       }}
@@ -590,7 +593,12 @@ export default function UserFileList({
 
   return (
     <>
-      {view === "List" ? renderListView() : renderGridView()}
+      {view === "Grid" ? renderGridView() : (
+        <>
+          {renderGridView()}
+          {renderListView()}
+        </>
+      )}
 
       <Modal
         className="md:max-w-2xl"

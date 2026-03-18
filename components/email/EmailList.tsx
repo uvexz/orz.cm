@@ -41,6 +41,8 @@ interface EmailListProps {
   onSelectEmail: (emailId: string | null) => void;
   className?: string;
   isAdminModel: boolean;
+  showMailboxSwitcher?: boolean;
+  onShowMailboxList?: () => void;
 }
 
 export default function EmailList({
@@ -49,6 +51,8 @@ export default function EmailList({
   onSelectEmail,
   className,
   isAdminModel: _isAdminModel,
+  showMailboxSwitcher = false,
+  onShowMailboxList,
 }: EmailListProps) {
   const t = useTranslations("Email");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -242,106 +246,122 @@ export default function EmailList({
 
   return (
     <div className={cn("grids flex min-w-0 flex-1 flex-col", className)}>
-      <div className="flex items-center gap-2 bg-neutral-200/40 p-2 text-base font-semibold text-neutral-600 backdrop-blur dark:bg-neutral-800 dark:text-neutral-50">
-        <Icons.inbox size={20} />
-        <span>{t("INBOX")}</span>
-        <div className="ml-auto flex items-center justify-center gap-2">
-          <SendEmailModal emailAddress={emailAddress} onSuccess={mutate} />
-          <TooltipProvider>
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Switch
-                  className="mt-1 data-[state=checked]:bg-blue-500 data-[state=unchecked]:bg-neutral-300 dark:data-[state=unchecked]:bg-neutral-200"
-                  onCheckedChange={handleSetAutoRefresh}
-                  checked={isAutoRefresh}
-                  aria-label="Auto refresh"
-                />
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{t("Auto refresh")}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={isRefreshing || isLoading || isAutoRefresh}
-          >
-            <Icons.refreshCw
-              size={15}
-              className={cn(
-                isRefreshing || isLoading || isAutoRefresh
-                  ? "animate-spin"
-                  : "",
-              )}
-            />
-          </Button>
-          <Button
-            className={cn(
-              showMutiCheckBox ? "bg-primary text-primary-foreground" : "",
-            )}
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMutiCheckBox(!showMutiCheckBox)}
-          >
-            <Icons.listChecks className="size-4" />
-          </Button>
-          {showMutiCheckBox && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex w-full items-center gap-1"
-                >
-                  <span className="text-sm">{t("more")}</span>
-                  <Icons.chevronDown className="mt-0.5 size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSelectAllEmails}
-                    className="w-full"
-                  >
-                    <span className="text-xs">{t("Select all")}</span>
-                  </Button>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  asChild
-                  disabled={selectedEmails.length === 0}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleMarkSelectedAsRead}
-                    className="w-full"
-                  >
-                    <span className="text-xs">{t("Mask as read")}</span>
-                  </Button>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  asChild
-                  disabled={isDeleting || selectedEmails.length === 0}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => handleDeletEmails(selectedEmails)}
-                  >
-                    {isDeleting && (
-                      <Icons.spinner className="mr-1 size-4 animate-spin" />
-                    )}
-                    <span className="text-xs">{t("Delete selected")}</span>
-                  </Button>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+      <div className="border-b bg-muted/40 p-2 text-foreground backdrop-blur">
+        <div className="flex flex-wrap items-center gap-2 text-base font-semibold">
+          {showMailboxSwitcher && onShowMailboxList && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={onShowMailboxList}
+              aria-label={t("Select mailbox")}
+            >
+              <Icons.chevronLeft className="size-4" />
+            </Button>
           )}
+          <Icons.inbox size={20} />
+          <span>{t("INBOX")}</span>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <SendEmailModal emailAddress={emailAddress} onSuccess={mutate} />
+            <TooltipProvider>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Switch
+                    className="data-[state=checked]:bg-blue-500 data-[state=unchecked]:bg-neutral-300 dark:data-[state=unchecked]:bg-neutral-200"
+                    onCheckedChange={handleSetAutoRefresh}
+                    checked={isAutoRefresh}
+                    aria-label="Auto refresh"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{t("Auto refresh")}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing || isLoading || isAutoRefresh}
+              className="h-9"
+            >
+              <Icons.refreshCw
+                size={15}
+                className={cn(
+                  isRefreshing || isLoading || isAutoRefresh
+                    ? "animate-spin"
+                    : "",
+                )}
+              />
+            </Button>
+            <Button
+              className={cn(
+                "h-9",
+                showMutiCheckBox ? "bg-primary text-primary-foreground" : "",
+              )}
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMutiCheckBox(!showMutiCheckBox)}
+            >
+              <Icons.listChecks className="size-4" />
+            </Button>
+            {showMutiCheckBox && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex h-9 items-center gap-1"
+                  >
+                    <span className="text-sm">{t("more")}</span>
+                    <Icons.chevronDown className="mt-0.5 size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSelectAllEmails}
+                      className="w-full"
+                    >
+                      <span className="text-xs">{t("Select all")}</span>
+                    </Button>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    asChild
+                    disabled={selectedEmails.length === 0}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleMarkSelectedAsRead}
+                      className="w-full"
+                    >
+                      <span className="text-xs">{t("Mask as read")}</span>
+                    </Button>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    asChild
+                    disabled={isDeleting || selectedEmails.length === 0}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleDeletEmails(selectedEmails)}
+                    >
+                      {isDeleting && (
+                        <Icons.spinner className="mr-1 size-4 animate-spin" />
+                      )}
+                      <span className="text-xs">{t("Delete selected")}</span>
+                    </Button>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </div>
       {isLoading && (
@@ -384,7 +404,7 @@ export default function EmailList({
                     key={email.id}
                     className="border-b border-dotted bg-neutral-100/50 px-3 py-2 hover:bg-gray-100 dark:border-neutral-700 dark:bg-neutral-900 hover:dark:bg-neutral-700"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       {showMutiCheckBox && (
                         <div
                           className="flex items-center gap-2"
@@ -401,7 +421,7 @@ export default function EmailList({
                         className="min-w-0 flex-1 cursor-pointer"
                         onClick={() => handleEmailSelection(email.id)}
                       >
-                        <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
+                        <div className="mb-1 flex min-w-0 flex-wrap items-center justify-between gap-2">
                           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-800 dark:text-neutral-200">
                             {email.fromName || email.subject || "Untitled"}
                           </span>
