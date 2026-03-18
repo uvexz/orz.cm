@@ -168,16 +168,15 @@ export const FileUploader = ({
                       <div
                         key={file.id}
                         className={cn(
-                          "relative overflow-hidden rounded-lg border",
+                          "relative overflow-hidden rounded-lg border bg-background transition-colors",
                           file.status === "uploading" &&
-                            "border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800",
+                            "border-border bg-muted/20",
                           file.status === "completed" &&
-                            "border-green-300 bg-green-50 dark:border-green-600 dark:bg-green-900/20",
+                            "border-border bg-muted/10",
                           file.status === "error" &&
-                            "border-red-300 bg-red-50 dark:border-red-600 dark:bg-red-900/20",
-                          "backdrop-blur-sm transition-all duration-300",
+                            "border-red-200 bg-red-50/60 dark:border-red-900 dark:bg-red-950/20",
                           file.status === "cancelled" &&
-                            "border-yellow-300 bg-yellow-50 dark:border-yellow-600 dark:bg-yellow-900/20",
+                            "border-border bg-muted/10",
                         )}
                       >
                         {/* 主进度条背景 */}
@@ -213,8 +212,8 @@ export const FileUploader = ({
                             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                               {file.status === "pending" ? (
                                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                                  <div className="flex items-center gap-1 rounded-full bg-neutral-600 px-3 py-1 text-xs text-white dark:bg-neutral-700">
-                                    <div className="h-2 w-2 rounded-full bg-neutral-300 dark:bg-neutral-400"></div>
+                                  <div className="flex items-center gap-1 rounded-full border bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+                                    <div className="h-2 w-2 rounded-full bg-muted-foreground/50"></div>
                                     {t("Pending Upload")}
                                   </div>
                                   <Button
@@ -231,8 +230,8 @@ export const FileUploader = ({
                                   <span className="text-sm">
                                     {file.progress}%
                                   </span>
-                                  <div className="flex items-center gap-1 rounded-full bg-gray-700 px-3 py-1 text-xs text-white dark:bg-gray-600">
-                                    <div className="h-2 w-2 animate-pulse rounded-full bg-gray-300 dark:bg-gray-400"></div>
+                                  <div className="flex items-center gap-1 rounded-full border bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+                                    <div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground/50"></div>
                                     {t("Uploading")}
                                   </div>
                                   <Button
@@ -247,8 +246,8 @@ export const FileUploader = ({
                                 </div>
                               ) : file.status === "completed" ? (
                                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                                  <div className="flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 text-xs text-white dark:bg-green-700">
-                                    <div className="h-2 w-2 rounded-full bg-green-300 dark:bg-green-400"></div>
+                                  <div className="flex items-center gap-1 rounded-full border bg-background/80 px-3 py-1 text-xs text-foreground">
+                                    <div className="h-2 w-2 rounded-full bg-foreground/60"></div>
                                     {t("Completed")}
                                   </div>
                                   <CopyButton
@@ -268,8 +267,8 @@ export const FileUploader = ({
                                   file.status === "cancelled") && (
                                   <div className="flex flex-col gap-2">
                                     <div className="flex flex-wrap items-center justify-end gap-2">
-                                      <div className="flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs text-white dark:bg-red-700">
-                                        <div className="h-2 w-2 rounded-full bg-red-300 dark:bg-red-400"></div>
+                                      <div className="flex items-center gap-1 rounded-full border bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+                                        <div className="h-2 w-2 rounded-full bg-muted-foreground/50"></div>
                                         {file.status === "cancelled"
                                           ? t("Aborted")
                                           : t("Failed")}

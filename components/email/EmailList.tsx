@@ -246,8 +246,8 @@ export default function EmailList({
 
   return (
     <div className={cn("grids flex min-w-0 flex-1 flex-col", className)}>
-      <div className="border-b bg-muted/40 p-2 text-foreground backdrop-blur">
-        <div className="flex flex-wrap items-center gap-2 text-base font-semibold">
+      <div className="border-b bg-muted/30 p-2 text-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-sm font-medium sm:text-base">
           {showMailboxSwitcher && onShowMailboxList && (
             <Button
               type="button"
@@ -268,7 +268,7 @@ export default function EmailList({
               <Tooltip delayDuration={200}>
                 <TooltipTrigger asChild>
                   <Switch
-                    className="data-[state=checked]:bg-blue-500 data-[state=unchecked]:bg-neutral-300 dark:data-[state=unchecked]:bg-neutral-200"
+                    className="data-[state=checked]:bg-foreground data-[state=unchecked]:bg-muted-foreground/30 dark:data-[state=unchecked]:bg-muted-foreground/40"
                     onCheckedChange={handleSetAutoRefresh}
                     checked={isAutoRefresh}
                     aria-label="Auto refresh"
@@ -402,7 +402,7 @@ export default function EmailList({
                 data.list.map((email) => (
                   <div
                     key={email.id}
-                    className="border-b border-dotted bg-neutral-100/50 px-3 py-2 hover:bg-gray-100 dark:border-neutral-700 dark:bg-neutral-900 hover:dark:bg-neutral-700"
+                    className="border-b border-dotted bg-background px-3 py-2 transition-colors hover:bg-muted/20"
                   >
                     <div className="flex items-start justify-between gap-2">
                       {showMutiCheckBox && (

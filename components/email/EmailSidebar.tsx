@@ -317,7 +317,7 @@ export default function EmailSidebar({
       {/* Header */}
       <div className="border-b p-2 text-center">
         {isMobile && selectedEmailAddress && setIsMobileSidebarOpen && (
-          <div className="mb-3 flex items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-left">
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-left">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">{t("Selected mailbox")}</p>
               <p className="truncate text-sm font-medium text-foreground">
@@ -439,7 +439,7 @@ export default function EmailSidebar({
         {shouldShowExpandedSidebar && (
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg text-xs text-muted-foreground">
             {/* Address */}
-            <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
+            <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/30 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
               <div className="flex items-center gap-1">
                 <Icons.mail className="size-3" />
                 <p className="line-clamp-1 text-start font-medium">
@@ -452,7 +452,7 @@ export default function EmailSidebar({
             </div>
 
             {/* Inbox Emails */}
-            <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
+            <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/30 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
               <div className="flex items-center gap-1">
                 <Icons.inbox className="size-3" />
                 <p className="line-clamp-1 text-start font-medium">
@@ -470,8 +470,8 @@ export default function EmailSidebar({
               aria-pressed={onlyUnread}
               aria-label={t("Filter unread emails")}
               className={cn(
-                "relative h-auto min-h-11 flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70",
-                onlyUnread && "bg-muted",
+                "relative h-auto min-h-11 flex-col items-center gap-1 rounded-md border bg-muted/30 px-1 pb-1 pt-2 transition-colors hover:bg-muted/50",
+                onlyUnread && "bg-muted/60",
                 { "col-span-2": user.role !== "ADMIN" },
               )}
               onClick={() => {
@@ -503,7 +503,7 @@ export default function EmailSidebar({
             {user.role === "ADMIN" && (
               <div
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70",
+                  "flex flex-col items-center gap-1 rounded-md border bg-muted/30 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70",
                   isAdminModel && "bg-muted",
                 )}
               >

@@ -168,7 +168,7 @@ export default function EmailDetail({
       <div className="flex items-start justify-between gap-2 border-b px-2 py-2">
         <div
           onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-gray-300 to-gray-900 text-sm font-bold text-white"
+          className="flex h-10 w-10 items-center justify-center rounded-full border bg-muted/40 text-sm font-medium text-foreground"
         >
           {email.subject?.[0].toUpperCase() ||
             email.fromName?.[0].toUpperCase() ||
@@ -209,7 +209,7 @@ export default function EmailDetail({
           )}
         </div>
         <Button
-          className="ml-auto size-8 grow-0 px-1 py-1"
+          className="ml-auto size-8 grow-0 px-1 py-1 text-muted-foreground"
           size={"sm"}
           onClick={onClose}
           variant={"outline"}
@@ -238,7 +238,7 @@ export default function EmailDetail({
                 return (
                   <div
                     key={index}
-                    className="group relative flex items-center justify-between rounded-md border border-dotted bg-gray-100 p-2 transition-shadow hover:border-dashed dark:bg-neutral-800"
+                    className="group relative flex items-center justify-between rounded-md border bg-muted/20 p-2 transition-colors hover:bg-muted/30"
                   >
                     <div className="flex items-center gap-2 overflow-hidden">
                       {attachment.mimeType.startsWith("image/") ? (
@@ -271,9 +271,9 @@ export default function EmailDetail({
                     </div>
                     <Button
                       onClick={() => handleDownload(attachment)}
-                      className="absolute right-1 top-1 inline-flex h-8 px-2 md:hidden md:group-hover:inline-flex"
+                      className="absolute right-1 top-1 inline-flex h-8 px-2 text-muted-foreground md:hidden md:group-hover:inline-flex"
                       size="sm"
-                      variant="default"
+                      variant="outline"
                       aria-label={t("Download attachment")}
                     >
                       <Icons.download className="size-3" />
