@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { User } from "@/lib/db/types";
 import {
@@ -169,20 +169,31 @@ export default function UserFileList({
     }
   };
 
+  const shortLinkIds = useMemo(
+    () =>
+      (files?.list ?? [])
+        .map((file) => file.shortUrlId)
+        .filter((id): id is string => Boolean(id)),
+    [files?.list],
+  );
+
   const handleGetFileShortLinkByIds = async () => {
-    if (!files || !files.list) return;
+    if (shortLinkIds.length === 0) {
+      setShortLinks([]);
+      return;
+    }
+
     try {
-      const ids = files.list.map((f) => f.shortUrlId || "");
-      if (!ids?.some((id) => id !== "")) return;
       const response = await fetch(`${action}/s3/files/short`, {
         method: "POST",
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ ids: shortLinkIds }),
       });
       if (!response.ok || response.status !== 200) {
-      } else {
-        const data = await response.json();
-        setShortLinks(data.urls);
+        return;
       }
+
+      const data = await response.json();
+      setShortLinks(data.urls);
     } catch (error) {
       console.error("Error get short link:", error);
     }
@@ -190,7 +201,19 @@ export default function UserFileList({
 
   useEffect(() => {
     handleGetFileShortLinkByIds();
-  }, [files]);
+  }, [action, shortLinkIds]);
+
+  const shortLinkByFileId = useMemo(() => {
+    const pairs = (files?.list ?? [])
+      .filter((file) => Boolean(file.shortUrlId))
+      .map((file, index) => [file.id, shortLinks[index] || ""] as const);
+
+    return new Map(pairs);
+  }, [files?.list, shortLinks]);
+  const selectedFileIdSet = useMemo(
+    () => new Set(selectedFiles.map((file) => file.id)),
+    [selectedFiles],
+  );
 
   if (files && files.total === 0) {
     return (
@@ -204,66 +227,73 @@ export default function UserFileList({
     );
   }
 
-  const renderFileLinks = (file: UserFileData, index: number) => (
-    <>
-      <div className="flex min-w-0 items-center gap-2">
-        <Icons.fileText className="size-3 shrink-0" />
-        <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground">
-          {file.path}
-        </p>
-        <CopyButton className="size-9 shrink-0" value={file.path} />
-      </div>
-      {file.shortUrlId && (
+  const renderFileLinks = (file: UserFileData) => {
+    const shortLink = shortLinkByFileId.get(file.id);
+
+    return (
+      <>
         <div className="flex min-w-0 items-center gap-2">
-          <Icons.unLink className="size-3 shrink-0 text-muted-foreground" />
+          <Icons.fileText className="size-3 shrink-0" />
+          <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground">
+            {file.path}
+          </p>
+          <CopyButton className="size-9 shrink-0" value={file.path} />
+        </div>
+        {shortLink && (
+          <div className="flex min-w-0 items-center gap-2">
+            <Icons.unLink className="size-3 shrink-0 text-muted-foreground" />
+            <Link
+              href={`https://${shortLink}`}
+              className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80"
+              target="_blank"
+            >
+              https://{shortLink}
+            </Link>
+            <CopyButton
+              className="size-9 shrink-0"
+              value={`https://${shortLink}`}
+            />
+          </div>
+        )}
+        <div className="flex min-w-0 items-center gap-2">
+          <Icons.link className="size-3 shrink-0" />
           <Link
-            href={"https://" + shortLinks[index]}
+            href={getFileUrl(file.path)}
             className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80"
             target="_blank"
           >
-            https://{shortLinks[index]}
+            {getFileUrl(file.path)}
           </Link>
           <CopyButton
             className="size-9 shrink-0"
-            value={`https://${shortLinks[index]}`}
+            value={getFileUrl(file.path)}
           />
         </div>
-      )}
-      <div className="flex min-w-0 items-center gap-2">
-        <Icons.link className="size-3 shrink-0" />
-        <Link
-          href={getFileUrl(file.path)}
-          className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80"
-          target="_blank"
-        >
-          {getFileUrl(file.path)}
-        </Link>
-        <CopyButton className="size-9 shrink-0" value={getFileUrl(file.path)} />
-      </div>
-      <div className="flex min-w-0 items-center gap-2">
-        <Icons.type className="size-3 shrink-0" />
-        <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80">
-          {`[${file.name}](${getFileUrl(file.path)})`}
-        </p>
-        <CopyButton
-          className="size-9 shrink-0"
-          value={`[${file.name}](${getFileUrl(file.path)})`}
-        />
-      </div>
-      {file.mimeType.startsWith("image/") && (
         <div className="flex min-w-0 items-center gap-2">
-          <Icons.code className="size-3 shrink-0" />
+          <Icons.type className="size-3 shrink-0" />
           <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80">
-            {`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
+            {`[${file.name}](${getFileUrl(file.path)})`}
           </p>
           <CopyButton
             className="size-9 shrink-0"
-            value={`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
+            value={`[${file.name}](${getFileUrl(file.path)})`}
           />
         </div>
-      )}
-    </>
-  );
+        {file.mimeType.startsWith("image/") && (
+          <div className="flex min-w-0 items-center gap-2">
+            <Icons.code className="size-3 shrink-0" />
+            <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80">
+              {`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
+            </p>
+            <CopyButton
+              className="size-9 shrink-0"
+              value={`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
+            />
+          </div>
+        )}
+      </>
+    );
+  };
 
   const renderListView = () => (
     <div className="overflow-hidden rounded-lg border bg-background max-sm:hidden">
@@ -307,7 +337,7 @@ export default function UserFileList({
                 >
                   <Checkbox
                     checked={
-                      selectedFiles.find((f) => f.id === file.id) !== undefined
+                      selectedFileIdSet.has(file.id)
                     }
                     onCheckedChange={() => handleSelectFile(file)}
                     className="mr-3 size-4 border-neutral-300 bg-neutral-100 data-[state=checked]:border-neutral-900 data-[state=checked]:bg-neutral-600 data-[state=checked]:text-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:data-[state=checked]:border-neutral-300 dark:data-[state=checked]:bg-neutral-300"
@@ -332,7 +362,7 @@ export default function UserFileList({
                             alt={`${file.name}`}
                           />
                         )}
-                      {renderFileLinks(file, index)}
+                      {renderFileLinks(file)}
                     </div>
                   }
                 >
@@ -484,7 +514,7 @@ export default function UserFileList({
           key={file.id}
           className={cn(
             "group relative flex w-full cursor-pointer items-end rounded-md border border-transparent transition-all hover:bg-muted/40",
-            selectedFiles.find((f) => f.id === file.id) !== undefined &&
+            selectedFileIdSet.has(file.id) &&
               "border-border bg-muted/60",
           )}
           onClick={() => handleSelectFile(file)}
@@ -493,7 +523,7 @@ export default function UserFileList({
             {showMutiCheckBox && (
               <Checkbox
                 checked={
-                  selectedFiles.find((f) => f.id === file.id) !== undefined
+                  selectedFileIdSet.has(file.id)
                 }
                 // onCheckedChange={() => handleSelectFile(file)}
                 className="absolute left-1 top-1 size-4 border-neutral-300 bg-neutral-100 data-[state=checked]:border-neutral-900 data-[state=checked]:bg-neutral-600 data-[state=checked]:text-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:data-[state=checked]:border-neutral-300 dark:data-[state=checked]:bg-neutral-300"
@@ -532,7 +562,7 @@ export default function UserFileList({
                       <strong>Modified:</strong>{" "}
                       {formatDate(file.lastModified?.toString() || "")}
                     </p>
-                    {renderFileLinks(file, index)}
+                    {renderFileLinks(file)}
                     <div className="flex items-center justify-end space-x-1 pt-2">
                       <Button
                         className="flex h-7 w-full items-center gap-2 text-xs"

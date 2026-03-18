@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { ForwardEmail } from "@/lib/db/types";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -125,6 +125,22 @@ export default function EmailList({
     }
   }, [emailAddress, data, selectedEmailId]);
 
+  const selectedEmail = useMemo(
+    () => data?.list?.find((email) => email.id === selectedEmailId),
+    [data?.list, selectedEmailId],
+  );
+
+  const emailPreviewMap = useMemo(
+    () =>
+      new Map(
+        (data?.list ?? []).map((email) => [
+          email.id,
+          email.html ? htmlToText(email.html) : email.text || "No content",
+        ]),
+      ),
+    [data?.list],
+  );
+
   const handleMarkAsRead = async (emailId: string) => {
     try {
       const response = await fetch("/api/email/read", {
@@ -206,8 +222,8 @@ export default function EmailList({
 
   const handleEmailSelection = (emailId: string | null) => {
     if (emailId) {
-      const selectedEmail = data?.list?.find((email) => email.id === emailId);
-      if (selectedEmail && !selectedEmail.readAt) {
+      const nextSelectedEmail = data?.list?.find((email) => email.id === emailId);
+      if (nextSelectedEmail && !nextSelectedEmail.readAt) {
         handleMarkAsRead(emailId);
       }
     }
@@ -391,7 +407,7 @@ export default function EmailList({
         <div className="scrollbar-hidden relative h-[calc(100vh-105px)] animate-fade-in overflow-scroll">
           {selectedEmailId ? (
             <EmailDetail
-              email={data?.list?.find((email) => email.id === selectedEmailId)}
+              email={selectedEmail}
               selectedEmailId={selectedEmailId}
               onClose={() => onSelectEmail(null)}
               onMarkAsRead={() => handleMarkAsRead(selectedEmailId)}
@@ -438,9 +454,7 @@ export default function EmailList({
                           {email.subject}
                         </div>
                         <div className="line-clamp-2 break-words text-xs text-neutral-500">
-                          {email.html
-                            ? htmlToText(email.html)
-                            : email.text || "No content"}
+                          {emailPreviewMap.get(email.id) || "No content"}
                         </div>
                       </div>
                     </div>

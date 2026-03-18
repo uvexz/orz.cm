@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
@@ -27,21 +27,34 @@ export function LinkPreviewer({
   const [screenshotInfo, setScreenshotInfo] = useState({
     tmp_url: "",
   });
+  const screenshotUrlRef = useRef("");
+  const hasLoadedScreenshotRef = useRef(false);
 
   const handleScrapingScreenshot = async () => {
-    if (url) {
-      const res = await fetch(
-        `/api/v1/scraping/screenshot?url=${url}&key=${apiKey}&width=1200&height=750&viewportWidth=1200&viewportHeight=750`,
-      );
-      if (!res.ok || res.status !== 200) {
-      } else {
-        const blob = await res.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        setScreenshotInfo({
-          tmp_url: imageUrl,
-        });
-      }
+    if (!url || hasLoadedScreenshotRef.current) {
+      return;
     }
+
+    const res = await fetch(
+      `/api/v1/scraping/screenshot?url=${url}&key=${apiKey}&width=1200&height=750&viewportWidth=1200&viewportHeight=750`,
+    );
+
+    if (!res.ok || res.status !== 200) {
+      return;
+    }
+
+    const blob = await res.blob();
+    const imageUrl = URL.createObjectURL(blob);
+
+    if (screenshotUrlRef.current.startsWith("blob:")) {
+      URL.revokeObjectURL(screenshotUrlRef.current);
+    }
+
+    screenshotUrlRef.current = imageUrl;
+    hasLoadedScreenshotRef.current = true;
+    setScreenshotInfo({
+      tmp_url: imageUrl,
+    });
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -51,12 +64,22 @@ export function LinkPreviewer({
   };
 
   useEffect(() => {
+    hasLoadedScreenshotRef.current = false;
+    setScreenshotInfo({ tmp_url: "" });
+
+    if (screenshotUrlRef.current.startsWith("blob:")) {
+      URL.revokeObjectURL(screenshotUrlRef.current);
+      screenshotUrlRef.current = "";
+    }
+  }, [apiKey, url]);
+
+  useEffect(() => {
     return () => {
-      if (screenshotInfo.tmp_url.startsWith("blob:")) {
-        URL.revokeObjectURL(screenshotInfo.tmp_url);
+      if (screenshotUrlRef.current.startsWith("blob:")) {
+        URL.revokeObjectURL(screenshotUrlRef.current);
       }
     };
-  }, [screenshotInfo.tmp_url]);
+  }, []);
 
   return (
     <TooltipProvider>
@@ -121,6 +144,7 @@ export function LinkInfoPreviewer({
     timestamp: "",
     payload: "",
   });
+  const hasLoadedMetaRef = useRef(false);
 
   const isImageUrl = (url: string): boolean => {
     const imageExtensions = [
@@ -153,9 +177,10 @@ export function LinkInfoPreviewer({
   };
 
   const handleScrapingInfo = async () => {
-    if (!url) return;
+    if (!url || hasLoadedMetaRef.current) return;
 
     if (isImageUrl(url)) {
+      hasLoadedMetaRef.current = true;
       setMetaInfo({
         title: formatUrl,
         description: "",
@@ -186,6 +211,7 @@ export function LinkInfoPreviewer({
         });
       } else {
         const data = await res.json();
+        hasLoadedMetaRef.current = true;
         setMetaInfo({ ...data, title: data.title || url });
       }
     } catch (error) {
@@ -209,6 +235,21 @@ export function LinkInfoPreviewer({
       handleScrapingInfo();
     }
   };
+
+  useEffect(() => {
+    hasLoadedMetaRef.current = false;
+    setMetaInfo({
+      title: "",
+      description: "",
+      image: "",
+      icon: "",
+      url: "",
+      lang: "",
+      author: "",
+      timestamp: "",
+      payload: "",
+    });
+  }, [apiKey, formatUrl, url]);
 
   return (
     <TooltipProvider>

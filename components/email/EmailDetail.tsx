@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ForwardEmail } from "@/lib/db/types";
 import {
   File,
@@ -89,6 +89,59 @@ export default function EmailDetail({
 }: EmailDetailProps) {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const t = useTranslations("Email");
+  const attachments = useMemo<Attachment[]>(() => {
+    if (!email?.attachments) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(email.attachments);
+    } catch (error) {
+      console.log("Failed to parse attachments:", error);
+      return [];
+    }
+  }, [email]);
+
+  const processedEmailContent = useMemo(() => {
+    const content = email?.html || email?.text || "";
+
+    if (!content || attachments.length === 0) {
+      return content;
+    }
+
+    if (email?.html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(content, "text/html");
+      const images = Array.from(doc.getElementsByTagName("img"));
+
+      images.forEach((img) => {
+        const alt = img.getAttribute("alt") || "";
+        const matchingAttachment = attachments.find(
+          (att) => att.filename === alt,
+        );
+        if (matchingAttachment) {
+          img.setAttribute(
+            "src",
+            `${siteConfig.emailR2Domain}/${matchingAttachment.r2Path}`,
+          );
+        }
+      });
+
+      return doc.documentElement.outerHTML;
+    }
+
+    if (email?.text) {
+      return attachments.reduce((processedContent, attachment) => {
+        const regex = new RegExp(`\\b${attachment.filename}\\b`, "g");
+        return processedContent.replace(
+          regex,
+          `${siteConfig.emailR2Domain}/${attachment.r2Path}`,
+        );
+      }, content);
+    }
+
+    return content;
+  }, [attachments, email]);
 
   function getFileIcon(type: string): LucideIcon {
     const icon = Object.keys(fileTypeIcons).find((key) =>
@@ -109,54 +162,6 @@ export default function EmailDetail({
   };
 
   if (!email) return null;
-
-  let attachments: Attachment[] = [];
-  try {
-    if (email.attachments) {
-      attachments = JSON.parse(email.attachments);
-    }
-  } catch (error) {
-    console.log("Failed to parse attachments:", error);
-  }
-
-  // 处理邮件内容中的图片链接
-  const processContent = (content: string): string => {
-    if (!content || attachments.length === 0) return content;
-
-    let processedContent = content;
-
-    // 如果是 HTML，解析 DOM 并替换 <img> 标签的 src
-    if (email.html) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(content, "text/html");
-      const images = Array.from(doc.getElementsByTagName("img")); // 转换为数组
-
-      images.forEach((img) => {
-        const alt = img.getAttribute("alt") || "";
-        const matchingAttachment = attachments.find(
-          (att) => att.filename === alt,
-        );
-        if (matchingAttachment) {
-          img.setAttribute(
-            "src",
-            `${siteConfig.emailR2Domain}/${matchingAttachment.r2Path}`,
-          );
-        }
-      });
-      processedContent = doc.documentElement.outerHTML; // 返回完整的 HTML
-    } else if (email.text) {
-      // 如果是纯文本，替换文件名
-      attachments.forEach((attachment) => {
-        const regex = new RegExp(`\\b${attachment.filename}\\b`, "g");
-        processedContent = processedContent.replace(
-          regex,
-          `${siteConfig.emailR2Domain}/${attachment.r2Path}`,
-        );
-      });
-    }
-
-    return processedContent;
-  };
 
   return (
     <div
@@ -225,7 +230,7 @@ export default function EmailDetail({
             __html: processContent(email.html || email.text || ""),
           }}
         /> */}
-        <EmailViewer email={processContent(email.html || email.text || "")} />
+        <EmailViewer email={processedEmailContent} />
 
         {attachments.length > 0 && (
           <div className="mt-auto border-t border-dashed px-2 py-3">
