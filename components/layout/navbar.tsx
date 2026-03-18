@@ -34,12 +34,12 @@ export function NavBar({ scroll = false }: NavBarProps) {
         <div className="flex items-center gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-1.5">
             <Icons.logo />
-            <h1
+            <span
               style={{ fontFamily: "Bahamas Bold" }}
               className="text-2xl font-bold"
             >
               {siteConfig.name}
-            </h1>
+            </span>
           </Link>
         </div>
 

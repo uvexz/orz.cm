@@ -28,7 +28,7 @@ export function EmailDashboard({ user }: { user: AppSessionUser }) {
   }, [isMobile, selectedEmailAddress]);
 
   return (
-    <div className="flex h-[calc(100vh-60px)] w-full">
+    <div className="flex h-[calc(100vh-60px)] w-full min-w-0">
       <EmailSidebar
         className={cn(
           !isCollapsed ? "w-64 xl:w-72" : "w-16",

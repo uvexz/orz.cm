@@ -15,7 +15,14 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
@@ -487,6 +494,12 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Mobile navigation</SheetTitle>
+            <SheetDescription>
+              Browse dashboard sections and open product areas.
+            </SheetDescription>
+          </SheetHeader>
           <ScrollArea className="h-full overflow-y-auto">
             <div className="flex h-screen flex-col">
               <nav className="flex flex-1 flex-col gap-y-8 p-6 text-lg font-medium">

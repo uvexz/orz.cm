@@ -38,9 +38,11 @@ export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {
 
           <div className="flex items-center gap-3">
             <Link
-              href={siteConfig.url}
+              href={siteConfig.links.github}
               target="_blank"
               rel="noreferrer"
+              aria-label="Open GitHub repository"
+              title="GitHub"
               className="font-medium underline underline-offset-1"
             >
               <Icons.github className="size-5" />

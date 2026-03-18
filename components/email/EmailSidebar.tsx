@@ -413,12 +413,13 @@ export default function EmailSidebar({
               </p>
             </div>
 
-            <button
+            <Button
               type="button"
+              variant="ghost"
               aria-pressed={onlyUnread}
               aria-label={t("Filter unread emails")}
               className={cn(
-                "relative flex cursor-pointer flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
+                "relative h-auto min-h-11 flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
                 {
                   "bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700":
                     onlyUnread,
@@ -448,7 +449,7 @@ export default function EmailSidebar({
                   <TooltipContent>{t("Filter unread emails")}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            </button>
+            </Button>
 
             {/* Admin Mode */}
             {user.role === "ADMIN" && (
@@ -555,18 +556,8 @@ export default function EmailSidebar({
         {userEmails.map((email) => (
           <div
             key={email.id}
-            onClick={() => onSelectEmail(email.emailAddress)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onSelectEmail(email.emailAddress);
-              }
-            }}
-            role="button"
-            tabIndex={0}
-            aria-pressed={selectedEmailAddress === email.emailAddress}
             className={cn(
-              `border-gray-5 group m-1 cursor-pointer bg-neutral-50 p-2 transition-colors hover:bg-neutral-100 dark:border-zinc-700 dark:bg-neutral-800 dark:hover:bg-neutral-900`,
+              `border-gray-5 group m-1 bg-neutral-50 p-2 transition-colors hover:bg-neutral-100 dark:border-zinc-700 dark:bg-neutral-800 dark:hover:bg-neutral-900`,
               selectedEmailAddress === email.emailAddress
                 ? "bg-gray-100 dark:bg-neutral-900"
                 : "",
@@ -584,95 +575,111 @@ export default function EmailSidebar({
                   : "",
               )}
             >
-              <span className="min-w-0 flex-1 truncate" title={email.emailAddress}>
-                {isCollapsed
-                  ? email.emailAddress.slice(0, 1).toLocaleUpperCase()
-                  : email.emailAddress}
-              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onSelectEmail(email.emailAddress)}
+                aria-pressed={selectedEmailAddress === email.emailAddress}
+                className={cn(
+                  "h-auto min-w-0 flex-1 justify-start p-0 text-left text-sm font-bold text-neutral-500 hover:bg-transparent dark:text-zinc-400",
+                  isCollapsed &&
+                    "size-full justify-center text-center text-white hover:bg-transparent dark:text-neutral-100",
+                )}
+              >
+                <span className="min-w-0 flex-1 truncate" title={email.emailAddress}>
+                  {isCollapsed
+                    ? email.emailAddress.slice(0, 1).toLocaleUpperCase()
+                    : email.emailAddress}
+                </span>
+              </Button>
               {!isCollapsed && (
-                <>
+                <div className="ml-2 flex shrink-0 items-center gap-1">
                   <SendEmailModal
                     emailAddress={email.emailAddress}
                     onSuccess={mutate}
                     triggerLabel={t("Send email")}
-                    triggerButton={
-                      <Icons.send
-                        className={cn(
-                          "size-5 rounded border p-1 text-primary",
-                          !isMobile
-                            ? "hidden hover:bg-neutral-200 group-hover:ml-auto group-hover:inline"
-                            : "",
-                        )}
-                      />
-                    }
-                  />
-                  <button
-                    type="button"
-                    aria-label={t("Edit email")}
+                    triggerButton={<Icons.send className="size-4 text-primary" />}
                     className={cn(
-                      "size-5 rounded border p-1 text-primary",
+                      "size-9 shrink-0 rounded-md border p-0 text-primary",
                       !isMobile
-                        ? "hidden hover:bg-neutral-200 group-hover:inline"
+                        ? "hidden hover:bg-neutral-200 group-hover:inline-flex"
                         : "",
                     )}
-                    onClick={(event) => {
-                      event.stopPropagation();
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("Edit email")}
+                    className={cn(
+                      "size-9 shrink-0 rounded-md border p-0 text-primary",
+                      !isMobile
+                        ? "hidden hover:bg-neutral-200 group-hover:inline-flex"
+                        : "",
+                    )}
+                    onClick={() => {
                       handleOpenEditEmail(email);
                     }}
                   >
-                    <PenLine aria-hidden="true" className="size-full" />
-                  </button>
-                  <button
+                    <PenLine aria-hidden="true" className="size-4" />
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     aria-label={t("Delete email")}
                     disabled={Boolean(email.deletedAt)}
                     className={cn(
-                      "size-5 rounded border p-1 text-primary disabled:cursor-not-allowed disabled:opacity-60",
+                      "size-9 shrink-0 rounded-md border p-0 text-primary disabled:cursor-not-allowed disabled:opacity-60",
                       !isMobile
-                        ? "hidden hover:bg-neutral-200 group-hover:inline"
+                        ? "hidden hover:bg-neutral-200 group-hover:inline-flex"
                         : "",
                       email.deletedAt ? "bg-gray-400" : "",
                     )}
-                    onClick={(event) => {
-                      event.stopPropagation();
+                    onClick={() => {
                       if (!email.deletedAt) {
                         setEmailToDelete(email.id);
                         setShowDeleteModal(true);
                       }
                     }}
                   >
-                    <Icons.trash aria-hidden="true" className="size-full" />
-                  </button>
+                    <Icons.trash aria-hidden="true" className="size-4" />
+                  </Button>
                   <CopyButton
                     value={`${email.emailAddress}`}
                     aria-label={t("Copy email address")}
                     className={cn(
-                      "size-5 rounded border p-1",
+                      "size-9 shrink-0 rounded-md border p-0",
                       "duration-250 transition-all hover:bg-neutral-200",
                     )}
                     title="Copy email address"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                    }}
                   />
-                </>
+                </div>
               )}
             </div>
             {!isCollapsed && (
-              <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500">
-                <div className="flex items-center gap-1 text-nowrap">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onSelectEmail(email.emailAddress)}
+                aria-label={t("Open email inbox")}
+                className="mt-2 h-auto min-w-0 justify-between gap-2 p-0 text-xs font-normal text-gray-500 hover:bg-transparent"
+              >
+                <div className="flex min-w-0 items-center gap-1">
                   {email.unreadCount > 0 && (
                     <Badge variant="default">{email.unreadCount}</Badge>
                   )}
-                  {t("{email} recived", { email: email.count })}
+                  <span className="truncate">
+                    {t("{email} recived", { email: email.count })}
+                  </span>
                 </div>
-                <span className="line-clamp-1 hover:line-clamp-none">
+                <span className="min-w-0 truncate text-right">
                   {isAdminModel
                     ? `${email.user || email.email.slice(0, 5)} · `
                     : ""}
                   <TimeAgoIntl date={email.createdAt} />
                 </span>
-              </div>
+              </Button>
             )}
           </div>
         ))}

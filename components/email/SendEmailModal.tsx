@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import type { KeyboardEvent, MouseEvent } from "react";
+import { useId, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -11,6 +10,7 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "../ui/drawer";
@@ -41,16 +41,16 @@ export function SendEmailModal({
     text: "",
   });
   const [isPending, startTransition] = useTransition();
+  const subjectId = useId();
+  const fromId = useId();
+  const toId = useId();
 
   const t = useTranslations("Email");
 
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error && error.message ? error.message : fallback;
 
-  const openModal = (
-    event?: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>,
-  ) => {
-    event?.stopPropagation();
+  const openModal = () => {
     setIsOpen(true);
   };
 
@@ -111,21 +111,22 @@ export function SendEmailModal({
   return (
     <>
       {triggerButton ? (
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label={triggerLabel}
-          onClick={openModal}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              openModal(event);
-            }
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={className}
+          aria-label={triggerLabel ?? t("Send Email")}
+          onClick={(event) => {
+            event.stopPropagation();
+            openModal();
           }}
         >
           {triggerButton}
-        </div>
+        </Button>
       ) : (
         <Button
+          type="button"
           className={className}
           variant="ghost"
           size="sm"
@@ -143,14 +144,22 @@ export function SendEmailModal({
         onOpenChange={setIsOpen}
       >
         <DrawerContent className="fixed bottom-0 right-0 top-0 h-[calc(100vh)] w-full rounded-none sm:max-w-5xl">
-          <DrawerHeader>
-            <DrawerTitle className="flex items-center gap-1">
-              {t("Send Email")}{" "}
+          <DrawerHeader className="border-b px-4 pb-3 text-left">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1 space-y-1">
+                <DrawerTitle>{t("Send Email")}</DrawerTitle>
+                <DrawerDescription>
+                  Compose and send an email from the selected mailbox.
+                </DrawerDescription>
+              </div>
               <Button
-                className="ml-auto"
+                type="button"
+                className="ml-auto shrink-0"
                 onClick={handleSendEmail}
                 disabled={isPending}
                 variant="ghost"
+                size="icon"
+                aria-label={t("Send Email")}
               >
                 {isPending ? (
                   <Icons.spinner className="size-4 animate-spin" />
@@ -159,47 +168,64 @@ export function SendEmailModal({
                 )}
               </Button>
               <DrawerClose asChild>
-                <Button variant="ghost">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("Close")}
+                >
                   <Icons.close className="size-5" />
                 </Button>
               </DrawerClose>
-            </DrawerTitle>
+            </div>
           </DrawerHeader>
           <div className="scrollbar-hidden space-y-1 overflow-y-auto px-4 pb-4">
-            <div className="flex items-center justify-between border-b">
-              <label className="text-nowrap text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <div className="flex min-w-0 flex-wrap items-center gap-3 border-b sm:flex-nowrap">
+              <label
+                htmlFor={subjectId}
+                className="shrink-0 break-words text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              >
                 {t("Subject")}
               </label>
               <Input
+                id={subjectId}
                 value={sendForm.subject}
                 onChange={(e) =>
                   setSendForm({ ...sendForm, subject: e.target.value })
                 }
                 placeholder={t("Your subject")}
-                className="border-none"
+                className="min-w-0 flex-1 border-none"
               />
             </div>
-            <div className="flex items-center justify-between border-b">
-              <label className="text-nowrap text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <div className="flex min-w-0 flex-wrap items-center gap-3 border-b sm:flex-nowrap">
+              <label
+                htmlFor={fromId}
+                className="shrink-0 break-words text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              >
                 {t("From")}
               </label>
               <Input
+                id={fromId}
                 value={emailAddress || ""}
                 disabled
-                className="border-none"
+                className="min-w-0 flex-1 border-none"
               />
             </div>
-            <div className="flex items-center justify-between border-b">
-              <label className="text-nowrap text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <div className="flex min-w-0 flex-wrap items-center gap-3 border-b sm:flex-nowrap">
+              <label
+                htmlFor={toId}
+                className="shrink-0 break-words text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              >
                 {t("To")}
               </label>
               <Input
+                id={toId}
                 value={sendForm.to}
                 onChange={(e) =>
                   setSendForm({ ...sendForm, to: e.target.value })
                 }
                 placeholder="recipient@example.com"
-                className="border-none"
+                className="min-w-0 flex-1 border-none"
               />
             </div>
             <div>

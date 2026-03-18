@@ -44,7 +44,7 @@ export function CopyButton({
       variant="ghost"
       aria-label={accessibleLabel}
       className={cn(
-        "z-10 size-[30px] p-1.5 text-foreground hover:border hover:text-foreground dark:text-foreground",
+        "z-10 size-10 p-0 text-foreground hover:border hover:text-foreground dark:text-foreground",
         className,
       )}
       onClick={(event) => {

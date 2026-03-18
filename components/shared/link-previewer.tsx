@@ -63,13 +63,13 @@ export function LinkPreviewer({
       <Tooltip delayDuration={200} onOpenChange={handleOpenChange}>
         <TooltipTrigger asChild>
           <Link
-            className="flex w-full items-center hover:text-blue-400 hover:underline"
+            className="flex min-w-0 w-full items-center hover:text-blue-400 hover:underline"
             target="_blank"
             href={url}
             title={url}
             rel="noreferrer"
           >
-            <span className="truncate">{formatUrl}</span>
+            <span className="min-w-0 truncate">{formatUrl}</span>
             <Icons.outLink className="ml-0.5 mt-0.5 size-3 shrink-0" />
           </Link>
         </TooltipTrigger>
@@ -215,13 +215,13 @@ export function LinkInfoPreviewer({
       <Tooltip delayDuration={200} onOpenChange={handleOpenChange}>
         <TooltipTrigger asChild>
           <Link
-            className="flex w-full items-center hover:text-blue-400 hover:underline"
+            className="flex min-w-0 w-full items-center hover:text-blue-400 hover:underline"
             target="_blank"
             href={url}
             title={url}
             rel="noreferrer"
           >
-            <span className="truncate">{formatUrl}</span>
+            <span className="min-w-0 truncate">{formatUrl}</span>
             <Icons.outLink className="ml-0.5 mt-0.5 size-3 shrink-0" />
           </Link>
         </TooltipTrigger>

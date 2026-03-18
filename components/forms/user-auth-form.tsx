@@ -13,8 +13,15 @@ import { authClient } from "@/lib/auth-client";
 import { cn, fetcher } from "@/lib/utils";
 import { userPasswordAuthSchema } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/shared/icons";
 
 import { Skeleton } from "../ui/skeleton";
@@ -47,12 +54,12 @@ function getAuthErrorCode(error: unknown) {
 }
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
-  const {
-    register: register2,
-    handleSubmit: handleSubmit2,
-    formState: { errors: errors2 },
-  } = useForm<FormData2>({
+  const form = useForm<FormData2>({
     resolver: zodResolver(userPasswordAuthSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
   const [isLoading, startTransition] = React.useTransition();
   const [isGoogleLoading, setIsGoogleLoading] = React.useState<boolean>(false);
@@ -193,64 +200,69 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
   const rendeCredentials = () =>
     loginMethod.credentials && (
-      <form onSubmit={handleSubmit2(onSubmitPwd)}>
-        <div className="grid gap-3">
-          <div className="grid gap-1">
-            <Label className="sr-only" htmlFor="email">
-              Email
-            </Label>
-            <Input
-              id="email"
-              placeholder="email@example.com"
-              type="email"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect="off"
-              disabled={isLoading || isGoogleLoading}
-              {...register2("email")}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmitPwd)}>
+          <div className="grid gap-3">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="space-y-1">
+                  <FormLabel className="sr-only">Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="email@example.com"
+                      type="email"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      autoCorrect="off"
+                      disabled={isLoading || isGoogleLoading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="px-1 text-xs" />
+                </FormItem>
+              )}
             />
-            {errors2?.email && (
-              <p className="px-1 text-xs text-red-600">
-                {errors2.email.message}
-              </p>
-            )}
-          </div>
-          <div className="grid gap-1">
-            <Label className="sr-only" htmlFor="email">
-              Password
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter password"
-              autoCapitalize="none"
-              autoComplete="password"
-              autoCorrect="off"
-              disabled={isLoading || isGoogleLoading}
-              {...register2("password")}
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem className="space-y-1">
+                  <FormLabel className="sr-only">Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter password"
+                      autoCapitalize="none"
+                      autoComplete="current-password"
+                      autoCorrect="off"
+                      disabled={isLoading || isGoogleLoading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="px-1 text-xs" />
+                </FormItem>
+              )}
             />
-            {errors2?.password && (
-              <p className="px-1 text-xs text-red-600">
-                {errors2.password.message}
-              </p>
-            )}
+
+            <Button
+              type="submit"
+              className="my-2"
+              disabled={isLoading || isGoogleLoading || isGithubLoading}
+            >
+              {isLoading && (
+                <Icons.spinner className="mr-2 size-4 animate-spin" />
+              )}
+              {t("Sign In / Sign Up")}
+            </Button>
+
+            {/* <p className="rounded-md border border-dashed bg-muted px-3 py-2 text-xs text-muted-foreground">
+              📢 {t("Unregistered users will automatically create an account")}.
+            </p> */}
           </div>
-
-          <Button
-            className="my-2"
-            disabled={isLoading || isGoogleLoading || isGithubLoading}
-          >
-            {isLoading && (
-              <Icons.spinner className="mr-2 size-4 animate-spin" />
-            )}
-            {t("Sign In / Sign Up")}
-          </Button>
-
-          {/* <p className="rounded-md border border-dashed bg-muted px-3 py-2 text-xs text-muted-foreground">
-            📢 {t("Unregistered users will automatically create an account")}.
-          </p> */}
-        </div>
-      </form>
+        </form>
+      </Form>
     );
 
   return (

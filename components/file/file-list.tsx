@@ -206,58 +206,58 @@ export default function UserFileList({
 
   const renderFileLinks = (file: UserFileData, index: number) => (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Icons.fileText className="size-3 shrink-0" />
-        <p className="line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs dark:bg-neutral-800">
+        <p className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs dark:bg-neutral-800">
           {file.path}
         </p>
-        <CopyButton className="size-6" value={file.path} />
+        <CopyButton className="size-9 shrink-0" value={file.path} />
       </div>
       {file.shortUrlId && (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Icons.unLink className="size-3 shrink-0 text-blue-500" />
           <Link
             href={"https://" + shortLinks[index]}
-            className="line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800"
+            className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800"
             target="_blank"
           >
             https://{shortLinks[index]}
           </Link>
           <CopyButton
-            className="size-6"
+            className="size-9 shrink-0"
             value={`https://${shortLinks[index]}`}
           />
         </div>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Icons.link className="size-3 shrink-0" />
         <Link
           href={getFileUrl(file.path)}
-          className="line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800"
+          className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800"
           target="_blank"
         >
           {getFileUrl(file.path)}
         </Link>
-        <CopyButton className="size-6" value={getFileUrl(file.path)} />
+        <CopyButton className="size-9 shrink-0" value={getFileUrl(file.path)} />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Icons.type className="size-3 shrink-0" />
-        <p className="line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800">
+        <p className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800">
           {`[${file.name}](${getFileUrl(file.path)})`}
         </p>
         <CopyButton
-          className="size-6"
+          className="size-9 shrink-0"
           value={`[${file.name}](${getFileUrl(file.path)})`}
         />
       </div>
       {file.mimeType.startsWith("image/") && (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Icons.code className="size-3 shrink-0" />
-          <p className="line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800">
+          <p className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800">
             {`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
           </p>
           <CopyButton
-            className="size-6"
+            className="size-9 shrink-0"
             value={`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
           />
         </div>
@@ -314,10 +314,10 @@ export default function UserFileList({
                   />
                 </div>
               )}
-              <div className={cn("col-span-3 items-center space-x-3 text-sm")}>
+              <div className={cn("col-span-3 min-w-0 items-center space-x-3 text-sm")}>
                 <ClickableTooltip
                   className={cn(
-                    "flex cursor-pointer items-center justify-start gap-1 break-all text-start",
+                    "flex min-w-0 cursor-pointer items-center justify-start gap-1 break-all text-start",
                     file.status !== 1 && "text-muted-foreground",
                   )}
                   content={
@@ -336,10 +336,10 @@ export default function UserFileList({
                     </div>
                   }
                 >
-                  {truncateMiddle(file.name, 36)}
+                  <span className="min-w-0 truncate">{truncateMiddle(file.name, 36)}</span>
                   {file.status === 1 && (
                     <CopyButton
-                      className="size-6"
+                      className="size-9 shrink-0"
                       value={getFileUrl(file.path)}
                     />
                   )}
@@ -350,8 +350,10 @@ export default function UserFileList({
                   {file.mimeType || "-"}
                 </Badge>
               </div>
-              <div className="col-span-1 flex items-center text-nowrap text-xs">
-                {formatFileSize(storageValueToBytes(file.size) || 0)}
+              <div className="col-span-1 flex min-w-0 items-center text-xs">
+                <span className="truncate">
+                  {formatFileSize(storageValueToBytes(file.size) || 0)}
+                </span>
               </div>
               <div className="col-span-1 hidden items-center text-xs sm:flex">
                 <ClickableTooltip
@@ -366,8 +368,10 @@ export default function UserFileList({
                   {file.user.name || file.user.email}
                 </ClickableTooltip>
               </div>
-              <div className="col-span-1 hidden items-center text-nowrap text-xs sm:flex">
-                <TimeAgoIntl date={file.updatedAt as Date} />
+              <div className="col-span-1 hidden min-w-0 items-center text-xs sm:flex">
+                <span className="truncate">
+                  <TimeAgoIntl date={file.updatedAt as Date} />
+                </span>
               </div>
               <div className="col-span-1 hidden items-center text-xs sm:flex">
                 <Switch checked={file.status === 1} disabled />
@@ -376,8 +380,8 @@ export default function UserFileList({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      className="size-[25px] p-1.5"
-                      size="sm"
+                      className="size-9 p-0"
+                      size="icon"
                       variant="ghost"
                     >
                       <Icons.moreVertical className="size-4" />

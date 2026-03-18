@@ -83,7 +83,9 @@ export function Notification() {
         onClick={handleClose}
         variant={"ghost"}
         size={"icon"}
-        className="absolute right-1.5 top-[18px] flex size-6 -translate-y-1/2 items-center justify-center"
+        aria-label="Dismiss notification"
+        title="Dismiss notification"
+        className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full"
       >
         <Icons.close className="size-4 text-primary" />
       </Button>

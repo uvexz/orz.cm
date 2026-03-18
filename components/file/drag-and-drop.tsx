@@ -94,20 +94,20 @@ const DragAndDrop = ({
       }`}
     >
       <input {...getInputProps()} />
-      <div className="text-center">
+      <div className="min-w-0 text-center">
         <div className="mx-auto w-fit transition-all duration-300">
           <Icons.cloudUpload className="size-20" />
         </div>
         {isDragActive ? (
-          <div className="animate-fade-in text-primary">
+          <div className="animate-fade-in break-words text-primary">
             {t("Drop files to upload them to")} {bucketInfo.bucket}
           </div>
         ) : isPasteActive ? (
-          <div className="animate-fade-in text-green-600">
+          <div className="animate-fade-in break-words text-green-600">
             {t("Files pasted successfully")}
           </div>
         ) : (
-          <div className="animate-fade-out">
+          <div className="animate-fade-out break-words">
             <p>{t("Drag and drop file(s) here")}</p>
             <p className="my-2 text-sm text-muted-foreground">{t("or")}</p>
             <Button size="sm">{t("Browse file(s)")}</Button>

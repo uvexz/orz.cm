@@ -11,8 +11,11 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
+  DrawerDescription,
   DrawerFooter,
+  DrawerHeader,
   DrawerPortal,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Icons } from "@/components/shared/icons";
@@ -71,7 +74,7 @@ export const FileUploader = ({
   return (
     <>
       <Button
-        className="flex h-9 items-center gap-1 text-nowrap"
+        className="flex h-9 items-center gap-1 whitespace-nowrap"
         onClick={() => setIsOpen(true)}
       >
         <Icons.cloudUpload className="size-5" />
@@ -81,23 +84,28 @@ export const FileUploader = ({
         <Drawer open={isOpen} direction="right" onOpenChange={setIsOpen}>
           <DrawerPortal>
             <DrawerContent className="h-screen w-full overflow-y-auto rounded-none sm:max-w-xl">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="mx-4 text-lg font-bold">{t("Upload Files")}</p>
+              <DrawerHeader className="mb-2 flex-row items-start justify-between gap-3 pb-2 text-left">
+                <div className="min-w-0 space-y-1">
+                  <DrawerTitle>{t("Upload Files")}</DrawerTitle>
+                  <DrawerDescription>
+                    Add files to this bucket and manage upload progress.
+                  </DrawerDescription>
+                </div>
                 <DrawerClose asChild>
-                  <Button variant="ghost">
+                  <Button variant="ghost" size="icon" aria-label="Close upload panel">
                     <Icons.close className="size-4" />
                   </Button>
                 </DrawerClose>
-              </div>
-              <div className="flex items-center justify-between px-4">
-                <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                  <div className="truncate">{bucketInfo.provider_name}</div>
-                  <Icons.arrowRight className="size-3" />
-                  <div className="font-medium text-blue-600 dark:text-blue-400">
+              </DrawerHeader>
+              <div className="flex items-center justify-between gap-3 px-4">
+                <div className="flex min-w-0 items-center space-x-1 text-sm text-muted-foreground">
+                  <div className="min-w-0 truncate">{bucketInfo.provider_name}</div>
+                  <Icons.arrowRight className="size-3 shrink-0" />
+                  <div className="min-w-0 truncate font-medium text-blue-600 dark:text-blue-400">
                     {bucketInfo.bucket}
                   </div>
                 </div>
-                <Badge className="text-xs">
+                <Badge className="shrink-0 text-xs">
                   {t("Limit")}:{" "}
                   {formatFileSize(bucketUsage.limits.maxSingleFileSize, {
                     precision: 1,
