@@ -168,15 +168,17 @@ export default function EmailSidebar({
       emailDomains?.find((d) => d.domain_name === selectedDomainSuffix)
         ?.min_email_length ?? 1;
     if (!normalizedEmailSuffix || normalizedEmailSuffix.length < limit_len) {
-      toast.error(`Email address characters must be at least ${limit_len}`);
+      toast.error(t("Email address characters must be at least {count}", {
+        count: limit_len,
+      }));
       return;
     }
     if (/[^a-zA-Z0-9_\-\.]/.test(normalizedEmailSuffix)) {
-      toast.error("Invalid email address");
+      toast.error(t("Invalid email address"));
       return;
     }
     if (reservedAddressSuffix.includes(normalizedEmailSuffix)) {
-      toast.error("Email address is reserved, please choose another one");
+      toast.error(t("Email address is reserved, please choose another one"));
       return;
     }
 
@@ -204,9 +206,9 @@ export default function EmailSidebar({
           await mutate();
           onSelectEmail(fullEmailAddress);
           setShowEmailModal(false);
-          toast.success("Email updated successfully");
+          toast.success(t("Email updated successfully"));
         } else {
-          toast.error("Failed to update email", {
+          toast.error(t("Failed to update email"), {
             description: await res.text(),
           });
         }
@@ -227,15 +229,17 @@ export default function EmailSidebar({
             await mutate();
             onSelectEmail(fullEmailAddress);
             setShowEmailModal(false);
-            toast.success("Email created successfully");
+            toast.success(t("Email created successfully"));
           } else {
-            toast.error("Failed to create email", {
+            toast.error(t("Failed to create email"), {
               description: await res.text(),
             });
           }
         } catch (error: unknown) {
-          console.log("Error creating email:", error);
-          toast.error("Error creating email");
+          console.error("Error creating email:", error);
+          toast.error(t("Error creating email"), {
+            description: getErrorMessage(error, t("Please try again")),
+          });
         }
       }
     });
@@ -265,12 +269,15 @@ export default function EmailSidebar({
           setShowDeleteModal(false);
           setDeleteInput("");
           setEmailToDelete(null);
-          toast.success("Email deleted successfully");
+          toast.success(t("Email deleted successfully"));
         } else {
-          toast.error("Failed to delete email");
+          toast.error(t("Failed to delete email"));
         }
-      } catch (error) {
-        console.log("Error deleting email:", error);
+      } catch (error: unknown) {
+        console.error("Error deleting email:", error);
+        toast.error(t("Failed to delete email"), {
+          description: getErrorMessage(error, t("Please try again")),
+        });
       }
     });
   };
@@ -287,7 +294,7 @@ export default function EmailSidebar({
     if (deleteInput.trim() === expectedInput) {
       handleDeleteEmail(emailToDelete);
     } else {
-      toast.error("Input does not match. Please type correctly.");
+      toast.error(t("Input does not match. Please type correctly."));
     }
   };
 
@@ -578,7 +585,7 @@ export default function EmailSidebar({
                     {t("No emails")}
                   </EmptyPlaceholder.Title>
                   <EmptyPlaceholder.Description>
-                    You don&apos;t have any email yet. Start creating email.
+                    {t("You don't have any email yet. Start creating email.")}
                   </EmptyPlaceholder.Description>
                 </EmptyPlaceholder>
               </div>
@@ -800,7 +807,7 @@ export default function EmailSidebar({
                       disabled={isEdit || !hasEmailDomains}
                     >
                       <SelectTrigger className="w-full sm:w-1/3 sm:rounded-none sm:border-x-0 sm:shadow-inner">
-                        <SelectValue placeholder="Select a domain" />
+                        <SelectValue placeholder={t("Choose a domain")} />
                       </SelectTrigger>
                       <SelectContent>
                         {emailDomains && emailDomains.length > 0 ? (
@@ -886,6 +893,7 @@ export default function EmailSidebar({
               className="mb-4"
               autoCapitalize="none"
               autoCorrect="off"
+              aria-label={t("Type the confirmation text")}
             />
             <div className="flex justify-end gap-2">
               <Button

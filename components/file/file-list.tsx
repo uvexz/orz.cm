@@ -92,8 +92,6 @@ export default function UserFileList({
   const [currentSelectFile, setCurrentSelectFile] =
     useState<UserFileData | null>();
 
-  // const isAdmin = action.includes("/admin");
-
   const getFileUrl = (key: string) => {
     return `${bucketInfo.custom_domain}/${key}`;
   };
@@ -123,12 +121,12 @@ export default function UserFileList({
         : window.open(signedUrl, "_blank");
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert("Error downloading file");
+      toast.error(t("Error downloading file"));
     }
   };
 
   const handleDeleteSingle = async (file: UserFileData) => {
-    if (!confirm("Are you sure you want to delete this file?")) return;
+    if (!confirm(t("Are you sure you want to delete this file?"))) return;
 
     try {
       toast.promise(
@@ -151,7 +149,7 @@ export default function UserFileList({
       );
     } catch (error) {
       console.error("Error deleting file:", error);
-      toast.success("Error deleting file");
+      toast.error("Error deleting file");
     }
   };
 
@@ -163,13 +161,13 @@ export default function UserFileList({
         body: JSON.stringify({ urlId, fileId: shortTarget?.id }),
       });
       if (!response.ok || response.status !== 200) {
-        toast.error("Error generating short link");
+        toast.error(t("Error generating short link"));
       } else {
         onRefresh();
       }
     } catch (error) {
       console.error("Error generating short link:", error);
-      toast.error("Error generating short link");
+      toast.error(t("Error generating short link"));
     }
   };
 
@@ -417,6 +415,7 @@ export default function UserFileList({
                       className="size-9 border border-transparent p-0 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                       size="icon"
                       variant="ghost"
+                      aria-label={t("Open file actions")}
                     >
                       <Icons.moreVertical className="size-4" />
                     </Button>

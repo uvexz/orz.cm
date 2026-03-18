@@ -128,8 +128,6 @@ export default function UserFileManager({ user, action }: FileListProps) {
     searchParams,
   ]);
 
-  // const isAdmin = action.includes("/admin");
-
   const { mutate } = useSWRConfig();
 
   const { data: s3Configs, isLoading } = useSWR<ClientStorageCredentials[]>(
@@ -276,7 +274,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
         );
       } catch (error) {
         console.error("Error deleting files:", error);
-        toast.success("Error deleting files");
+        toast.error("Error deleting files");
       }
     });
   };
@@ -422,6 +420,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
                   ? "border-neutral-600 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
                   : "",
               )}
+              aria-label={t("Open file actions")}
             >
               <Icons.chevronDown className="size-4" />
             </DropdownMenuTrigger>

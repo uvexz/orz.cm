@@ -13,7 +13,6 @@ import { EmptyPlaceholder } from "../shared/empty-placeholder";
 import { Icons } from "../shared/icons";
 import { PaginationWrapper } from "../shared/pagination";
 import { TimeAgoIntl } from "../shared/time-ago";
-// import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import {
@@ -287,7 +286,7 @@ export default function EmailList({
                     className="data-[state=checked]:bg-foreground data-[state=unchecked]:bg-muted-foreground/30 dark:data-[state=unchecked]:bg-muted-foreground/40"
                     onCheckedChange={handleSetAutoRefresh}
                     checked={isAutoRefresh}
-                    aria-label="Auto refresh"
+                    aria-label={t("Auto refresh")}
                   />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{t("Auto refresh")}</TooltipContent>
@@ -299,6 +298,7 @@ export default function EmailList({
               onClick={handleManualRefresh}
               disabled={isRefreshing || isLoading || isAutoRefresh}
               className="h-9"
+              aria-label={t("Refresh email list")}
             >
               <Icons.refreshCw
                 size={15}
@@ -317,6 +317,8 @@ export default function EmailList({
               variant="outline"
               size="sm"
               onClick={() => setShowMutiCheckBox(!showMutiCheckBox)}
+              aria-pressed={showMutiCheckBox}
+              aria-label={t("Select all")}
             >
               <Icons.listChecks className="size-4" />
             </Button>
