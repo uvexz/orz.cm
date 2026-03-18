@@ -1,6 +1,9 @@
 import {
+  CACHE_KEY_NAMESPACE,
   CACHE_TTL,
   delCache,
+  delCacheByPrefix,
+  getCache,
   getOrSetCache,
   setCache,
 } from "@/lib/cache";
@@ -34,47 +37,96 @@ type ShortUrlCacheValue = NonNullable<
 >;
 type NegativeShortUrlCacheValue = { missing: true };
 
+type UserShortUrlListResult = Awaited<ReturnType<typeof listUserShortUrls>>;
+type UrlStatusResult = UrlStatusStats | { status: unknown };
+
 function createUniqueConstraintError() {
   const error = new Error("Unique constraint failed") as Error & { code?: string };
   error.code = "UNIQUE_CONSTRAINT";
   return error;
 }
 
-function getShortUrlCacheKey(slug: string) {
-  return `short-url:${slug}`;
+function getShortUrlSlugCacheKey(slug: string) {
+  return `${CACHE_KEY_NAMESPACE.shortUrlSlug}:${slug}`;
 }
 
-async function invalidateShortUrlCache(...slugs: Array<string | null | undefined>) {
+function getShortUrlStatusCacheKey(userId: string, role: UserRole) {
+  return `${CACHE_KEY_NAMESPACE.shortUrlStatus}:${role}:${userId}`;
+}
+
+function getShortUrlListCacheKey(
+  userId: string,
+  role: UserRole,
+  page: number,
+  size: number,
+  userName: string,
+  url: string,
+  target: string,
+) {
+  const query = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    userName,
+    url,
+    target,
+  });
+
+  return `${CACHE_KEY_NAMESPACE.shortUrlList}:${role}:${userId}:${query.toString()}`;
+}
+
+function getShortUrlListCachePrefix(userId: string, role: UserRole) {
+  return `${CACHE_KEY_NAMESPACE.shortUrlList}:${role}:${userId}:`;
+}
+
+function getShortUrlStatusCacheInvalidationKeys(
+  ownerUserIds: Array<string | null | undefined>,
+) {
+  const uniqueUserIds = [...new Set(ownerUserIds.filter(Boolean))] as string[];
+
+  return [
+    ...uniqueUserIds.map((userId) => getShortUrlStatusCacheKey(userId, "USER")),
+    getShortUrlStatusCacheKey("admin", "ADMIN"),
+  ];
+}
+
+async function invalidateShortUrlCaches({
+  slugs = [],
+  ownerUserIds = [],
+}: {
+  slugs?: Array<string | null | undefined>;
+  ownerUserIds?: Array<string | null | undefined>;
+}) {
   const uniqueSlugs = [...new Set(slugs.filter(Boolean))] as string[];
-  await Promise.all(uniqueSlugs.map((slug) => delCache(getShortUrlCacheKey(slug))));
+  const uniqueUserIds = [...new Set(ownerUserIds.filter(Boolean))] as string[];
+
+  await Promise.all([
+    ...uniqueSlugs.map((slug) => delCache(getShortUrlSlugCacheKey(slug))),
+    ...getShortUrlStatusCacheInvalidationKeys(uniqueUserIds).map((key) => delCache(key)),
+    ...uniqueUserIds.map((userId) => delCacheByPrefix(getShortUrlListCachePrefix(userId, "USER"))),
+    delCacheByPrefix(getShortUrlListCachePrefix("admin", "ADMIN")),
+  ]);
 }
 
 async function readShortUrlFromCache(
   slug: string,
 ): Promise<ShortUrlCacheValue | null> {
-  const cachedValue = await getOrSetCache<ShortUrlCacheValue | NegativeShortUrlCacheValue>(
-    getShortUrlCacheKey(slug),
-    CACHE_TTL.shortUrl,
-    async () => {
-      const shortUrl = await findShortUrlBySuffix(slug);
-      if (!shortUrl) {
-        return { missing: true } satisfies NegativeShortUrlCacheValue;
-      }
+  const cacheKey = getShortUrlSlugCacheKey(slug);
+  const cachedValue = await getCache<
+    ShortUrlCacheValue | NegativeShortUrlCacheValue
+  >(cacheKey);
 
-      return shortUrl;
-    },
-  );
+  if (cachedValue !== null) {
+    return "missing" in cachedValue ? null : cachedValue;
+  }
 
-  if ("missing" in cachedValue) {
-    await setCache(
-      getShortUrlCacheKey(slug),
-      cachedValue,
-      CACHE_TTL.shortUrlNegative,
-    );
+  const shortUrl = await findShortUrlBySuffix(slug);
+  if (!shortUrl) {
+    await setCache(cacheKey, { missing: true }, CACHE_TTL.shortUrlNegative);
     return null;
   }
 
-  return cachedValue;
+  await setCache(cacheKey, shortUrl, CACHE_TTL.shortUrl);
+  return shortUrl;
 }
 
 async function assertShortUrlSlugAvailable(url: string, currentId?: string) {
@@ -94,7 +146,20 @@ export async function getUserShortUrls(
   url = "",
   target = "",
 ) {
-  return listUserShortUrls(userId, page, size, role, userName, url, target);
+  const cacheUserId = role === "ADMIN" ? "admin" : userId;
+  const cacheKey = getShortUrlListCacheKey(
+    cacheUserId,
+    role,
+    page,
+    size,
+    userName,
+    url,
+    target,
+  );
+
+  return getOrSetCache<UserShortUrlListResult>(cacheKey, CACHE_TTL.shortUrlList, () =>
+    listUserShortUrls(userId, page, size, role, userName, url, target),
+  );
 }
 
 export async function getUserShortUrlCount(
@@ -152,10 +217,17 @@ export async function getUrlStatus(
 export async function getUrlStatusOptimized(
   userId: string,
   role: UserRole = "USER",
-): Promise<UrlStatusStats | { status: unknown }> {
+): Promise<UrlStatusResult> {
   try {
-    const urlRecords = await listUrlStatusRecords(userId, role);
-    return calculateUrlStatusStats(urlRecords);
+    const cacheUserId = role === "ADMIN" ? "admin" : userId;
+    return getOrSetCache<UrlStatusResult>(
+      getShortUrlStatusCacheKey(cacheUserId, role),
+      CACHE_TTL.shortUrlStatus,
+      async () => {
+        const urlRecords = await listUrlStatusRecords(userId, role);
+        return calculateUrlStatusStats(urlRecords);
+      },
+    );
   } catch (error) {
     console.error("Error getting URL status (optimized):", error);
     return { status: error };
@@ -167,7 +239,10 @@ export async function createUserShortUrl(data: ShortUrlFormData) {
     const normalizedData = normalizeShortUrlFormData(data);
     await assertShortUrlSlugAvailable(normalizedData.url);
     const shortUrl = await insertUserShortUrl(normalizedData);
-    await invalidateShortUrlCache(normalizedData.url);
+    await invalidateShortUrlCaches({
+      slugs: [normalizedData.url],
+      ownerUserIds: [normalizedData.userId],
+    });
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -187,7 +262,10 @@ export async function updateUserShortUrl(data: ShortUrlFormData) {
       throw new Error("Short URL not found");
     }
 
-    await invalidateShortUrlCache(existingShortUrl?.url, normalizedData.url);
+    await invalidateShortUrlCaches({
+      slugs: [existingShortUrl?.url, normalizedData.url],
+      ownerUserIds: [normalizedData.userId],
+    });
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -210,7 +288,10 @@ export async function updateUserShortUrlAdmin(
       throw new Error("Short URL not found");
     }
 
-    await invalidateShortUrlCache(existingShortUrl?.url, normalizedData.url);
+    await invalidateShortUrlCaches({
+      slugs: [existingShortUrl?.url, normalizedData.url],
+      ownerUserIds: [normalizedData.userId, newUserId],
+    });
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -230,7 +311,10 @@ export async function updateUserShortUrlActive(
       throw new Error("Short URL not found");
     }
 
-    await invalidateShortUrlCache(existingShortUrl?.url);
+    await invalidateShortUrlCaches({
+      slugs: [existingShortUrl?.url],
+      ownerUserIds: [shortUrl.userId, userId],
+    });
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -239,11 +323,16 @@ export async function updateUserShortUrlActive(
 
 export async function updateUserShortUrlVisibility(id: string, visible: number) {
   try {
+    const existingShortUrl = await findShortUrlSlugById(id);
     const shortUrl = await updateShortUrlVisibilityState(id, visible);
     if (!shortUrl) {
       throw new Error("Short URL not found");
     }
 
+    await invalidateShortUrlCaches({
+      slugs: [existingShortUrl?.url],
+      ownerUserIds: [shortUrl.userId],
+    });
     return { status: "success", data: shortUrl };
   } catch (error) {
     return { status: error };
@@ -253,7 +342,10 @@ export async function updateUserShortUrlVisibility(id: string, visible: number) 
 export async function deleteUserShortUrl(userId: string, urlId: string) {
   const existingShortUrl = await findShortUrlSlugById(urlId);
   const deletedShortUrl = await removeUserShortUrl(userId, urlId);
-  await invalidateShortUrlCache(existingShortUrl?.url);
+  await invalidateShortUrlCaches({
+    slugs: [existingShortUrl?.url],
+    ownerUserIds: [deletedShortUrl?.userId, userId],
+  });
   return deletedShortUrl;
 }
 

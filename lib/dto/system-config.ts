@@ -1,6 +1,6 @@
 import { asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
-import { CACHE_TTL, delCache, getOrSetCache } from "@/lib/cache";
+import { CACHE_TTL, delCache, getCache, setCache } from "@/lib/cache";
 
 import { db } from "../db";
 import { systemConfigs } from "../db/schema";
@@ -39,6 +39,8 @@ export interface UpdateSystemConfigData<TValue = SystemConfigValue> {
 }
 
 type SystemConfigRow = typeof systemConfigs.$inferSelect;
+type MissingSystemConfigCacheValue = { missing: true };
+type SystemConfigCacheValue = SystemConfigData | MissingSystemConfigCacheValue;
 
 const DEFAULT_SYSTEM_CONFIG_VALUES = {
   enable_user_registration: true,
@@ -123,6 +125,53 @@ function getSystemConfigCacheKey(key: string) {
   return `system-config:${key}`;
 }
 
+function isMissingSystemConfigCacheValue(
+  value: SystemConfigCacheValue,
+): value is MissingSystemConfigCacheValue {
+  return "missing" in value;
+}
+
+async function readSystemConfigCacheValue(
+  key: string,
+): Promise<SystemConfigCacheValue | null> {
+  return getCache<SystemConfigCacheValue>(getSystemConfigCacheKey(key));
+}
+
+async function writeSystemConfigCacheValue(
+  key: string,
+  value: SystemConfigCacheValue,
+): Promise<SystemConfigCacheValue> {
+  await setCache(getSystemConfigCacheKey(key), value, CACHE_TTL.dto);
+  return value;
+}
+
+async function loadSystemConfigCacheValue(
+  key: string,
+): Promise<SystemConfigCacheValue> {
+  const [config] = await db
+    .select()
+    .from(systemConfigs)
+    .where(eq(systemConfigs.key, key))
+    .limit(1);
+
+  if (!config) {
+    return writeSystemConfigCacheValue(key, { missing: true });
+  }
+
+  return writeSystemConfigCacheValue(key, toSystemConfigData(config));
+}
+
+async function getSystemConfigCacheValue(
+  key: string,
+): Promise<SystemConfigCacheValue> {
+  const cachedValue = await readSystemConfigCacheValue(key);
+  if (cachedValue !== null) {
+    return cachedValue;
+  }
+
+  return loadSystemConfigCacheValue(key);
+}
+
 async function invalidateSystemConfigCache(key: string) {
   await delCache(getSystemConfigCacheKey(key));
 }
@@ -131,19 +180,8 @@ async function invalidateSystemConfigCache(key: string) {
 export async function getSystemConfig(
   key: string,
 ): Promise<SystemConfigData | null> {
-  return getOrSetCache(getSystemConfigCacheKey(key), CACHE_TTL.dto, async () => {
-    const [config] = await db
-      .select()
-      .from(systemConfigs)
-      .where(eq(systemConfigs.key, key))
-      .limit(1);
-
-    if (!config) {
-      return null;
-    }
-
-    return toSystemConfigData(config);
-  });
+  const config = await getSystemConfigCacheValue(key);
+  return isMissingSystemConfigCacheValue(config) ? null : config;
 }
 
 // 获取配置值（简化版本，直接返回解析后的值）
@@ -305,26 +343,46 @@ export async function getMultipleConfigs<
     return {} as TConfigs;
   }
 
-  const configs = await db
-    .select()
-    .from(systemConfigs)
-    .where(inArray(systemConfigs.key, keys));
+  const uniqueKeys = [...new Set(keys)];
+  const cachedValues = await Promise.all(
+    uniqueKeys.map(async (key) => [key, await readSystemConfigCacheValue(key)] as const),
+  );
+
+  const cachedMap = new Map(cachedValues);
+  const missingKeys = uniqueKeys.filter((key) => cachedMap.get(key) === null);
+
+  if (missingKeys.length > 0) {
+    const configs = await db
+      .select()
+      .from(systemConfigs)
+      .where(inArray(systemConfigs.key, missingKeys));
+
+    const configMap = new Map(configs.map((config) => [config.key, config]));
+
+    await Promise.all(
+      missingKeys.map(async (key) => {
+        const config = configMap.get(key);
+        const value: SystemConfigCacheValue = config
+          ? toSystemConfigData(config)
+          : { missing: true };
+        cachedMap.set(key, await writeSystemConfigCacheValue(key, value));
+      }),
+    );
+  }
 
   const result: Record<string, SystemConfigValue> = {};
-  configs.forEach((config) => {
-    result[config.key] = parseConfigValue(
-      config.value,
-      config.type as ConfigType,
-    );
-  });
 
-  for (const key of keys) {
-    if (!(key in result)) {
+  for (const key of uniqueKeys) {
+    const config = cachedMap.get(key);
+    if (!config || isMissingSystemConfigCacheValue(config)) {
       const defaultValue = getDefaultConfigValue(key);
       if (defaultValue !== undefined) {
         result[key] = defaultValue;
       }
+      continue;
     }
+
+    result[key] = config.value;
   }
 
   return result as TConfigs;
