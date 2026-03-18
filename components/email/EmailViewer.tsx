@@ -1,62 +1,76 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 const EmailViewer = ({ email }: { email: string }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  const updateIframe = useCallback(() => {
+  const cleanupObserver = useCallback(() => {
+    resizeObserverRef.current?.disconnect();
+    resizeObserverRef.current = null;
+  }, []);
+
+  const adjustHeight = useCallback(() => {
     const iframe = iframeRef.current;
-    if (!iframe) return () => {};
+    const doc = iframe?.contentDocument;
 
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) {
-      console.warn("Cannot access iframe document");
-      return () => {};
+    if (!iframe || !doc) {
+      return;
     }
 
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            * {
-              box-sizing: border-box;
-            }
-          </style>
-        </head>
-        <body>${email}</body>
-      </html>
-    `);
-    doc.close();
+    const height = Math.max(
+      doc.body?.scrollHeight ?? 0,
+      doc.documentElement?.scrollHeight ?? 0,
+    );
 
-    const adjustHeight = () => {
-      if (iframe.contentDocument?.body) {
-        const height = iframe.contentDocument.body.scrollHeight;
-        iframe.style.height = `${height + 20}px`; // Add padding
+    iframe.style.height = `${height + 20}px`;
+  }, []);
+
+  const srcDoc = useMemo(
+    () => `<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      * {
+        box-sizing: border-box;
       }
-    };
+    </style>
+  </head>
+  <body>${email}</body>
+</html>`,
+    [email],
+  );
 
-    iframe.addEventListener("load", adjustHeight);
-    // Handle dynamic content (e.g., images)
-    const observer = new MutationObserver(adjustHeight);
-    observer.observe(doc.body, { childList: true, subtree: true });
+  const handleLoad = useCallback(() => {
+    cleanupObserver();
+    adjustHeight();
 
-    return () => {
-      iframe.removeEventListener("load", adjustHeight);
-      observer.disconnect();
-    };
-  }, [email]);
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc?.body || typeof ResizeObserver === "undefined") {
+      return;
+    }
 
-  useEffect(() => {
-    const cleanup = updateIframe();
-    return cleanup;
-  }, [updateIframe]);
+    const observer = new ResizeObserver(() => {
+      adjustHeight();
+    });
+
+    observer.observe(doc.body);
+
+    if (doc.documentElement) {
+      observer.observe(doc.documentElement);
+    }
+
+    resizeObserverRef.current = observer;
+  }, [adjustHeight, cleanupObserver]);
+
+  useEffect(() => cleanupObserver, [cleanupObserver]);
 
   return (
     <iframe
       ref={iframeRef}
       title="Email Content"
       sandbox="allow-same-origin allow-popups"
+      srcDoc={srcDoc}
+      onLoad={handleLoad}
       style={{
         width: "100%",
         border: "none",
