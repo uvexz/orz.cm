@@ -309,7 +309,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
             }}
           >
             <SelectTrigger className="w-[80px] rounded-r-none text-sm">
-              <SelectValue placeholder="Select a type" />
+              <SelectValue placeholder={t("Filter field")} />
             </SelectTrigger>
             <SelectContent>
               {[
@@ -363,7 +363,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
               }}
             >
               <SelectTrigger className="flex-1 break-all text-left sm:w-[120px] sm:flex-none">
-                <SelectValue placeholder="Select a bucket" />
+                <SelectValue placeholder={t("Choose a bucket")} />
               </SelectTrigger>
               <SelectContent>
                 {s3Configs.map((provider, index) => (
@@ -486,11 +486,10 @@ export default function UserFileManager({ user, action }: FileListProps) {
         <EmptyPlaceholder className="col-span-full mt-8 shadow-none">
           <EmptyPlaceholder.Icon name="close" />
           <EmptyPlaceholder.Title>
-            {t("Configuration Error")}
+            {t("Storage configuration issue")}
           </EmptyPlaceholder.Title>
           <EmptyPlaceholder.Description>
-            {error.message}, Please check your bucket configuration and try
-            again
+            {error.message}. {t("Check your bucket settings and try again")}
           </EmptyPlaceholder.Description>
         </EmptyPlaceholder>
       )}

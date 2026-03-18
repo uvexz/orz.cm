@@ -163,7 +163,7 @@ export default function EmailList({
 
   const handleMarkSelectedAsRead = async () => {
     if (selectedEmails.length === 0) {
-      toast.error("Please select at least one email");
+      toast.error(t("Select at least one email"));
       return;
     }
 
@@ -271,7 +271,7 @@ export default function EmailList({
               size="icon"
               className="size-9 shrink-0"
               onClick={onShowMailboxList}
-              aria-label={t("Select mailbox")}
+              aria-label={t("Back to mailboxes")}
             >
               <Icons.chevronLeft className="size-4" />
             </Button>
@@ -354,7 +354,7 @@ export default function EmailList({
                       onClick={handleMarkSelectedAsRead}
                       className="w-full"
                     >
-                      <span className="text-xs">{t("Mask as read")}</span>
+                      <span className="text-xs">{t("Mark as read")}</span>
                     </Button>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -464,7 +464,7 @@ export default function EmailList({
                 <div className="flex h-[calc(100vh-135px)] flex-col items-center justify-center gap-8">
                   <Loader />
                   <p className="font-mono font-semibold text-neutral-500">
-                    {t("Waiting for emails")}...
+                    {t("Waiting for new emails")}...
                   </p>
                 </div>
               )}

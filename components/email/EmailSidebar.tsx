@@ -319,7 +319,7 @@ export default function EmailSidebar({
         {isMobile && selectedEmailAddress && setIsMobileSidebarOpen && (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-left">
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">{t("Selected mailbox")}</p>
+              <p className="text-xs text-muted-foreground">{t("Current mailbox")}</p>
               <p className="truncate text-sm font-medium text-foreground">
                 {selectedEmailAddress}
               </p>
@@ -331,7 +331,7 @@ export default function EmailSidebar({
               className="shrink-0"
               onClick={() => setIsMobileSidebarOpen(false)}
             >
-              {t("Open inbox")}
+              {t("Open messages")}
             </Button>
           </div>
         )}
@@ -431,7 +431,7 @@ export default function EmailSidebar({
               className="h-9 sm:w-auto"
               onClick={() => setIsMobileSidebarOpen(false)}
             >
-              {t("Open inbox")}
+              {t("Open messages")}
             </Button>
           )}
         </div>
@@ -703,7 +703,7 @@ export default function EmailSidebar({
                 type="button"
                 variant="ghost"
                 onClick={() => onSelectEmail(email.emailAddress)}
-                aria-label={t("Open email inbox")}
+                aria-label={t("Open mailbox")}
                 className="mt-2 h-auto min-w-0 justify-between gap-2 p-0 text-sm font-normal text-muted-foreground hover:bg-transparent"
               >
                 <div className="flex min-w-0 items-center gap-1">
@@ -711,7 +711,7 @@ export default function EmailSidebar({
                     <Badge variant="default">{email.unreadCount}</Badge>
                   )}
                   <span className="truncate">
-                    {t("{email} recived", { email: email.count })}
+                    {t("{email} received", { email: email.count })}
                   </span>
                 </div>
                 <span className="min-w-0 truncate text-right">
@@ -882,7 +882,7 @@ export default function EmailSidebar({
             <Input
               value={deleteInput}
               onChange={(e) => setDeleteInput(e.target.value)}
-              placeholder={`please input`}
+              placeholder={t("Type the confirmation text")}
               className="mb-4"
               autoCapitalize="none"
               autoCorrect="off"
