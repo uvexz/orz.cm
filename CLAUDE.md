@@ -135,17 +135,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Design Context
 
 ### Users
-Primary users are people who want to shorten long URLs and generate temporary email addresses quickly. They are usually trying to get a practical task done with minimal friction: make links easier to share, cleaner to present, and create disposable inboxes without extra setup.
+Primary users are people who want to shorten long URLs and generate temporary email addresses quickly. They are usually trying to complete a practical task with minimal friction: make links easier to share and create disposable inboxes without extra setup.
 
 ### Brand Personality
-The brand should feel clean, simple, and minimal. The overall emotional goal is confidence through clarity: fast to understand, lightweight to use, and polished without feeling corporate or heavy.
+Clean, simple, minimal. The product should feel calm, clear, and polished, with confidence coming from clarity rather than visual intensity.
 
 ### Aesthetic Direction
-The product should feel like a polished indie hacker product rather than a serious infra console or a playful experiment. Favor crisp layouts, restrained interfaces, and purposeful accents over noisy visuals. Light mode is the primary design target. Existing brand assets, the neutral UI foundation, and the current logo/display typography should be treated as the baseline unless a task explicitly calls for a broader rebrand.
+Aim for a Vercel-like feel: minimal, calm, and product-first. Keep the interface mostly neutral, using accent color sparingly rather than turning the UI into a branded color field. The product should feel like a polished indie hacker tool, not a heavy infra console and not a playful experiment. Light mode is the primary target; dark mode should remain solid but secondary. Existing logo, typography, and neutral UI foundation are the baseline.
 
 ### Design Principles
 1. Reduce friction first: optimize every screen for fast completion of core tasks like shortening links and creating temporary mailboxes.
 2. Keep the interface minimal: prefer fewer, clearer elements over decorative complexity.
-3. Polish the basics: spacing, hierarchy, typography, and states should feel intentional and refined.
-4. Use visual emphasis sparingly: accents and motion should guide attention, not dominate the experience.
-5. Design light-first: ensure light mode feels complete and premium, with dark mode treated as secondary unless a task says otherwise.
+3. Stay mostly neutral: use accent color sparingly and intentionally to guide attention.
+4. Polish the basics: spacing, hierarchy, typography, contrast, and states should feel deliberate and refined.
+5. Design accessibly by default: target WCAG AA, respect reduced-motion preferences, and avoid relying on color alone for meaning.
+6. Design light-first: make light mode feel complete and premium, with dark mode treated as secondary unless a task explicitly says otherwise.

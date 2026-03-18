@@ -40,11 +40,12 @@ export function CopyButton({
   return (
     <Button
       type="button"
-      size="sm"
+      size="icon"
       variant="ghost"
       aria-label={accessibleLabel}
       className={cn(
-        "z-10 size-10 p-0 text-foreground hover:border hover:text-foreground dark:text-foreground",
+        "size-10 shrink-0 text-muted-foreground hover:text-foreground",
+        hasCopied && "text-foreground",
         className,
       )}
       onClick={(event) => {

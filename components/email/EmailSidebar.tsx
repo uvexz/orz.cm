@@ -341,9 +341,9 @@ export default function EmailSidebar({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t("Search emails")}
-                  className="h-[30px] w-full border p-1 pl-8 text-xs placeholder:text-xs"
+                  className="h-8 w-full border-border bg-background pl-8 text-xs placeholder:text-xs"
                 />
-                <Search className="absolute left-2 top-2 size-4 text-gray-500" />
+                <Search className="absolute left-2 top-2 size-4 text-muted-foreground" />
               </div>
             </div>
           )}
@@ -386,29 +386,29 @@ export default function EmailSidebar({
         </Button>
 
         {!isCollapsed && (
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg text-xs text-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg text-xs text-muted-foreground">
             {/* Address */}
-            <div className="flex flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700">
+            <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
               <div className="flex items-center gap-1">
                 <Icons.mail className="size-3" />
                 <p className="line-clamp-1 text-start font-medium">
                   {t("Email Address")}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-sm font-semibold text-foreground">
                 {nFormatter(data ? data.total : 0)}
               </p>
             </div>
 
             {/* Inbox Emails */}
-            <div className="flex flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700">
+            <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
               <div className="flex items-center gap-1">
                 <Icons.inbox className="size-3" />
                 <p className="line-clamp-1 text-start font-medium">
                   {t("Inbox Emails")}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-sm font-semibold text-foreground">
                 {nFormatter(data ? data.totalInboxCount : 0)}
               </p>
             </div>
@@ -419,11 +419,8 @@ export default function EmailSidebar({
               aria-pressed={onlyUnread}
               aria-label={t("Filter unread emails")}
               className={cn(
-                "relative h-auto min-h-11 flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
-                {
-                  "bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700":
-                    onlyUnread,
-                },
+                "relative h-auto min-h-11 flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70",
+                onlyUnread && "bg-muted",
                 { "col-span-2": user.role !== "ADMIN" },
               )}
               onClick={() => {
@@ -436,7 +433,7 @@ export default function EmailSidebar({
                   {t("Unread Emails")}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-sm font-semibold text-foreground">
                 {nFormatter(data ? data.totalUnreadCount : 0)}
               </p>
               <TooltipProvider>
@@ -455,11 +452,8 @@ export default function EmailSidebar({
             {user.role === "ADMIN" && (
               <div
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
-                  {
-                    "bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700":
-                      isAdminModel,
-                  },
+                  "flex flex-col items-center gap-1 rounded-md border bg-muted/40 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70",
+                  isAdminModel && "bg-muted",
                 )}
               >
                 <div className="flex items-center gap-1">
@@ -557,22 +551,19 @@ export default function EmailSidebar({
           <div
             key={email.id}
             className={cn(
-              `border-gray-5 group m-1 bg-neutral-50 p-2 transition-colors hover:bg-neutral-100 dark:border-zinc-700 dark:bg-neutral-800 dark:hover:bg-neutral-900`,
-              selectedEmailAddress === email.emailAddress
-                ? "bg-gray-100 dark:bg-neutral-900"
-                : "",
-              isCollapsed ? "flex items-center justify-center" : "",
+              "group m-1 rounded-lg border bg-background p-2 transition-colors hover:bg-muted/40",
+              selectedEmailAddress === email.emailAddress && "bg-muted/60",
+              isCollapsed && "flex items-center justify-center",
             )}
           >
             <div
               className={cn(
-                "flex min-w-0 items-center justify-between gap-1 text-sm font-bold text-neutral-500 dark:text-zinc-400",
-                isCollapsed
-                  ? "size-10 justify-center rounded-xl bg-neutral-400 text-center text-white dark:text-neutral-100"
-                  : "",
-                selectedEmailAddress === email.emailAddress && isCollapsed
-                  ? "bg-neutral-600"
-                  : "",
+                "flex min-w-0 items-center justify-between gap-1 text-sm font-bold text-muted-foreground",
+                isCollapsed &&
+                  "size-10 justify-center rounded-xl bg-muted text-center text-foreground",
+                selectedEmailAddress === email.emailAddress &&
+                  isCollapsed &&
+                  "bg-primary text-primary-foreground",
               )}
             >
               <Button
@@ -581,9 +572,9 @@ export default function EmailSidebar({
                 onClick={() => onSelectEmail(email.emailAddress)}
                 aria-pressed={selectedEmailAddress === email.emailAddress}
                 className={cn(
-                  "h-auto min-w-0 flex-1 justify-start p-0 text-left text-sm font-bold text-neutral-500 hover:bg-transparent dark:text-zinc-400",
+                  "h-auto min-w-0 flex-1 justify-start p-0 text-left text-sm font-bold text-foreground hover:bg-transparent",
                   isCollapsed &&
-                    "size-full justify-center text-center text-white hover:bg-transparent dark:text-neutral-100",
+                    "size-full justify-center text-center text-inherit hover:bg-transparent",
                 )}
               >
                 <span className="min-w-0 flex-1 truncate" title={email.emailAddress}>
@@ -600,9 +591,9 @@ export default function EmailSidebar({
                     triggerLabel={t("Send email")}
                     triggerButton={<Icons.send className="size-4 text-primary" />}
                     className={cn(
-                      "size-9 shrink-0 rounded-md border p-0 text-primary",
+                      "size-9 shrink-0 rounded-md border border-transparent p-0 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
                       !isMobile
-                        ? "hidden hover:bg-neutral-200 group-hover:inline-flex"
+                        ? "hidden hover:bg-background group-hover:inline-flex"
                         : "",
                     )}
                   />
@@ -612,9 +603,9 @@ export default function EmailSidebar({
                     size="icon"
                     aria-label={t("Edit email")}
                     className={cn(
-                      "size-9 shrink-0 rounded-md border p-0 text-primary",
+                      "size-9 shrink-0 rounded-md border border-transparent p-0 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
                       !isMobile
-                        ? "hidden hover:bg-neutral-200 group-hover:inline-flex"
+                        ? "hidden hover:bg-background group-hover:inline-flex"
                         : "",
                     )}
                     onClick={() => {
@@ -630,11 +621,10 @@ export default function EmailSidebar({
                     aria-label={t("Delete email")}
                     disabled={Boolean(email.deletedAt)}
                     className={cn(
-                      "size-9 shrink-0 rounded-md border p-0 text-primary disabled:cursor-not-allowed disabled:opacity-60",
+                      "size-9 shrink-0 rounded-md border border-transparent p-0 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60",
                       !isMobile
-                        ? "hidden hover:bg-neutral-200 group-hover:inline-flex"
+                        ? "hidden hover:bg-background group-hover:inline-flex"
                         : "",
-                      email.deletedAt ? "bg-gray-400" : "",
                     )}
                     onClick={() => {
                       if (!email.deletedAt) {
@@ -649,8 +639,8 @@ export default function EmailSidebar({
                     value={`${email.emailAddress}`}
                     aria-label={t("Copy email address")}
                     className={cn(
-                      "size-9 shrink-0 rounded-md border p-0",
-                      "duration-250 transition-all hover:bg-neutral-200",
+                      "size-9 shrink-0 rounded-md border border-transparent p-0",
+                      "transition-colors hover:border-border hover:bg-background",
                     )}
                     title="Copy email address"
                   />
@@ -663,7 +653,7 @@ export default function EmailSidebar({
                 variant="ghost"
                 onClick={() => onSelectEmail(email.emailAddress)}
                 aria-label={t("Open email inbox")}
-                className="mt-2 h-auto min-w-0 justify-between gap-2 p-0 text-xs font-normal text-gray-500 hover:bg-transparent"
+                className="mt-2 h-auto min-w-0 justify-between gap-2 p-0 text-xs font-normal text-muted-foreground hover:bg-transparent"
               >
                 <div className="flex min-w-0 items-center gap-1">
                   {email.unreadCount > 0 && (
@@ -724,7 +714,7 @@ export default function EmailSidebar({
               <div className="mb-4">
                 <label
                   htmlFor="emailAddress"
-                  className="mb-1 block text-sm font-medium text-gray-700"
+                  className="mb-1 block text-sm font-medium text-foreground"
                 >
                   {t("Email Address")}
                 </label>
@@ -824,14 +814,14 @@ export default function EmailSidebar({
         >
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold">{t("Delete email")}</h2>
-            <p className="mb-4 text-sm text-neutral-600">
+            <p className="mb-4 text-sm text-muted-foreground">
               {t(
                 "You are about to delete the following email, once deleted, it cannot be recovered",
               )}
               . {t("All emails in inbox will be deleted at the same time")}.{" "}
               {t("Are you sure you want to continue?")}
             </p>
-            <p className="mb-4 text-sm text-neutral-600">
+            <p className="mb-4 text-sm text-muted-foreground">
               {t("To confirm, please type")}{" "}
               <strong className="break-all">
                 delete{" "}

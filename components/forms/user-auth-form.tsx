@@ -177,7 +177,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
+          <span className="bg-background px-2 text-xs tracking-[0.16em] text-muted-foreground">
             {t("Or continue with")}
           </span>
         </div>
@@ -248,7 +248,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
             <Button
               type="submit"
-              className="my-2"
+              className="my-2 w-full"
               disabled={isLoading || isGoogleLoading || isGithubLoading}
             >
               {isLoading && (
@@ -268,7 +268,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   return (
     <div className={cn("grid gap-3", className)} {...props}>
       {!loginMethod.registration && (
-        <p className="rounded-md border border-dashed bg-muted p-3 text-sm text-muted-foreground">
+        <p className="rounded-md border border-dashed bg-muted/40 p-3 text-sm text-muted-foreground">
           📢 {t("Administrator has disabled new user registration")}.
         </p>
       )}

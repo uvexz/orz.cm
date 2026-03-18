@@ -208,17 +208,17 @@ export default function UserFileList({
     <>
       <div className="flex min-w-0 items-center gap-2">
         <Icons.fileText className="size-3 shrink-0" />
-        <p className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs dark:bg-neutral-800">
+        <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground">
           {file.path}
         </p>
         <CopyButton className="size-9 shrink-0" value={file.path} />
       </div>
       {file.shortUrlId && (
         <div className="flex min-w-0 items-center gap-2">
-          <Icons.unLink className="size-3 shrink-0 text-blue-500" />
+          <Icons.unLink className="size-3 shrink-0 text-muted-foreground" />
           <Link
             href={"https://" + shortLinks[index]}
-            className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800"
+            className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80"
             target="_blank"
           >
             https://{shortLinks[index]}
@@ -233,7 +233,7 @@ export default function UserFileList({
         <Icons.link className="size-3 shrink-0" />
         <Link
           href={getFileUrl(file.path)}
-          className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800"
+          className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80"
           target="_blank"
         >
           {getFileUrl(file.path)}
@@ -242,7 +242,7 @@ export default function UserFileList({
       </div>
       <div className="flex min-w-0 items-center gap-2">
         <Icons.type className="size-3 shrink-0" />
-        <p className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800">
+        <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80">
           {`[${file.name}](${getFileUrl(file.path)})`}
         </p>
         <CopyButton
@@ -253,7 +253,7 @@ export default function UserFileList({
       {file.mimeType.startsWith("image/") && (
         <div className="flex min-w-0 items-center gap-2">
           <Icons.code className="size-3 shrink-0" />
-          <p className="min-w-0 line-clamp-1 truncate rounded-md bg-neutral-100 p-1.5 text-xs hover:text-blue-500 dark:bg-neutral-800">
+          <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80">
             {`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
           </p>
           <CopyButton
@@ -266,8 +266,8 @@ export default function UserFileList({
   );
 
   const renderListView = () => (
-    <div className="overflow-hidden rounded-lg border bg-primary-foreground">
-      <div className="text-mute-foreground grid grid-cols-5 gap-4 bg-neutral-100 px-6 py-3 text-sm font-medium dark:bg-neutral-800 sm:grid-cols-10">
+    <div className="overflow-hidden rounded-lg border bg-background">
+      <div className="grid grid-cols-5 gap-4 border-b bg-muted/40 px-6 py-3 text-sm font-medium text-muted-foreground sm:grid-cols-10">
         {showMutiCheckBox && (
           <div className="col-end-1">
             <Checkbox
@@ -294,11 +294,11 @@ export default function UserFileList({
           <TableColumnSekleton />
         </>
       ) : (
-        <div className="divide-y divide-neutral-200 dark:divide-neutral-600">
+        <div className="divide-y">
           {files?.list.map((file, index) => (
             <div
               key={file.id}
-              className="text-mute-foreground grid grid-cols-5 gap-4 px-6 py-4 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-600 sm:grid-cols-10"
+              className="grid grid-cols-5 gap-4 px-6 py-4 text-muted-foreground transition-colors hover:bg-muted/30 sm:grid-cols-10"
             >
               {showMutiCheckBox && (
                 <div
@@ -317,7 +317,7 @@ export default function UserFileList({
               <div className={cn("col-span-3 min-w-0 items-center space-x-3 text-sm")}>
                 <ClickableTooltip
                   className={cn(
-                    "flex min-w-0 cursor-pointer items-center justify-start gap-1 break-all text-start",
+                    "flex min-w-0 cursor-pointer items-center justify-start gap-1 break-all text-start text-foreground",
                     file.status !== 1 && "text-muted-foreground",
                   )}
                   content={
@@ -380,7 +380,7 @@ export default function UserFileList({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      className="size-9 p-0"
+                      className="size-9 border border-transparent p-0 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                       size="icon"
                       variant="ghost"
                     >
@@ -480,9 +480,9 @@ export default function UserFileList({
         <div
           key={file.id}
           className={cn(
-            "group relative flex w-full cursor-pointer items-end rounded-md transition-all hover:bg-blue-50",
+            "group relative flex w-full cursor-pointer items-end rounded-md border border-transparent transition-all hover:bg-muted/40",
             selectedFiles.find((f) => f.id === file.id) !== undefined &&
-              "bg-blue-50",
+              "border-border bg-muted/60",
           )}
           onClick={() => handleSelectFile(file)}
         >
@@ -499,7 +499,7 @@ export default function UserFileList({
             {React.cloneElement(getFileIcon(file, bucketInfo), { size: 40 })}
             <div className="w-full text-center">
               <ClickableTooltip
-                className="mx-auto line-clamp-2 break-all px-2 pb-1 text-center text-xs font-medium text-muted-foreground group-hover:text-blue-500 sm:max-w-[100px]"
+                className="mx-auto line-clamp-2 break-all px-2 pb-1 text-center text-xs font-medium text-muted-foreground group-hover:text-foreground sm:max-w-[100px]"
                 content={
                   <div className="max-w-[300px] space-y-1 p-3 text-start">
                     {file.mimeType.startsWith("image/") &&

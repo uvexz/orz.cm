@@ -290,7 +290,7 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="ml-auto size-9 lg:size-8"
+                  className="ml-auto size-9 text-muted-foreground hover:text-foreground lg:size-8"
                   onClick={toggleSidebar}
                 >
                   {isSidebarExpanded ? (
@@ -487,7 +487,7 @@ export function MobileSheetSidebar({ links }: DashboardSidebarProps) {
           <Button
             variant="outline"
             size="icon"
-            className="size-9 shrink-0 md:hidden"
+            className="size-9 shrink-0 text-muted-foreground hover:text-foreground md:hidden"
           >
             <Menu className="size-5" />
             <span className="sr-only">Toggle navigation menu</span>

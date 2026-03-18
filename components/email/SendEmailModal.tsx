@@ -137,13 +137,8 @@ export function SendEmailModal({
         </Button>
       )}
 
-      <Drawer
-        handleOnly
-        open={isOpen}
-        direction="right"
-        onOpenChange={setIsOpen}
-      >
-        <DrawerContent className="fixed bottom-0 right-0 top-0 h-[calc(100vh)] w-full rounded-none sm:max-w-5xl">
+      <Drawer open={isOpen} direction="right" onOpenChange={setIsOpen}>
+        <DrawerContent className="fixed bottom-0 right-0 top-0 h-screen w-full rounded-none sm:max-w-5xl">
           <DrawerHeader className="border-b px-4 pb-3 text-left">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1 space-y-1">
@@ -164,7 +159,7 @@ export function SendEmailModal({
                 {isPending ? (
                   <Icons.spinner className="size-4 animate-spin" />
                 ) : (
-                  <Icons.send className="size-4 text-blue-600" />
+                  <Icons.send className="size-4 text-foreground" />
                 )}
               </Button>
               <DrawerClose asChild>
@@ -179,7 +174,7 @@ export function SendEmailModal({
               </DrawerClose>
             </div>
           </DrawerHeader>
-          <div className="scrollbar-hidden space-y-1 overflow-y-auto px-4 pb-4">
+          <div className="scrollbar-hidden space-y-1 overflow-y-auto px-4 pb-4 pt-2">
             <div className="flex min-w-0 flex-wrap items-center gap-3 border-b sm:flex-nowrap">
               <label
                 htmlFor={subjectId}

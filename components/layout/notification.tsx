@@ -73,7 +73,7 @@ export function Notification() {
   if (!notification || !isVisible) return null;
 
   return (
-    <div className="relative flex max-h-48 w-full items-center justify-center bg-muted text-sm text-primary">
+    <div className="relative flex max-h-48 w-full items-center justify-center border-b bg-muted/40 text-sm text-foreground">
       <div
         className="flex-1 px-8 py-2.5 text-center"
         dangerouslySetInnerHTML={{ __html: notification }}
@@ -85,9 +85,9 @@ export function Notification() {
         size={"icon"}
         aria-label="Dismiss notification"
         title="Dismiss notification"
-        className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full"
+        className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
       >
-        <Icons.close className="size-4 text-primary" />
+        <Icons.close className="size-4" />
       </Button>
     </div>
   );

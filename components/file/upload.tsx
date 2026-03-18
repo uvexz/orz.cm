@@ -101,11 +101,11 @@ export const FileUploader = ({
                 <div className="flex min-w-0 items-center space-x-1 text-sm text-muted-foreground">
                   <div className="min-w-0 truncate">{bucketInfo.provider_name}</div>
                   <Icons.arrowRight className="size-3 shrink-0" />
-                  <div className="min-w-0 truncate font-medium text-blue-600 dark:text-blue-400">
+                  <div className="min-w-0 truncate font-medium text-foreground">
                     {bucketInfo.bucket}
                   </div>
                 </div>
-                <Badge className="shrink-0 text-xs">
+                <Badge variant="outline" className="shrink-0 text-xs">
                   {t("Limit")}:{" "}
                   {formatFileSize(bucketUsage.limits.maxSingleFileSize, {
                     precision: 1,
@@ -126,7 +126,7 @@ export const FileUploader = ({
                 {stats.total > 0 && (
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="font-semibold">{t("Upload List")}</h2>
-                    <Badge className="flex items-center gap-1">
+                    <Badge variant="secondary" className="flex items-center gap-1">
                       {stats.completed}
                       <span>/</span>
                       {stats.total}
@@ -154,7 +154,7 @@ export const FileUploader = ({
                 {files.length > 0 && (
                   <div className="space-y-2 rounded-lg">
                     {files.some((file) => file.status === "uploading") && (
-                      <div className="flex items-center gap-1 rounded-md border border-dashed bg-yellow-100 p-2 text-sm text-muted-foreground dark:bg-neutral-600">
+                      <div className="flex items-center gap-1 rounded-md border border-dashed bg-muted/40 p-2 text-sm text-muted-foreground">
                         <Icons.info className="size-4" />
                         {t(
                           "Do not close the window until the upload is complete",
@@ -201,10 +201,10 @@ export const FileUploader = ({
                             )}
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                              <p className="truncate text-sm font-medium text-foreground">
                                 {file.originalName}
                               </p>
-                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              <p className="mt-1 text-xs text-muted-foreground">
                                 {formatFileSize(file.file.size)}
                               </p>
                             </div>
@@ -339,7 +339,7 @@ export const FileUploader = ({
                     <Button
                       onClick={startUpload}
                       disabled={isUploading || stats.pending === 0}
-                      className="flex items-center gap-2 rounded-md bg-green-500 px-4 py-2 text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+                      className="gap-2"
                     >
                       <Play className="h-4 w-4" />
                       {t("Start Upload")}

@@ -63,7 +63,7 @@ export function LinkPreviewer({
       <Tooltip delayDuration={200} onOpenChange={handleOpenChange}>
         <TooltipTrigger asChild>
           <Link
-            className="flex min-w-0 w-full items-center hover:text-blue-400 hover:underline"
+            className="flex w-full min-w-0 items-center text-muted-foreground transition-colors hover:text-foreground hover:underline"
             target="_blank"
             href={url}
             title={url}
@@ -215,7 +215,7 @@ export function LinkInfoPreviewer({
       <Tooltip delayDuration={200} onOpenChange={handleOpenChange}>
         <TooltipTrigger asChild>
           <Link
-            className="flex min-w-0 w-full items-center hover:text-blue-400 hover:underline"
+            className="flex w-full min-w-0 items-center text-muted-foreground transition-colors hover:text-foreground hover:underline"
             target="_blank"
             href={url}
             title={url}
