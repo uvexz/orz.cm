@@ -238,7 +238,7 @@ export default function UserFileList({
       <>
         <div className="flex min-w-0 items-center gap-2">
           <Icons.fileText className="size-3 shrink-0" />
-          <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground">
+          <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-sm text-foreground">
             {file.path}
           </p>
           <CopyButton className="size-9 shrink-0" value={file.path} />
@@ -248,7 +248,7 @@ export default function UserFileList({
             <Icons.unLink className="size-3 shrink-0 text-muted-foreground" />
             <Link
               href={`https://${shortLink}`}
-              className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80"
+              className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-sm text-foreground transition-colors hover:text-foreground/80"
               target="_blank"
             >
               https://{shortLink}
@@ -263,7 +263,7 @@ export default function UserFileList({
           <Icons.link className="size-3 shrink-0" />
           <Link
             href={getFileUrl(file.path)}
-            className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80"
+            className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-sm text-foreground transition-colors hover:text-foreground/80"
             target="_blank"
           >
             {getFileUrl(file.path)}
@@ -275,7 +275,7 @@ export default function UserFileList({
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <Icons.type className="size-3 shrink-0" />
-          <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80">
+          <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-sm text-foreground transition-colors hover:text-foreground/80">
             {`[${file.name}](${getFileUrl(file.path)})`}
           </p>
           <CopyButton
@@ -286,7 +286,7 @@ export default function UserFileList({
         {file.mimeType.startsWith("image/") && (
           <div className="flex min-w-0 items-center gap-2">
             <Icons.code className="size-3 shrink-0" />
-            <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-xs text-foreground transition-colors hover:text-foreground/80">
+            <p className="min-w-0 line-clamp-1 truncate rounded-md border bg-muted/40 p-1.5 text-sm text-foreground transition-colors hover:text-foreground/80">
               {`<img src="${getFileUrl(file.path)}" alt="${file.name}">${getFileUrl(file.path)}</img>`}
             </p>
             <CopyButton
@@ -549,20 +549,20 @@ export default function UserFileList({
                           alt={`${file.name}`}
                         />
                       )}
-                    <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                    <p className="mt-1 text-sm font-semibold tracking-tight text-foreground">
                       {file.path}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       <strong>Size:</strong>{" "}
                       {formatFileSize(storageValueToBytes(file.size) || 0)}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       <strong>Type:</strong> {file.mimeType || "-"}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       <strong>User:</strong> {file.user.name || file.user.email}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       <strong>Modified:</strong>{" "}
                       {formatDate(file.lastModified?.toString() || "")}
                     </p>

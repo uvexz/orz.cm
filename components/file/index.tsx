@@ -325,7 +325,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
             </SelectContent>
           </Select>
           <Input
-            className="min-w-28 rounded-l-none border-l-0 placeholder:text-xs sm:w-48 sm:flex-none"
+            className="min-w-28 rounded-l-none border-l-0 text-sm placeholder:text-sm sm:w-48 sm:flex-none"
             placeholder={`Search by ${currentSearchType}...`}
             value={searchInput}
             onChange={(e) => {

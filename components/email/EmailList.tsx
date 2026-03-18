@@ -441,7 +441,7 @@ export default function EmailList({
                           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-800 dark:text-neutral-200">
                             {email.fromName || email.subject || "Untitled"}
                           </span>
-                          <span className="shrink-0 text-xs text-neutral-600 dark:text-neutral-400">
+                          <span className="shrink-0 text-sm text-neutral-600 dark:text-neutral-400 tabular-nums">
                             <TimeAgoIntl
                               date={new Date(email.date ?? email.createdAt)}
                             />
@@ -450,10 +450,10 @@ export default function EmailList({
                             <Icons.checkCheck className="ml-2 size-3 text-green-600" />
                           )}
                         </div>
-                        <div className="mb-0.5 min-w-0 line-clamp-1 truncate text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                        <div className="mb-0.5 min-w-0 line-clamp-1 truncate text-sm font-medium text-neutral-600 dark:text-neutral-400">
                           {email.subject}
                         </div>
-                        <div className="line-clamp-2 break-words text-xs text-neutral-500">
+                        <div className="line-clamp-2 break-words text-sm leading-5 text-neutral-500">
                           {emailPreviewMap.get(email.id) || "No content"}
                         </div>
                       </div>

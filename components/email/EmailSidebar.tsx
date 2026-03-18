@@ -371,7 +371,7 @@ export default function EmailSidebar({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t("Search emails")}
-                  className="h-9 w-full border-border bg-background pl-8 text-xs placeholder:text-xs"
+                  className="h-9 w-full border-border bg-background pl-8 text-sm placeholder:text-sm"
                 />
                 <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
               </div>
@@ -437,16 +437,16 @@ export default function EmailSidebar({
         </div>
 
         {shouldShowExpandedSidebar && (
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg text-xs text-muted-foreground">
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg text-sm text-muted-foreground">
             {/* Address */}
             <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/30 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
               <div className="flex items-center gap-1">
                 <Icons.mail className="size-3" />
-                <p className="line-clamp-1 text-start font-medium">
+                <p className="line-clamp-1 text-start font-medium tracking-tight text-foreground">
                   {t("Email Address")}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-base font-semibold tracking-tight text-foreground tabular-nums">
                 {nFormatter(data ? data.total : 0)}
               </p>
             </div>
@@ -455,11 +455,11 @@ export default function EmailSidebar({
             <div className="flex flex-col items-center gap-1 rounded-md border bg-muted/30 px-1 pb-1 pt-2 transition-colors hover:bg-muted/70">
               <div className="flex items-center gap-1">
                 <Icons.inbox className="size-3" />
-                <p className="line-clamp-1 text-start font-medium">
+                <p className="line-clamp-1 text-start font-medium tracking-tight text-foreground">
                   {t("Inbox Emails")}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-base font-semibold tracking-tight text-foreground tabular-nums">
                 {nFormatter(data ? data.totalInboxCount : 0)}
               </p>
             </div>
@@ -480,11 +480,11 @@ export default function EmailSidebar({
             >
               <div className="flex items-center gap-1">
                 <Icons.mailOpen className="size-3" />
-                <p className="line-clamp-1 text-start font-medium">
+                <p className="line-clamp-1 text-start font-medium tracking-tight text-foreground">
                   {t("Unread Emails")}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-base font-semibold tracking-tight text-foreground tabular-nums">
                 {nFormatter(data ? data.totalUnreadCount : 0)}
               </p>
               <TooltipProvider>
@@ -509,7 +509,7 @@ export default function EmailSidebar({
               >
                 <div className="flex items-center gap-1">
                   <Icons.lock className="size-3" />
-                  <p className="line-clamp-1 text-start font-medium">
+                  <p className="line-clamp-1 text-start font-medium tracking-tight text-foreground">
                     {t("Admin Mode")}
                   </p>
                 </div>
@@ -609,7 +609,7 @@ export default function EmailSidebar({
           >
             <div
               className={cn(
-                "flex min-w-0 items-center justify-between gap-1 text-sm font-bold text-muted-foreground",
+                "flex min-w-0 items-center justify-between gap-1 text-sm font-semibold text-muted-foreground",
                 isSidebarCollapsed &&
                   "size-10 justify-center rounded-xl bg-muted text-center text-foreground",
                 selectedEmailAddress === email.emailAddress &&
@@ -623,7 +623,7 @@ export default function EmailSidebar({
                 onClick={() => onSelectEmail(email.emailAddress)}
                 aria-pressed={selectedEmailAddress === email.emailAddress}
                 className={cn(
-                  "h-auto min-w-0 flex-1 justify-start p-0 text-left text-sm font-bold text-foreground hover:bg-transparent",
+                  "h-auto min-w-0 flex-1 justify-start p-0 text-left text-sm font-semibold tracking-tight text-foreground hover:bg-transparent",
                   isSidebarCollapsed &&
                     "size-full justify-center text-center text-inherit hover:bg-transparent",
                 )}
@@ -704,7 +704,7 @@ export default function EmailSidebar({
                 variant="ghost"
                 onClick={() => onSelectEmail(email.emailAddress)}
                 aria-label={t("Open email inbox")}
-                className="mt-2 h-auto min-w-0 justify-between gap-2 p-0 text-xs font-normal text-muted-foreground hover:bg-transparent"
+                className="mt-2 h-auto min-w-0 justify-between gap-2 p-0 text-sm font-normal text-muted-foreground hover:bg-transparent"
               >
                 <div className="flex min-w-0 items-center gap-1">
                   {email.unreadCount > 0 && (
