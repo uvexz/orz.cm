@@ -34,26 +34,25 @@ export function NavBar({ scroll = false }: NavBarProps) {
         <div className="flex items-center gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-1.5">
             <Icons.logo />
-            <span
+            <h1
               style={{ fontFamily: "Bahamas Bold" }}
               className="text-2xl font-bold"
             >
               {siteConfig.name}
-            </span>
+            </h1>
           </Link>
         </div>
 
         <div className="flex items-center space-x-4">
           {links && links.length > 0 ? (
-            <nav className="hidden gap-6 md:flex">
+            <nav className="hidden items-center gap-2 rounded-full border border-border/70 bg-background/80 p-1 md:flex">
               {links.map((item, index) => (
                 <Link
                   key={index}
                   href={item.disabled ? "#" : item.href}
                   prefetch={true}
                   className={cn(
-                    "flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm",
-                    "text-foreground/60",
+                    "flex min-h-9 items-center rounded-full px-4 text-sm font-medium text-foreground/62 transition-colors hover:bg-muted hover:text-foreground",
                     item.disabled && "cursor-not-allowed opacity-80",
                   )}
                 >
@@ -63,11 +62,13 @@ export function NavBar({ scroll = false }: NavBarProps) {
             </nav>
           ) : null}
 
-          <Link
-            href="/dashboard"
-            className="hidden text-sm font-medium text-foreground/60 transition-colors hover:text-foreground/80 md:block"
-          >
-            <Button className="" variant="outline" size="sm" rounded="lg">
+          <Link href="/dashboard" className="hidden md:block">
+            <Button
+              variant="outline"
+              size="sm"
+              rounded="full"
+              className="border-border/80 bg-background/80 px-4 shadow-none"
+            >
               {t("Dashboard")}
             </Button>
           </Link>

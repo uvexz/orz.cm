@@ -33,11 +33,11 @@ export function constructMetadata({
     title,
     description,
     keywords: [
-      "Cloudflare",
       "Short Link",
-      "Email",
-      "Open API",
-      "Screenshot API",
+      "URL Shortener",
+      "Temporary Email",
+      "Disposable Inbox",
+      "Link Sharing",
     ],
     authors: [
       {

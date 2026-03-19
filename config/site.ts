@@ -9,7 +9,7 @@ const appName = env.NEXT_PUBLIC_APP_NAME || "Orz";
 export const siteConfig: SiteConfig = {
   name: appName,
   description:
-    "All-in-one domain platform with short links, temp email, file storage, and open APIs.",
+    "Short links and temporary email, built for fast sharing and quick inbox access.",
   url: siteUrl,
   ogImage: `${siteUrl}/_static/og.jpg`,
   links: {

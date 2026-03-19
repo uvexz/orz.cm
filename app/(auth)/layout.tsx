@@ -23,7 +23,7 @@ export default async function AuthLayout({ children }: AuthLayoutProps) {
 
   // return <div className="min-h-screen">{children}</div>;
   return (
-    <main className="relative flex h-screen w-full flex-col">
+    <main className="relative flex min-h-screen w-full flex-col">
       <div className="flex-1">
         <div className="flex min-h-screen w-full">
           <div className="relative hidden flex-col border-r bg-muted p-16 lg:flex lg:w-1/2">
