@@ -50,7 +50,3 @@ export function notFound(body: unknown = "Not Found") {
 export function conflict(body: unknown = "Conflict") {
   return new ApiError(409, body);
 }
-
-export function internalServerError(body: unknown = "Internal Server Error") {
-  return new ApiError(500, body);
-}

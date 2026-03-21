@@ -88,18 +88,6 @@ async function incrementClick(id: string) {
   return updated ?? null;
 }
 
-export async function getApiKeyCallCount() {
-  try {
-    const [result] = await db
-      .select({ total: sql<number>`coalesce(sum(${scrapeMetas.click}), 0)` })
-      .from(scrapeMetas);
-
-    return Number(result?.total ?? 0);
-  } catch (error) {
-    return -1;
-  }
-}
-
 export async function getScrapeStatsByType(
   type: string,
   dateRange: string = "",

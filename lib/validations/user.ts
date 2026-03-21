@@ -16,5 +16,3 @@ export const userRoleSchema = z.object({
 export const userPasswordSchema = z.object({
   password: z.string().min(6).max(32),
 });
-
-export const userApiKeySchema = z.object({});
