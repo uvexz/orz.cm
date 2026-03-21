@@ -76,7 +76,7 @@ export default function EmailManagerInnovate() {
                   {exampleMailbox.split("@")[1]}
                 </span>
               </div>
-              <p className="break-all pr-1 text-lg font-semibold tracking-[-0.03em] text-foreground sm:break-normal">
+              <p className="break-words pr-1 text-lg font-semibold tracking-[-0.03em] text-foreground">
                 {exampleMailbox}
               </p>
               <p className="text-sm text-muted-foreground">

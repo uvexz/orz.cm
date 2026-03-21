@@ -243,7 +243,7 @@ export function UrlListResults({
                 >
                   <TableCell className="col-span-1 min-w-0 flex items-center gap-1 sm:col-span-2">
                     <Link
-                      className="min-w-0 overflow-hidden text-ellipsis whitespace-normal break-all text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-400"
+                      className="min-w-0 overflow-hidden text-ellipsis whitespace-normal break-words text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-400"
                       href={`https://${short.prefix}/${short.url}${short.password ? `?password=${short.password}` : ""}`}
                       target="_blank"
                       prefetch={false}
@@ -363,11 +363,11 @@ export function UrlListResults({
             data.list.map((short) => (
               <div
                 className={cn(
-                  "h-24 rounded-lg border p-1 shadow-inner dark:bg-neutral-800",
+                  "h-24 rounded-lg border p-1 dark:bg-neutral-800",
                 )}
                 key={short.id}
               >
-                <div className="flex h-full flex-col rounded-lg border border-dotted bg-white px-3 py-1.5 backdrop-blur-lg dark:bg-black">
+                <div className="flex h-full flex-col rounded-lg border border-dotted bg-white px-3 py-1.5 dark:bg-black">
                   <div className="flex min-w-0 items-center justify-between gap-1">
                     <BlurImage
                       src={`https://unavatar.io/${extractHostname(short.target)}?fallback=https://orz.cm/logo.png`}
@@ -379,7 +379,7 @@ export function UrlListResults({
                     <div className="ml-2 mr-auto flex min-w-0 flex-col justify-between truncate">
                       <div className="flex min-w-0 items-center">
                         <Link
-                          className="min-w-0 overflow-hidden text-ellipsis whitespace-normal break-all text-sm font-semibold text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-300"
+                          className="min-w-0 overflow-hidden text-ellipsis whitespace-normal break-words text-sm font-semibold text-slate-600 hover:text-blue-400 hover:underline dark:text-slate-300"
                           href={`https://${short.prefix}/${short.url}${short.password ? `?password=${short.password}` : ""}`}
                           target="_blank"
                           prefetch={false}

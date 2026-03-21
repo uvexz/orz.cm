@@ -881,7 +881,7 @@ export default function EmailSidebar({
             </p>
             <p className="mb-4 text-sm text-muted-foreground">
               {t("To confirm, please type")}{" "}
-              <strong className="break-all">
+              <strong className="break-words">
                 delete{" "}
                 {userEmails.find((e) => e.id === emailToDelete)?.emailAddress}
               </strong>

@@ -189,17 +189,17 @@ export default function EmailDetail({
                 <strong>{t("From")}:</strong> {email.fromName} &lt;{email.from}
                 &gt;
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="w-60 text-wrap text-xs">
+              <TooltipContent side="bottom" className="max-w-60 text-wrap text-xs">
                 {email.fromName} <br />
                 {email.from}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <p className="break-all text-xs">
+          <p className="break-words text-xs">
             <strong>{t("To")}:</strong> {email.to}
           </p>
           {email.replyTo && email.replyTo !== '""' && (
-            <p className="break-all text-xs">
+            <p className="break-words text-xs">
               <strong>{t("Reply-To")}:</strong> {email.replyTo}
             </p>
           )}

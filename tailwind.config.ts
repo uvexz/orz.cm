@@ -116,13 +116,13 @@ const config = {
         },
         "fade-out": {
           "0%": {
-            opacity: "0",
+            opacity: "1",
           },
           "50%": {
             opacity: "0.6",
           },
           "100%": {
-            opacity: "1",
+            opacity: "0",
           },
         },
         // Fade in left and right
@@ -154,28 +154,28 @@ const config = {
         },
         "fade-out-left": {
           "0%": {
-            opacity: "0",
-            transform: "translateX(-10px)",
+            opacity: "1",
+            transform: "translateX(0)",
           },
           "50%": {
             opacity: "0.6",
           },
           "100%": {
-            opacity: "1",
-            transform: "translateX(0px)",
+            opacity: "0",
+            transform: "translateX(-10px)",
           },
         },
         "fade-out-right": {
           "0%": {
-            opacity: "0",
-            transform: "translateX(10px)",
+            opacity: "1",
+            transform: "translateX(0)",
           },
           "50%": {
             opacity: "0.6",
           },
           "100%": {
-            opacity: "1",
-            transform: "translateX(0px)",
+            opacity: "0",
+            transform: "translateX(10px)",
           },
         },
         spotlight: {
@@ -194,20 +194,20 @@ const config = {
         "accordion-up": "accordion-up 0.2s ease-out",
 
         // Fade up and down
-        "fade-up": "fade-up 0.5s",
-        "fade-down": "fade-down 0.5s",
+        "fade-up": "fade-up 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
+        "fade-down": "fade-down 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
 
         // Fade in and out
-        "fade-in": "fade-in 0.4s",
-        "fade-out": "fade-out 0.4s",
+        "fade-in": "fade-in 0.2s cubic-bezier(0.22, 1, 0.36, 1)",
+        "fade-out": "fade-out 0.15s cubic-bezier(0.22, 1, 0.36, 1)",
 
         // Fade in left and right
-        "fade-in-left": "fade-in-left 0.4s",
-        "fade-in-right": "fade-in-right 0.4s",
-        "fade-out-left": "fade-out-left 0.4s",
-        "fade-out-right": "fade-out-right 0.4s",
+        "fade-in-left": "fade-in-left 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
+        "fade-in-right": "fade-in-right 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
+        "fade-out-left": "fade-out-left 0.2s cubic-bezier(0.22, 1, 0.36, 1)",
+        "fade-out-right": "fade-out-right 0.2s cubic-bezier(0.22, 1, 0.36, 1)",
 
-        spotlight: "spotlight 2s ease .75s 1 forwards",
+        spotlight: "spotlight 1.5s cubic-bezier(0.22, 1, 0.36, 1) .75s 1 forwards",
       },
     },
   },

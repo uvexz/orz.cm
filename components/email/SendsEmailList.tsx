@@ -58,15 +58,15 @@ export default function SendsEmailList({ user }: { user: AppSessionUser }) {
 
   return (
     <div className="h-[calc(100vh-60px)] w-full overflow-auto p-4 xl:p-8">
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg text-xs text-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
-        <div className="flex flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700">
+      <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-1 text-xs">
+        <div className="flex flex-col items-center gap-1 rounded-md bg-background px-1 pb-1 pt-2 transition-colors hover:bg-muted dark:bg-card dark:hover:bg-muted">
           <div className="flex items-center gap-1">
-            <Icons.send className="size-3" />
-            <p className="line-clamp-1 text-start font-medium">
+            <Icons.send className="size-3 text-muted-foreground" />
+            <p className="line-clamp-1 text-start font-medium text-muted-foreground">
               {t("Sent Emails")}
             </p>
           </div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <p className="text-sm font-semibold text-foreground">
             {nFormatter(sendEmails ?? 0)}
           </p>
         </div>
@@ -76,16 +76,13 @@ export default function SendsEmailList({ user }: { user: AppSessionUser }) {
           <div
             onClick={() => setAdminModel(!isAdminModel)}
             className={cn(
-              "flex cursor-pointer flex-col items-center gap-1 rounded-md bg-neutral-100 px-1 pb-1 pt-2 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700",
-              {
-                "bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-gray-700":
-                  isAdminModel,
-              },
+              "flex cursor-pointer flex-col items-center gap-1 rounded-md bg-background px-1 pb-1 pt-2 transition-colors dark:bg-card",
+              isAdminModel ? "bg-muted dark:bg-muted" : "hover:bg-muted dark:hover:bg-muted",
             )}
           >
             <div className="flex items-center gap-1">
-              <Icons.lock className="size-3" />
-              <p className="line-clamp-1 text-start font-medium">
+              <Icons.lock className="size-3 text-muted-foreground" />
+              <p className="line-clamp-1 text-start font-medium text-muted-foreground">
                 {t("Admin Mode")}
               </p>
             </div>
@@ -102,13 +99,13 @@ export default function SendsEmailList({ user }: { user: AppSessionUser }) {
           placeholder={t("Search by send to email")}
           value={searchQuery}
           onChange={handleSearch}
-          className="w-full bg-neutral-50"
+          className="w-full"
         />
         <Input
           placeholder={t("Search by from email")}
           value={searchQuery}
           onChange={handleSearch}
-          className="w-full bg-neutral-50"
+          className="w-full"
           disabled
         />
       </div>
@@ -131,35 +128,35 @@ export default function SendsEmailList({ user }: { user: AppSessionUser }) {
           <div className="space-y-1.5">
             {data.list.map((email) => (
               <Collapsible
-                className="w-full rounded-lg border bg-primary-foreground transition-all duration-200 hover:bg-neutral-100 dark:hover:bg-neutral-500"
+                className="w-full rounded-lg border bg-card transition-all duration-200 hover:bg-muted/50"
                 key={email.id}
               >
                 <CollapsibleTrigger className="w-full">
-                  <div className="grids flex items-center justify-between rounded-t-lg bg-neutral-300/70 px-2 py-1.5">
-                    <span className="truncate text-xs font-semibold text-neutral-600 dark:text-neutral-200">
+                  <div className="grids flex items-center justify-between rounded-t-lg bg-muted/70 px-2 py-1.5">
+                    <span className="truncate text-xs font-semibold text-muted-foreground">
                       {email.from}
                     </span>
-                    <span className="text-xs text-neutral-800 dark:text-neutral-300">
+                    <span className="text-xs text-muted-foreground">
                       {formatDate(new Date(email.createdAt).getTime())}
                     </span>
                   </div>
                   <div className="grid w-full grid-cols-1 gap-3 p-2 sm:grid-cols-2">
                     <div className="text-start">
-                      <div className="truncate text-xs font-semibold text-neutral-600 dark:text-neutral-200">
+                      <div className="truncate text-xs font-semibold text-foreground">
                         <strong>Send To:</strong> {email.to}
                       </div>
-                      <p className="line-clamp-1 truncate text-xs font-semibold text-neutral-600 dark:text-neutral-400">
+                      <p className="line-clamp-1 truncate text-xs font-semibold text-muted-foreground">
                         <strong>Subject:</strong>{" "}
                         {email.subject || "No subject"}
                       </p>
                     </div>
-                    <p className="line-clamp-2 break-all text-start text-xs text-neutral-500">
+                    <p className="line-clamp-2 text-start text-xs text-muted-foreground">
                       {htmlToText(email.html || "")}
                     </p>
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="animate-fade-in break-all border-t border-dashed p-2 text-sm text-neutral-500 dark:text-neutral-100">
+                  <div className="animate-fade-in break-words border-t border-dashed p-2 text-sm text-neutral-500 dark:text-neutral-100">
                     {htmlToText(email.html || "")}
                   </div>
                 </CollapsibleContent>

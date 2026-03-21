@@ -25,10 +25,10 @@ export const URL_STATUS_CONFIG: StatusConfig = {
     shadow: "shadow-green-500/25",
   },
   Disabled: {
-    color: "bg-gray-600",
-    textColor: "text-gray-600",
-    gradient: "from-gray-400 to-gray-600",
-    shadow: "shadow-gray-500/25",
+    color: "bg-muted-foreground",
+    textColor: "text-muted-foreground",
+    gradient: "from-muted-foreground/60 to-muted-foreground",
+    shadow: "shadow-muted-foreground/25",
   },
   Expired: {
     color: "bg-red-500",
@@ -126,13 +126,13 @@ export function StatusInfoCard({
   const barHeight = Math.max(8, Math.min(100, percentage));
 
   return (
-    <Card className="grids group relative animate-fade-in overflow-hidden bg-gray-50/70 p-4 backdrop-blur-lg transition-all duration-300 hover:shadow-lg dark:bg-primary-foreground">
+    <Card className="grids group relative animate-fade-in overflow-hidden bg-muted p-4 transition-all duration-300 hover:shadow-md dark:bg-muted">
       <div className="flex items-end justify-between">
         <div className="flex-1">
           <div className="text-sm font-medium">{t(title)}</div>
           <div className="mt-4 flex items-center gap-2 text-xl font-bold">
             {nFormatter(currentTotal || 0)}
-            <p className="mt-1.5 text-xs text-slate-500">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               / {nFormatter(total || 0)}
             </p>
           </div>
@@ -140,7 +140,7 @@ export function StatusInfoCard({
 
         <div className="ml-4 flex h-16 items-end">
           <div className="relative flex flex-col items-center">
-            <div className="relative h-14 w-7 overflow-hidden rounded-lg border border-gray-300/20 bg-gray-200/50 backdrop-blur-sm dark:border-gray-600/20 dark:bg-gray-700/50">
+            <div className="relative h-14 w-7 overflow-hidden rounded-lg border border-border/20 bg-muted/80 dark:border-border/20 dark:bg-muted/80">
               <div
                 className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${config.gradient} rounded-lg transition-all duration-700 ease-out ${config.shadow}`}
                 style={{ height: `${barHeight}%` }}

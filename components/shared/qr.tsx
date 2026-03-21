@@ -421,7 +421,7 @@ export default function QRCodeEditor({
                   <input
                     id={fgColorInputId}
                     aria-label={t("Front Color")}
-                    className="block w-full rounded-r-lg border-2 border-l-0 bg-background pl-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                    className="block w-full rounded-r-lg border-2 border-l-0 bg-background pl-3 text-sm text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
                     spellCheck="false"
                     defaultValue={params.fgColor}
                     name="front-color"
@@ -474,7 +474,7 @@ export default function QRCodeEditor({
                   <input
                     id={bgColorInputId}
                     aria-label={t("Background Color")}
-                    className="block w-full rounded-r-lg border-2 border-l-0 bg-background pl-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                    className="block w-full rounded-r-lg border-2 border-l-0 bg-background pl-3 text-sm text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
                     spellCheck="false"
                     defaultValue={params.bgColor}
                     name="background-color"

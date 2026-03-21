@@ -384,7 +384,7 @@ export default function EmailList({
       </div>
       {isLoading && (
         <div className="flex flex-col gap-2 p-1">
-          {[...Array(9)].map((_, index) => (
+          {[...Array(3)].map((_, index) => (
             <Skeleton key={index} className="h-[80px] w-full rounded-lg" />
           ))}
         </div>
@@ -431,7 +431,7 @@ export default function EmailList({
                           <Checkbox
                             checked={selectedEmails.includes(email.id)}
                             onCheckedChange={() => handleSelectEmail(email.id)}
-                            className="mr-3 size-4 border-neutral-300 bg-neutral-100 data-[state=checked]:border-neutral-900 data-[state=checked]:bg-neutral-600 data-[state=checked]:text-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:data-[state=checked]:border-neutral-300 dark:data-[state=checked]:bg-neutral-300"
+                            className="mr-3 size-4 border-border bg-muted data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                           />
                         </div>
                       )}
@@ -440,10 +440,10 @@ export default function EmailList({
                         onClick={() => handleEmailSelection(email.id)}
                       >
                         <div className="mb-1 flex min-w-0 flex-wrap items-center justify-between gap-2">
-                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
                             {email.fromName || email.subject || "Untitled"}
                           </span>
-                          <span className="shrink-0 text-sm text-neutral-600 dark:text-neutral-400 tabular-nums">
+                          <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
                             <TimeAgoIntl
                               date={new Date(email.date ?? email.createdAt)}
                             />
@@ -452,10 +452,10 @@ export default function EmailList({
                             <Icons.checkCheck className="ml-2 size-3 text-green-600" />
                           )}
                         </div>
-                        <div className="mb-0.5 min-w-0 line-clamp-1 truncate text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                        <div className="mb-0.5 min-w-0 line-clamp-1 truncate text-sm font-medium text-muted-foreground">
                           {email.subject}
                         </div>
-                        <div className="line-clamp-2 break-words text-sm leading-5 text-neutral-500">
+                        <div className="line-clamp-2 break-words text-sm leading-5 text-muted-foreground">
                           {emailPreviewMap.get(email.id) || "No content"}
                         </div>
                       </div>
@@ -465,7 +465,7 @@ export default function EmailList({
               ) : (
                 <div className="flex h-[calc(100vh-135px)] flex-col items-center justify-center gap-8">
                   <Loader />
-                  <p className="font-mono font-semibold text-neutral-500">
+                  <p className="font-mono font-semibold text-muted-foreground">
                     {t("Waiting for new emails")}...
                   </p>
                 </div>
@@ -491,7 +491,7 @@ export default function EmailList({
 export function EmptyInboxSection() {
   const t = useTranslations("Email");
   return (
-    <div className="grids flex flex-1 animate-fade-in flex-col items-center justify-center p-4 text-center text-neutral-600 dark:text-neutral-400">
+    <div className="grids flex flex-1 animate-fade-in flex-col items-center justify-center p-4 text-center text-muted-foreground">
       <BlurImage
         className="size-40"
         src="/_static/landing/mailbox.svg"
@@ -513,9 +513,9 @@ export function EmptyInboxSection() {
         <li>{t("How to create emails with api?")}</li>
       </ul>
       <div className="mt-6 flex gap-2">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-neutral-300 dark:bg-neutral-600" />
-        <span className="h-2 w-2 animate-pulse rounded-full bg-neutral-300 delay-100 dark:bg-neutral-600" />
-        <span className="h-2 w-2 animate-pulse rounded-full bg-neutral-300 delay-200 dark:bg-neutral-600" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground delay-100" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground delay-200" />
       </div>
     </div>
   );

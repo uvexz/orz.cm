@@ -100,7 +100,7 @@ export default function PasswordPrompt() {
             {t("Protected Link")}
           </h1>
 
-          <div className="mb-4 break-all text-left text-sm text-neutral-400">
+          <div className="mb-4 break-words text-left text-sm text-neutral-400">
             <p>
               {t("You are attempting to access a password-protected link")}.{" "}
               <strong>

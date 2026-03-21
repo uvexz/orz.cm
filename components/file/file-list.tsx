@@ -349,7 +349,7 @@ export default function UserFileList({
               <div className={cn("col-span-3 min-w-0 items-center space-x-3 text-sm")}>
                 <ClickableTooltip
                   className={cn(
-                    "flex min-w-0 cursor-pointer items-center justify-start gap-1 break-all text-start text-foreground",
+                    "flex min-w-0 cursor-pointer items-center justify-start gap-1 break-words text-start text-foreground",
                     file.status !== 1 && "text-muted-foreground",
                   )}
                   content={
@@ -535,7 +535,7 @@ export default function UserFileList({
             {React.cloneElement(getFileIcon(file, bucketInfo), { size: 40 })}
             <div className="w-full text-center">
               <ClickableTooltip
-                className="mx-auto line-clamp-2 break-all px-2 pb-1 text-center text-xs font-medium text-muted-foreground group-hover:text-foreground sm:max-w-[100px]"
+                className="mx-auto line-clamp-2 break-words px-2 pb-1 text-center text-xs font-medium text-muted-foreground group-hover:text-foreground sm:max-w-[100px]"
                 content={
                   <div className="max-w-[300px] space-y-1 p-3 text-start">
                     {file.mimeType.startsWith("image/") &&

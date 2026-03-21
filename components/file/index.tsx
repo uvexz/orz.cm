@@ -360,7 +360,7 @@ export default function UserFileManager({ user, action }: FileListProps) {
                 provider && handleChangeBucket(provider, bucketName);
               }}
             >
-              <SelectTrigger className="flex-1 break-all text-left sm:w-[120px] sm:flex-none">
+              <SelectTrigger className="flex-1 break-words text-left sm:w-[120px] sm:flex-none">
                 <SelectValue placeholder={t("Choose a bucket")} />
               </SelectTrigger>
               <SelectContent>

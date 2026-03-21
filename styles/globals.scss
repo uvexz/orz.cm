@@ -7,62 +7,63 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 98%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    /* OKLCH with subtle blue tint for brand cohesion */
+    --background: oklch(100% 0.005 250);
+    --foreground: oklch(4% 0.005 250);
+    --card: oklch(100% 0.005 250);
+    --card-foreground: oklch(4% 0.005 250);
+    --popover: oklch(100% 0.005 250);
+    --popover-foreground: oklch(4% 0.005 250);
+    --primary: oklch(9% 0.01 250);
+    --primary-foreground: oklch(98% 0.005 250);
+    --secondary: oklch(96% 0.004 250);
+    --secondary-foreground: oklch(9% 0.01 250);
+    --muted: oklch(96% 0.004 250);
+    --muted-foreground: oklch(45% 0.005 250);
+    --accent: oklch(98% 0.005 250);
+    --accent-foreground: oklch(9% 0.01 250);
+    --destructive: oklch(60% 0.2 25);
+    --destructive-foreground: oklch(98% 0.005 250);
+    --border: oklch(90% 0.004 250);
+    --input: oklch(90% 0.004 250);
+    --ring: oklch(4% 0.01 250);
     --radius: 0.5rem;
-    --blue: 210 100% 50%;
+    --blue: oklch(50% 0.17 250);
 
-    --chart-1: 208 93% 60%;
-    --chart-2: 138deg 64% 52%;
-    --chart-3: 216 92% 60%;
-    --chart-4: 210 98% 78%;
-    --chart-5: 212 97% 87%;
+    --chart-1: oklch(60% 0.17 250);
+    --chart-2: oklch(52% 0.12 138);
+    --chart-3: oklch(60% 0.15 250);
+    --chart-4: oklch(78% 0.1 250);
+    --chart-5: oklch(87% 0.06 250);
   }
 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 8%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --blue: 215 100% 50%;
+    --background: oklch(4% 0.005 250);
+    --foreground: oklch(98% 0.005 250);
+    --card: oklch(4% 0.005 250);
+    --card-foreground: oklch(98% 0.005 250);
+    --popover: oklch(4% 0.005 250);
+    --popover-foreground: oklch(98% 0.005 250);
+    --primary: oklch(98% 0.005 250);
+    --primary-foreground: oklch(9% 0.01 250);
+    --secondary: oklch(15% 0.006 250);
+    --secondary-foreground: oklch(98% 0.005 250);
+    --muted: oklch(15% 0.006 250);
+    --muted-foreground: oklch(64% 0.005 250);
+    --accent: oklch(8% 0.008 250);
+    --accent-foreground: oklch(98% 0.005 250);
+    --destructive: oklch(63% 0.15 25);
+    --destructive-foreground: oklch(98% 0.005 250);
+    --border: oklch(15% 0.006 250);
+    --input: oklch(15% 0.006 250);
+    --ring: oklch(83% 0.005 250);
+    --blue: oklch(50% 0.17 250);
 
-    --chart-1: 221.2 83.2% 53.3%;
-    --chart-2: 212 95% 68%;
-    --chart-3: 216 92% 60%;
-    --chart-4: 210 98% 78%;
-    --chart-5: 212 97% 87%;
+    --chart-1: oklch(53% 0.16 250);
+    --chart-2: oklch(68% 0.1 250);
+    --chart-3: oklch(60% 0.15 250);
+    --chart-4: oklch(78% 0.1 250);
+    --chart-5: oklch(87% 0.06 250);
   }
 }
 
@@ -76,6 +77,29 @@
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+    font-family: var(--font-sans), "Inter-Fallback", system-ui, sans-serif;
+  }
+}
+
+/* Inter font fallback with metrics overrides to minimize CLS */
+@font-face {
+  font-family: "Inter-Fallback";
+  src: local("Arial");
+  size-adjust: 106%;
+  ascent-override: 87%;
+  descent-override: 87%;
+  line-gap-override: 0%;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
